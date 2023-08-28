@@ -1,105 +1,25 @@
 import time
-from datetime import datetime
+import datetime
 
 startTime = time.time()
 
 def currentTime():
-	return datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M:%S")
+	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
 
-import requests
-import json
-import pyodbc
-
-print(f"{ currentTime() }: ----------- Setup")
-
-print(f"{ currentTime() }: Load config")
-
-with open("./scripts/config.json", "r") as reader:
-	config = json.load(reader)
-
-print(f"{ currentTime() }: DB connect")
-
-cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
-cur = cn.cursor()
-
-cur.execute("select distinct flowid from FloMeet where isexcluded = 1 or iscomplete = 1")
-excluded = [ excluded.flowid for excluded in cur.fetchall() ]
-
-print(f"{ currentTime() }: Get events")
-
-response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.now().year }&month={ datetime.now().month }&eventType=tournaments")
-events = json.loads(response.text)["response"]
-
-for event in events:
-	event["startDate"] = datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
-
-events = sorted(events, key=lambda event: event["startDate"], reverse=True)
-
-print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
-
-for eventIndex, event in enumerate(events):
-	if event["guid"] in excluded:
-		continue
-
-	if not event["isPublishBrackets"] or not event["hasBrackets"]:
-		# No data
-		cur.execute("""
-			set nocount on;
-			declare @output int;
-			exec dbo.MeetSave @MeetID = @output output
-				, @FlowID = ?
-				, @MeetName = ?
-				, @IsExcluded = ?
-				, @IsComplete = ?;
-			select @output as OutputValue;
-			""", (event["guid"], event["name"], 1, 0,))
-		continue
-
-	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ event['guid'] }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg")
+def getEventDetails(eventGUID):	
+	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ eventGUID }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg")
 	eventInfo = json.loads(response.text)
 	location = eventInfo["data"]["attributes"].get("location") if eventInfo.get("data") and eventInfo["data"].get("attributes") and eventInfo["data"]["attributes"].get("location") else None
-	state = location.get("state") if location and eventInfo["data"]["attributes"]["location"].get("state") else None
 
-	if state is None or str.lower(state) not in ["sc", "nc", "ga", "tn"]:
-		
-		# Not in state
-		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { state if state else '--' }")
-		cur.execute("""
-			set nocount on;
-			declare @output int;
-			exec dbo.MeetSave @MeetID = @output output
-				, @FlowID = ?
-				, @MeetName = ?
-				, @IsExcluded = ?
-				, @IsComplete = ?
-				, @LocationName = ?
-				, @LocationCity = ?
-				, @LocationState = ?;
-			select @output as OutputValue;
-			""", (event["guid"], event["name"], 1, 0, event["locationName"], None, state,))
-		continue
+	return {
+		"location": location,
+		"city": location.get("city"),
+		"state": location.get("state") if location and eventInfo["data"]["attributes"]["location"].get("state") else None,
+	}
 
-	print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { state }")
+def loadEvent(eventGUID, meetId):
 
-	cur.execute("""
-		set nocount on;
-		declare @output int;
-		exec dbo.MeetSave @MeetID = @output output
-			, @FlowID = ?
-			, @MeetName = ?
-			, @IsExcluded = ?
-			, @IsComplete = ?
-			, @LocationName = ?
-			, @LocationCity = ?
-			, @LocationState = ?
-			, @StartTime = ?
-			, @EndTime = ?;
-		select @output as OutputValue;
-		""", (event["guid"], event["name"], 0, 0, event["locationName"], location.get("city"), state, event["startDate"], datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
-	
-	meetId = cur.fetchval()
-
-	response = requests.get(f"https://arena.flowrestling.org/bracket/{ event['guid'] }")
+	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
 	divisions = json.loads(response.text)["response"]["divisions"]
 
 	for divisionIndex, division in enumerate(divisions):
@@ -112,7 +32,7 @@ for eventIndex, event in enumerate(events):
 			print(f"{ currentTime() }: Weight { str(weightIndex + 1 )} of { str(len(division['weightClasses'])) }: { weight['name'] }")
 
 			for poolIndex, pool in enumerate(weight["boutPools"]):
-				response = requests.get(f"https://arena.flowrestling.org/bracket/{ event['guid'] }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
+				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
 				matches = json.loads(response.text)["response"]
 
 				for matchIndex, match in enumerate(matches):
@@ -177,7 +97,7 @@ for eventIndex, event in enumerate(events):
 							, @WinnerToTop = ?
 							, @LoserMatchFlowID = ?
 							, @LoserToTop = ?
-		 					, @WinnerWrestlerID = ?;
+							, @WinnerWrestlerID = ?;
 						select @output as OutputValue;
 						""", (
 							meetId,
@@ -198,7 +118,7 @@ for eventIndex, event in enumerate(events):
 							match["winnerToTop"],
 							match["loserToBoutGuid"],
 							match["loserToTop"],
-							topWrestlerId if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None,
+							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None,
 						))
 					
 					matchId = cur.fetchval()
@@ -232,77 +152,201 @@ for eventIndex, event in enumerate(events):
 		exec dbo.WrestlerUpdate @MeetID = ?;
 		""", (meetId,))
 	
-	cur.execute("""
-		set nocount on;
-		declare @output int;
-		exec dbo.MeetSave @MeetID = @output output
-			, @FlowID = ?
-			, @MeetName = ?
-			, @IsExcluded = ?
-			, @IsComplete;
-		select @output as OutputValue;
-		""", (event["guid"], event["name"], 0, 1,))
+import requests
+import json
+import pyodbc
 
-print(f"{ currentTime() }: ----------- Upcoming Events")
+print(f"{ currentTime() }: ----------- Setup")
 
-cur.execute("select FlowID from FloMeet where StartTime > getdate()")
-loaded = [ loaded.FlowID for loaded in cur.fetchall() ]
+print(f"{ currentTime() }: Load config")
 
-response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments")
-events = json.loads(response.text)["response"]
+with open("./scripts/config.json", "r") as reader:
+	config = json.load(reader)
 
-print(f"{ currentTime() }: ")
+print(f"{ currentTime() }: DB connect")
 
-for event in events:
-	event["startDate"] = datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
+cur = cn.cursor()
 
-events = sorted(events, key=lambda event: event["startDate"])
+cur.execute("""
+select	FloMeet.ID
+		, FloMeet.FlowID
+		, FloMeet.MeetName
+from	FloMeet
+where	FloMeet.IsFavorite = 1
+		and FloMeet.IsComplete = 0
+		and (
+			datediff("hh", getdate(), FloMeet.StartTime) < 3 and datediff("ss", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 90
+			or datediff("d", getdate(), FloMeet.StartTime) <= 1 and datediff("ss", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 300
+			or datediff("d", getdate(), FloMeet.StartTime) between 2 and 7 and datediff("hh", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 1
+		)
+""")
+favorites = cur.fetchall()
 
-for eventIndex, event in enumerate(events):
-	if event["guid"] in loaded:
-		continue
+print(f"{ currentTime() }: ----------- Favorites: { len(favorites) }")
 
-	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ event['guid'] }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg")
-	eventInfo = json.loads(response.text)
-	location = eventInfo["data"]["attributes"].get("location") if eventInfo.get("data") and eventInfo["data"].get("attributes") and eventInfo["data"]["attributes"].get("location") else None
-	state = location.get("state") if location and eventInfo["data"]["attributes"]["location"].get("state") else None
+for favorite in favorites:
+	loadEvent(favorite.FlowID, favorite.MeetID)
 
-	if state is not None and str.lower(state) in ["sc", "nc", "ga", "tn"]:	
-		# In state, save
-		print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { state if state else '--' }")
+	cur.execute(f"update flomeet set lastupdate = getdate() where id = { favorite.MeetID }")
+
+cur.execute("select case when coalesce(max(LastUpdate), getdate() - 365) < getdate() - 1 then 1 else 0 end IsRefresh from FloUpdate;")
+isRefresh = bool(cur.fetchval())
+print(f"{ currentTime() }: Time for daily update? { isRefresh }")
+
+if isRefresh:
+	print(f"{ currentTime() }: Refreshing")
+
+	print(f"{ currentTime() }: ----------- Upcoming Events")
+
+	cur.execute("select FlowID from FloMeet where StartTime > getdate()")
+	loaded = [ loaded.FlowID for loaded in cur.fetchall() ]
+
+	response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments")
+	events = json.loads(response.text)["response"]
+
+	print(f"{ currentTime() }: { len(events) } upcoming events")
+
+	for event in events:
+		event["startDate"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+
+	events = sorted(events, key=lambda event: event["startDate"])
+
+	for eventIndex, event in enumerate(events):
+		if event["guid"] in loaded:
+			continue
+
+		location = getEventDetails(event["guid"])
+
+		if location["state"] is not None and str.lower(location["state"]) in ["sc", "nc", "ga", "tn"]:	
+			# In state, save
+			print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
+			cur.execute("""
+				set nocount on;
+				declare @output int;
+				exec dbo.MeetSave @MeetID = @output output
+					, @FlowID = ?
+					, @MeetName = ?
+					, @IsExcluded = ?
+					, @IsComplete = ?
+					, @LocationName = ?
+					, @LocationCity = ?
+					, @LocationState = ?
+					, @StartTime = ?
+					, @EndTime = ?;
+				""", (event["guid"], event["name"], 0, 0, event["locationName"], location["city"], location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+
+		else:
+			# Not in state
+			print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
+			cur.execute("""
+				set nocount on;
+				declare @output int;
+				exec dbo.MeetSave @MeetID = @output output
+					, @FlowID = ?
+					, @MeetName = ?
+					, @IsExcluded = ?
+					, @IsComplete = ?
+					, @LocationName = ?
+					, @LocationCity = ?
+					, @LocationState = ?
+					, @StartTime = ?
+					, @EndTime = ?;
+				select @output as OutputValue;
+				""", (event["guid"], event["name"], 1, 0, event["locationName"], None, location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+
+	# End upcoming events
+
+	cur.execute("select distinct flowid from FloMeet where isexcluded = 1 or iscomplete = 1")
+	excluded = [ excluded.flowid for excluded in cur.fetchall() ]
+
+	print(f"{ currentTime() }: Get past events")
+
+	response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments")
+	events = json.loads(response.text)["response"]
+	events = [ event for event in events if event["guid"] not in excluded ]
+
+	for event in events:
+		event["startDate"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+
+	events = sorted(events, key=lambda event: event["startDate"], reverse=True)
+
+	print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
+
+	for eventIndex, event in enumerate(events):
+		if event["guid"] in excluded:
+			continue
+
+		if not event["isPublishBrackets"] or not event["hasBrackets"]:
+			# No data
+			cur.execute("""
+				set nocount on;
+				declare @output int;
+				exec dbo.MeetSave @MeetID = @output output
+					, @FlowID = ?
+					, @MeetName = ?
+					, @IsExcluded = ?
+					, @IsComplete = ?;
+				select @output as OutputValue;
+				""", (event["guid"], event["name"], 1, 0,))
+			continue
+
+		location = getEventDetails(event["guid"])
+
+		if location["state"] is None or str.lower(location["state"]) not in ["sc", "nc", "ga", "tn"]:
+			
+			# Not in state
+			print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
+			cur.execute("""
+				set nocount on;
+				declare @output int;
+				exec dbo.MeetSave @MeetID = @output output
+					, @FlowID = ?
+					, @MeetName = ?
+					, @IsExcluded = ?
+					, @IsComplete = ?
+					, @LocationName = ?
+					, @LocationCity = ?
+					, @LocationState = ?;
+				select @output as OutputValue;
+				""", (event["guid"], event["name"], 1, 0, event["locationName"], None, location["state"],))
+			continue
+
+		print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
+
 		cur.execute("""
-set nocount on;
-declare @output int;
-exec dbo.MeetSave @MeetID = @output output
-	, @FlowID = ?
-	, @MeetName = ?
-	, @IsExcluded = ?
-	, @IsComplete = ?
-	, @LocationName = ?
-	, @LocationCity = ?
-	, @LocationState = ?
-	, @StartTime = ?
-	, @EndTime = ?;
-""", (event["guid"], event["name"], 0, 0, event["locationName"], location.get("city"), state, event["startDate"], datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+			set nocount on;
+			declare @output int;
+			exec dbo.MeetSave @MeetID = @output output
+				, @FlowID = ?
+				, @MeetName = ?
+				, @IsExcluded = ?
+				, @IsComplete = ?
+				, @LocationName = ?
+				, @LocationCity = ?
+				, @LocationState = ?
+				, @StartTime = ?
+				, @EndTime = ?;
+			select @output as OutputValue;
+			""", (event["guid"], event["name"], 0, 0, event["locationName"], location.get("city"), location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+		meetId = cur.fetchval()
 
-	else:
-		# Not in state
-		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { state if state else '--' }")
+		loadEvent(event["guid"], meetId)
+		
 		cur.execute("""
-set nocount on;
-declare @output int;
-exec dbo.MeetSave @MeetID = @output output
-	, @FlowID = ?
-	, @MeetName = ?
-	, @IsExcluded = ?
-	, @IsComplete = ?
-	, @LocationName = ?
-	, @LocationCity = ?
-	, @LocationState = ?
-	, @StartTime = ?
-	, @EndTime = ?;
-select @output as OutputValue;
-""", (event["guid"], event["name"], 1, 0, event["locationName"], None, state, event["startDate"], datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+			set nocount on;
+			declare @output int;
+			exec dbo.MeetSave @MeetID = @output output
+				, @FlowID = ?
+				, @MeetName = ?
+				, @IsExcluded = ?
+				, @IsComplete = ?;
+			select @output as OutputValue;
+			""", (event["guid"], event["name"], 0, 1,))
+
+	# End past events 
+
+	cur.execute("insert into FloUpdate (LastUpdate) values (getdate());")
 
 cur.close()
 cn.close()
