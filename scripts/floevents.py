@@ -1,10 +1,22 @@
 import time
 import datetime
+import os
 
 startTime = time.time()
 
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
+
+def loadSQL():
+	sql = {}
+	sqlPath = "./scripts/sql"
+
+	if os.path.exists(sqlPath):
+		for file in os.listdir(sqlPath):
+			with open(f"{ sqlPath }/{ file }", "r") as fileReader:
+				sql[os.path.splitext(file)[0]] = fileReader.read()
+	
+	return sql
 
 def getEventDetails(eventGUID):	
 	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ eventGUID }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg")
@@ -19,10 +31,16 @@ def getEventDetails(eventGUID):
 
 def loadEvent(eventGUID, meetId):
 
+	output = {
+		"divisions": []
+	}
+
 	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
 	divisions = json.loads(response.text)["response"]["divisions"]
 
 	for divisionIndex, division in enumerate(divisions):
+		divisionSave = { "name": division["name"], "weightClasses": [] }
+
 		if len(division["weightClasses"]) == 0:
 			continue
 
@@ -30,128 +48,122 @@ def loadEvent(eventGUID, meetId):
 
 		for weightIndex, weight in enumerate(division["weightClasses"]):
 			print(f"{ currentTime() }: Weight { str(weightIndex + 1 )} of { str(len(division['weightClasses'])) }: { weight['name'] }")
+			weightSave = { "name": weight["name"], "pools": [] }
 
 			for poolIndex, pool in enumerate(weight["boutPools"]):
 				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
 				matches = json.loads(response.text)["response"]
+				poolSave = { "name": pool["name"], "matches": [] }
 
 				for matchIndex, match in enumerate(matches):
-					# if match["topWrestler"] is None or match["bottomWrestler"] is None or (match["winType"] is not None and str.lower(match["winType"]) == "bye"): # match["winType"] is None or 
-					# 	continue
+					
+					sort = match["sequenceNumber"]
+					if sort is None:
+						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
+					
+					matchSave = {
+						"round": match["roundName"]["displayName"],
+						"matchNumber": match["boutNumber"],
+						"sort": sort,
+						"mat": match["mat"]["name"] if match["mat"] is not None else None,
+						"topWrestler": {
+							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
+							"team": match["topWrestler"]["team"]["name"],
+							"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+						} if match["topWrestler"] is not None else None,
+						"bottomWrestler": {
+							"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
+							"team": match["bottomWrestler"]["team"]["name"],
+							"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+						} if match["bottomWrestler"] is not None else None,
+						"winType": match["winType"],
+						"results": match["result"],
+						"nextMatch": {
+							"winnerGUID": match["winnerToBoutGuid"],
+							"isWinnerTop": match["winnerToTop"],
+							"loserGUID": match["loserToBoutGuid"],
+							"isLoserTop": match["loserToTop"]
+						} if match["winnerToBoutGuid"] is not None else None
+					}
 					
 					if match["topWrestler"] is not None:
 						# Top wrestler
 						
-						cur.execute("""
-							set nocount on;
-							declare @output int;
-							exec dbo.WrestlerSave @WrestlerID = @output output
-								, @FlowID = ?
-								, @FirstName = ?
-								, @LastName = ?
-								, @TeamName = ?
-								, @TeamFlowID = ?;
-							select @output as OutputValue;
-							""", (match["topWrestler"]["guid"], match["topWrestler"]["firstName"].title(), match["topWrestler"]["lastName"].title(), match["topWrestler"]["team"]["name"], match["topWrestler"]["team"]["guid"],))
+						cur.execute(sql["WrestlerSave"], (
+							match["topWrestler"]["guid"], # @FlowID
+							match["topWrestler"]["firstName"].title(), # @FirstName
+							match["topWrestler"]["lastName"].title(), # @LastName
+							match["topWrestler"]["team"]["name"], # @TeamName
+							match["topWrestler"]["team"]["guid"], # @TeamFlowID
+						))
 						topWrestlerId = cur.fetchval()
 
 					if match["bottomWrestler"] is not None:
 						# Bottom wrestler
 
-						cur.execute("""
-							set nocount on;
-							declare @output int;
-							exec dbo.WrestlerSave @WrestlerID = @output output
-								, @FlowID = ?
-								, @FirstName = ?
-								, @LastName = ?
-								, @TeamName = ?
-								, @TeamFlowID = ?;
-							select @output as OutputValue;
-							""", (match["bottomWrestler"]["guid"], match["bottomWrestler"]["firstName"], match["bottomWrestler"]["lastName"], match["bottomWrestler"]["team"]["name"], match["bottomWrestler"]["team"]["guid"],))
+						cur.execute(sql["WrestlerSave"], (
+							match["bottomWrestler"]["guid"], # @FlowID
+							match["bottomWrestler"]["firstName"].title(), # @FirstName
+							match["bottomWrestler"]["lastName"].title(), # @LastName
+							match["bottomWrestler"]["team"]["name"], # @TeamName
+							match["bottomWrestler"]["team"]["guid"], # @TeamFlowID
+						))
 						bottomWrestlerId = cur.fetchval()
 
-					sort = match["sequenceNumber"]
-					if sort is None:
-						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
-					
-					cur.execute("""
-						set nocount on;
-						declare @output int;
-						exec dbo.MatchSave @MatchID = @output output
-							, @MeetID = ?
-							, @FlowID = ?
-							, @Division = ?
-							, @WeightClass = ?
-							, @PoolName = ?
-							, @RoundName = ?
-							, @WINType = ?
-							, @VideoURL = ?
-							, @Sort = ?
-							, @MatchNumber = ?
-							, @Mat = ?
-							, @Results = ?
-							, @TopFlowWrestlerID = ?
-							, @BottomFlowWrestlerID = ?
-							, @WinnerMatchFlowID = ?
-							, @WinnerToTop = ?
-							, @LoserMatchFlowID = ?
-							, @LoserToTop = ?
-							, @WinnerWrestlerID = ?;
-						select @output as OutputValue;
-						""", (
-							meetId,
-							match["guid"],
-							division["name"], 
-							weight["name"], 
-							pool["name"], 
-							match["roundName"]["displayName"], 
-							match["winType"], 
-							match["boutVideoUrl"], 
-							sort,
-							match["boutNumber"],
-							match["mat"]["name"] if match["mat"] is not None else None,
-							match["result"],
-							topWrestlerId if match["topWrestler"] is not None else None,
-							bottomWrestlerId if match["bottomWrestler"] is not None else None,
-							match["winnerToBoutGuid"],
-							match["winnerToTop"],
-							match["loserToBoutGuid"],
-							match["loserToTop"],
-							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None,
+					cur.execute(sql["MatchSave"], (
+							meetId, # @MeetID
+							match["guid"], # @FlowID
+							division["name"], # @Division
+							weight["name"], # @WeightClass
+							pool["name"], # @PoolName
+							match["roundName"]["displayName"], # @RoundName
+							match["winType"], # @WinType
+							match["boutVideoUrl"], # @VideoURL
+							sort, # @Sort
+							match["boutNumber"], # @MatchNumber
+							match["mat"]["name"] if match["mat"] is not None else None, # @Mat
+							match["result"], # @Results
+							topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID
+							bottomWrestlerId if match["bottomWrestler"] is not None else None, # @BottomFlowWrestlerID
+							match["winnerToBoutGuid"], # @WinnerMatchFlowID
+							match["winnerToTop"], # @WinnerToTop
+							match["loserToBoutGuid"], # @LoserMatchFlowID
+							match["loserToTop"], # @LoserToTop
+							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
 						))
 					
 					matchId = cur.fetchval()
 
 					if match["topWrestler"] is not None:
 						# Save wrestler match
-						cur.execute("""
-							set nocount on;
-							declare @output int;
-							exec dbo.WrestlerMatchSave @WrestlerMatchID = @output output
-								, @WrestlerID = ?
-								, @MatchID = ?
-								, @IsWinner = ?;
-							select @output as OutputValue;
-							""", (topWrestlerId, matchId, 1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0,))
+						cur.execute(sql["WrestlerMatchSave"], (
+							topWrestlerId, # @WrestlerID
+							matchId, # @MatchID
+							1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+						))
 
 					if match["bottomWrestler"] is not None:
 						# Save wrestler match
-						cur.execute("""
-							set nocount on;
-							declare @output int;
-							exec dbo.WrestlerMatchSave @WrestlerMatchID = @output output
-								, @WrestlerID = ?
-								, @MatchID = ?
-								, @IsWinner = ?;
-							select @output as OutputValue;
-							""", (bottomWrestlerId, matchId, 1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0,))
+						cur.execute(sql["WrestlerMatchSave"], (
+							bottomWrestlerId, # @WrestlerID
+							matchId, # @MatchID
+							1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+						))
+					
+					poolSave["matches"].append(matchSave)
+				weightSave["pools"].append(poolSave)
+			divisionSave["weightClasses"].append(weightSave)
+		output["divisions"].append(divisionSave)
+		
+	cur.execute(sql["WrestlerUpdate"], (meetId,))
+	return output
 
-	cur.execute("""
-		set nocount on;
-		exec dbo.WrestlerUpdate @MeetID = ?;
-		""", (meetId,))
+def loadMill(event):
+	print(f"{ currentTime() }: Moving { event['name'] } to the wrestling mill")
 	
+	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": event })
+	print(f"{ currentTime() }: Complete - { response.text }")
+
 import requests
 import json
 import pyodbc
@@ -163,34 +175,33 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
+sql = loadSQL()
+
 print(f"{ currentTime() }: DB connect")
 
 cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
 cur = cn.cursor()
 
-cur.execute("""
-select	FloMeet.ID
-		, FloMeet.FlowID
-		, FloMeet.MeetName
-from	FloMeet
-where	FloMeet.IsFavorite = 1
-		and FloMeet.IsComplete = 0
-		and (
-			datediff("hh", getdate(), FloMeet.StartTime) < 3 and datediff("ss", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 90
-			or datediff("d", getdate(), FloMeet.StartTime) <= 1 and datediff("ss", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 300
-			or datediff("d", getdate(), FloMeet.StartTime) between 2 and 7 and datediff("hh", coalesce(FloMeet.LastUpdate, getdate() - 365), getdate()) > 1
-		)
-""")
+cur.execute(sql["FavoritesGet"])
 favorites = cur.fetchall()
 
 print(f"{ currentTime() }: ----------- Favorites: { len(favorites) }")
 
 for favorite in favorites:
-	loadEvent(favorite.FlowID, favorite.MeetID)
+	eventDetails = loadEvent(favorite.FlowID, favorite.MeetID)
+	eventDetails["sqlId"] = favorite.MeetID
+	eventDetails["name"] = favorite.MeetName
+	eventDetails["location"] = favorite.LocationName
+	eventDetails["city"] = favorite.LocationCity
+	eventDetails["state"] = favorite.LocationState
+	eventDetails["startDate"] = favorite.StartTime
+	eventDetails["endDate"] = favorite.EndTime
+	eventDetails["hasBrackets"] = favorite.HasBrackets
 
-	cur.execute(f"update flomeet set lastupdate = getdate() where id = { favorite.MeetID }")
+	loadMill(eventDetails)
+	cur.execute(sql["MeetLastUpdateSet"], (favorite.MeetID,))
 
-cur.execute("select case when coalesce(max(LastUpdate), getdate() - 365) < getdate() - 1 then 1 else 0 end IsRefresh from FloUpdate;")
+cur.execute(sql["RefreshGet"])
 isRefresh = bool(cur.fetchval())
 print(f"{ currentTime() }: Time for daily update? { isRefresh }")
 
@@ -199,7 +210,7 @@ if isRefresh:
 
 	print(f"{ currentTime() }: ----------- Upcoming Events")
 
-	cur.execute("select FlowID from FloMeet where StartTime > getdate()")
+	cur.execute(sql["UpcomingLoadedGet"])
 	loaded = [ loaded.FlowID for loaded in cur.fetchall() ]
 
 	response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments")
@@ -208,9 +219,9 @@ if isRefresh:
 	print(f"{ currentTime() }: { len(events) } upcoming events")
 
 	for event in events:
-		event["startDate"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+		event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
-	events = sorted(events, key=lambda event: event["startDate"])
+	events = sorted(events, key=lambda event: event["startConverted"])
 
 	for eventIndex, event in enumerate(events):
 		if event["guid"] in loaded:
@@ -221,44 +232,54 @@ if isRefresh:
 		if location["state"] is not None and str.lower(location["state"]) in ["sc", "nc", "ga", "tn"]:	
 			# In state, save
 			print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-			cur.execute("""
-				set nocount on;
-				declare @output int;
-				exec dbo.MeetSave @MeetID = @output output
-					, @FlowID = ?
-					, @MeetName = ?
-					, @IsExcluded = ?
-					, @IsComplete = ?
-					, @LocationName = ?
-					, @LocationCity = ?
-					, @LocationState = ?
-					, @StartTime = ?
-					, @EndTime = ?;
-				""", (event["guid"], event["name"], 0, 0, event["locationName"], location["city"], location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+			cur.execute(sql["MeetSave"], (
+				event["guid"], # @FlowID
+				event["name"], # @MeetName
+				0, # @IsExcluded
+				0, # @IsComplete
+				event["locationName"], # @LocationName
+				location.get("city"), # @LocationCity
+				location["state"], # @LocationState
+				event["startConverted"], # @StartTime
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+				event["isPublishBrackets"], # @HasBrackets
+				))
+			meetId = cur.fetchval()
+			
+			eventDetails = {
+				"sqlId": meetId,
+				"name": event["name"],
+				"location": event["locationName"],
+				"city": location.get("city"),
+				"state": location["state"],
+				"startDate": event["startDate"],
+				"endDate": event["endDate"],
+				"hasBrackets": event["isPublishBrackets"],
+				"divisions": []
+			}
+
+			loadMill(eventDetails)
 
 		else:
 			# Not in state
 			print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-			cur.execute("""
-				set nocount on;
-				declare @output int;
-				exec dbo.MeetSave @MeetID = @output output
-					, @FlowID = ?
-					, @MeetName = ?
-					, @IsExcluded = ?
-					, @IsComplete = ?
-					, @LocationName = ?
-					, @LocationCity = ?
-					, @LocationState = ?
-					, @StartTime = ?
-					, @EndTime = ?;
-				select @output as OutputValue;
-				""", (event["guid"], event["name"], 1, 0, event["locationName"], None, location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
-
+			cur.execute(sql["MeetSave"], (
+				event["guid"], # @FlowID
+				event["name"], # @MeetName
+				1, # @IsExcluded
+				0, # @IsComplete
+				event["locationName"], # @LocationName
+				location.get("city"), # @LocationCity
+				location["state"], # @LocationState
+				event["startConverted"], # @StartTime
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+				event["isPublishBrackets"], # @HasBrackets
+				))
+			
 	# End upcoming events
 
-	cur.execute("select distinct flowid from FloMeet where isexcluded = 1 or iscomplete = 1")
-	excluded = [ excluded.flowid for excluded in cur.fetchall() ]
+	cur.execute(sql["ExcludedGet"])
+	excluded = [ excluded.FlowID for excluded in cur.fetchall() ]
 
 	print(f"{ currentTime() }: Get past events")
 
@@ -267,28 +288,14 @@ if isRefresh:
 	events = [ event for event in events if event["guid"] not in excluded ]
 
 	for event in events:
-		event["startDate"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+		event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
-	events = sorted(events, key=lambda event: event["startDate"], reverse=True)
+	events = sorted(events, key=lambda event: event["startConverted"], reverse=True)
 
 	print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
 
 	for eventIndex, event in enumerate(events):
 		if event["guid"] in excluded:
-			continue
-
-		if not event["isPublishBrackets"] or not event["hasBrackets"]:
-			# No data
-			cur.execute("""
-				set nocount on;
-				declare @output int;
-				exec dbo.MeetSave @MeetID = @output output
-					, @FlowID = ?
-					, @MeetName = ?
-					, @IsExcluded = ?
-					, @IsComplete = ?;
-				select @output as OutputValue;
-				""", (event["guid"], event["name"], 1, 0,))
 			continue
 
 		location = getEventDetails(event["guid"])
@@ -297,56 +304,69 @@ if isRefresh:
 			
 			# Not in state
 			print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-			cur.execute("""
-				set nocount on;
-				declare @output int;
-				exec dbo.MeetSave @MeetID = @output output
-					, @FlowID = ?
-					, @MeetName = ?
-					, @IsExcluded = ?
-					, @IsComplete = ?
-					, @LocationName = ?
-					, @LocationCity = ?
-					, @LocationState = ?;
-				select @output as OutputValue;
-				""", (event["guid"], event["name"], 1, 0, event["locationName"], None, location["state"],))
+			cur.execute(sql["MeetSave"], (
+				event["guid"], # @FlowID
+				event["name"], # @MeetName
+				1, # @IsExcluded
+				0, # @IsComplete
+				event["locationName"], # @LocationName
+				location.get("city"), # @LocationCity
+				location["state"], # @LocationState
+				event["startConverted"], # @StartTime
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+				event["isPublishBrackets"], # @HasBrackets
+				))
+			continue
+
+		if not event["isPublishBrackets"] or not event["hasBrackets"]:
+			# No data
+			cur.execute(sql["MeetSave"], (
+				event["guid"], # @FlowID
+				event["name"], # @MeetName
+				0, # @IsExcluded
+				0, # @IsComplete
+				event["locationName"], # @LocationName
+				location.get("city"), # @LocationCity
+				location["state"], # @LocationState
+				event["startConverted"], # @StartTime
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+				event["isPublishBrackets"], # @HasBrackets
+				))
 			continue
 
 		print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
-
-		cur.execute("""
-			set nocount on;
-			declare @output int;
-			exec dbo.MeetSave @MeetID = @output output
-				, @FlowID = ?
-				, @MeetName = ?
-				, @IsExcluded = ?
-				, @IsComplete = ?
-				, @LocationName = ?
-				, @LocationCity = ?
-				, @LocationState = ?
-				, @StartTime = ?
-				, @EndTime = ?;
-			select @output as OutputValue;
-			""", (event["guid"], event["name"], 0, 0, event["locationName"], location.get("city"), location["state"], event["startDate"], datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"),))
+		cur.execute(sql["MeetSave"], (
+			event["guid"], # @FlowID
+			event["name"], # @MeetName
+			0, # @IsExcluded
+			0, # @IsComplete
+			event["locationName"], # @LocationName
+			location.get("city"), # @LocationCity
+			location["state"], # @LocationState
+			event["startConverted"], # @StartTime
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+			event["isPublishBrackets"], # @HasBrackets
+			))
 		meetId = cur.fetchval()
 
 		loadEvent(event["guid"], meetId)
 		
-		cur.execute("""
-			set nocount on;
-			declare @output int;
-			exec dbo.MeetSave @MeetID = @output output
-				, @FlowID = ?
-				, @MeetName = ?
-				, @IsExcluded = ?
-				, @IsComplete = ?;
-			select @output as OutputValue;
-			""", (event["guid"], event["name"], 0, 1,))
+		cur.execute(sql["MeetSave"], (
+			event["guid"], # @FlowID
+			event["name"], # @MeetName
+			0, # @IsExcluded
+			1, # @IsComplete
+			event["locationName"], # @LocationName
+			location.get("city"), # @LocationCity
+			location["state"], # @LocationState
+			event["startConverted"], # @StartTime
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+			event["isPublishBrackets"], # @HasBrackets
+			))
 
 	# End past events 
 
-	cur.execute("insert into FloUpdate (LastUpdate) values (getdate());")
+	cur.execute(sql["LastUpdateSet"])
 
 cur.close()
 cn.close()
