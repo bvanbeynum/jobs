@@ -9,7 +9,7 @@ def currentTime():
 
 def loadSQL():
 	sql = {}
-	sqlPath = "./scripts/sql"
+	sqlPath = "./scripts/sql/floevents"
 
 	if os.path.exists(sqlPath):
 		for file in os.listdir(sqlPath):
@@ -194,7 +194,7 @@ for favorite in favorites:
 	eventDetails["location"] = favorite.LocationName
 	eventDetails["city"] = favorite.LocationCity
 	eventDetails["state"] = favorite.LocationState
-	eventDetails["startDate"] = favorite.StartTime
+	eventDetails["date"] = favorite.StartTime
 	eventDetails["endDate"] = favorite.EndTime
 	eventDetails["hasBrackets"] = favorite.HasBrackets
 
@@ -252,7 +252,7 @@ if isRefresh:
 				"location": event["locationName"],
 				"city": location.get("city"),
 				"state": location["state"],
-				"startDate": event["startDate"],
+				"date": event["startDate"],
 				"endDate": event["endDate"],
 				"hasBrackets": event["isPublishBrackets"],
 				"divisions": []
