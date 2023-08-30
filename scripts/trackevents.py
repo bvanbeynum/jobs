@@ -17,12 +17,6 @@ def loadSQL(sqlPath):
 	
 	return sql
 
-def loadMill(event):
-	print(f"{ currentTime() }: Moving { event['name'] } to the wrestling mill")
-	
-	response = requests.post(f"{ config['devServer'] }/api/trackeventsave", json={ "trackEvent": event })
-	print("loaded")
-
 import requests
 import json
 import pyodbc
@@ -108,7 +102,7 @@ for state in states:
 				"location": address,
 				"state": state["name"]
 			}
-			loadMill(event)
+			response = requests.post(f"{ config['devServer'] }/api/trackeventsave", json={ "trackEvent": event })
 
 	print(f"{ currentTime() }: Finished { state['name'] }")
 
