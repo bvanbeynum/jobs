@@ -34,17 +34,17 @@ def ServiceLoop():
 			if completeDates is not None and len(completeDates) > 0:
 				lastRun = max(completeDates)
 
-			if job["id"] not in runningIds and (lastRun is None or datetime.datetime.now() > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])):
+			if job["id"] not in runningIds and (lastRun is None or datetime.datetime.now(datetime.timezone.utc) > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])):
 				print(f"{ currentTime() }: Starting: { job['name'] }")
 				
 				for run in job["runs"]:
 					if run["completeTime"] is None:
-						run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+						run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 				sleepTime = sleepShort # Shorten the sleep time to get updates
 
 				run = {
-					"startTime": datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+					"startTime": datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
 					"completeTime": None,
 					"messages": []
 				}
@@ -75,7 +75,7 @@ def ServiceLoop():
 			
 			if stopJob:
 				run = running["run"]
-				run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+				run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 				run["messages"].extend([ { "severity": 0, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stdout.readlines() ])
 				run["messages"].extend([ { "severity": 100, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stderr.readlines() ])
