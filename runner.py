@@ -36,6 +36,10 @@ def ServiceLoop():
 
 			if job["id"] not in runningIds and (lastRun is None or datetime.datetime.now() > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])):
 				print(f"{ currentTime() }: Starting: { job['name'] }")
+				
+				for run in job["runs"]:
+					if run["completeTime"] is None:
+						run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 				sleepTime = sleepShort # Shorten the sleep time to get updates
 
