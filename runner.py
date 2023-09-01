@@ -3,6 +3,12 @@ import datetime
 
 startTime = time.time()
 
+import sys
+import subprocess
+import json
+import requests
+from dateutil import parser
+
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
 
@@ -19,12 +25,12 @@ def ServiceLoop():
 
 		# Fix dates
 		for job in jobs:
-			job["created"] = datetime.datetime.strptime(job["created"], "%Y-%m-%dT%H:%M:%S.%fZ")
-			job["modified"] = datetime.datetime.strptime(job["modified"], "%Y-%m-%dT%H:%M:%S.%fZ")
+			job["created"] = parser.parse(job["created"])
+			job["modified"] = parser.parse(job["modified"])
 
 			for run in job["runs"]:
-				run["startTime"] = datetime.datetime.strptime(run["startTime"], "%Y-%m-%dT%H:%M:%S.%fZ")
-				run["completeTime"] = datetime.datetime.strptime(run["completeTime"], "%Y-%m-%dT%H:%M:%S.%fZ") if run["completeTime"] is not None else None
+				run["startTime"] = parser.parse(run["startTime"])
+				run["completeTime"] = parser.parse(run["completeTime"]) if run["completeTime"] is not None else None
 
 		# Start jobs
 		runningIds = [ job["jobId"] for job in runningJobs ]
@@ -37,10 +43,6 @@ def ServiceLoop():
 			if job["id"] not in runningIds and (lastRun is None or datetime.datetime.now(datetime.timezone.utc) > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])):
 				print(f"{ currentTime() }: Starting: { job['name'] }")
 				
-				for run in job["runs"]:
-					if run["completeTime"] is None:
-						run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
-
 				sleepTime = sleepShort # Shorten the sleep time to get updates
 
 				run = {
@@ -74,6 +76,7 @@ def ServiceLoop():
 					running["process"].kill()
 			
 			if stopJob:
+				
 				run = running["run"]
 				run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
@@ -91,14 +94,7 @@ def ServiceLoop():
 
 		time.sleep(sleepTime)
 
-startTime = time.time()
-
 print(f"{ currentTime() }: ----------- Setup")
-
-import sys
-import subprocess
-import json
-import requests
 
 jobs = []
 runningJobs = []
