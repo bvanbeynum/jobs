@@ -4,6 +4,10 @@ import os
 
 startTime = time.time()
 
+import requests
+import json
+import pyodbc
+
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
 
@@ -164,10 +168,6 @@ def loadMill(event):
 	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": event })
 	print(f"{ currentTime() }: Complete - { response.text }")
 
-import requests
-import json
-import pyodbc
-
 print(f"{ currentTime() }: ----------- Setup")
 
 print(f"{ currentTime() }: Load config")
@@ -190,6 +190,7 @@ print(f"{ currentTime() }: ----------- Favorites: { len(favorites) }")
 for favorite in favorites:
 	eventDetails = loadEvent(favorite.FlowID, favorite.MeetID)
 	eventDetails["sqlId"] = favorite.MeetID
+	eventDetails["floGUID"] = favorite.FlowID
 	eventDetails["name"] = favorite.MeetName
 	eventDetails["location"] = favorite.LocationName
 	eventDetails["city"] = favorite.LocationCity
@@ -248,6 +249,7 @@ if isRefresh:
 			
 			eventDetails = {
 				"sqlId": meetId,
+				"floGUID": event["guid"],
 				"name": event["name"],
 				"location": event["locationName"],
 				"city": location.get("city"),
