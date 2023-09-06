@@ -14,7 +14,7 @@ def currentTime():
 
 def ServiceLoop():
 	sleepShort = 3
-	sleepLong = 60
+	sleepLong = 30
 	sleepTime = sleepLong
 
 	while True:
