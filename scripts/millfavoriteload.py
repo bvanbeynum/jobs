@@ -232,123 +232,66 @@ print(f"{ currentTime() }: ----------- Load data")
 response = requests.get(f"{ config['devServer'] }/api/floeventfavorites")
 events = json.loads(response.text)["floEvents"]
 
-favoriteIds = "".join([ "|" + str(event["sqlId"]) + "|" for event in events ])
-
-cur.execute(sql["UpdateFavorites"], (favoriteIds,))
-cur.execute(sql["RemoveFavorites"], (favoriteIds,))
-
-cur.execute(sql["GetFavorites"])
-favorites = cur.fetchall()
-
-print(f"{ currentTime() }: Review favorites: { len(favorites) }")
-
 updates = []
-for favorite in favorites:
-	startTime = favorite.StartTime
+for event in events:
+	if "isComplete" in event and event["isComplete"]:
+		continue
 
-	timeToStart = favorite.StartTime - datetime.datetime.now()
-	timeSinceUpdate = datetime.datetime.now() - favorite.LastUpdate if favorite.LastUpdate is not None else None
+	startDate = parser.parse(str(event["date"]).rstrip("Z"))
+	lastUpdate = parser.parse(event["lastUpdate"]) if "lastUpdate" in event else None
+
+	timeToStart = startDate - datetime.datetime.now()
+	timeSinceUpdate = datetime.datetime.now() - lastUpdate if lastUpdate is not None else None
 	
-	if favorite.LastUpdate is None:
-		print(f"{ currentTime() }: Update { favorite.MeetName }, no update")
-		updates.append(favorite)
+	if lastUpdate is None:
+		print(f"{ currentTime() }: Update { event['name'] }, no update")
+		updates.append(event)
 
 	elif timeToStart.days <= 0 and timeSinceUpdate.seconds > 90:
-		print(f"{ currentTime() }: Update { favorite.MeetName }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
-		updates.append(favorite)
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
+		updates.append(event)
 
 	elif timeToStart.days == 1 and timeSinceUpdate.seconds > 600:
-		print(f"{ currentTime() }: Update { favorite.MeetName }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
-		updates.append(favorite)
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
+		updates.append(event)
 
 	elif timeToStart.days >= 2 and timeToStart.days <= 7 and timeSinceUpdate.seconds > 60 * 60 * 24:
-		print(f"{ currentTime() }: Update { favorite.MeetName }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
-		updates.append(favorite)
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
+		updates.append(event)
+
+if len(updates) > 0:
+	print(f"{ currentTime() }: Update: { len(updates) }")
 
 for update in updates:
-	# floEvent = getFloEvent(update.FlowID)
+	eventDetails = loadEvent(update["floGUID"], update["sqlId"])
+	eventDetails["sqlId"] = update["sqlId"]
+	eventDetails["lastUpdate"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-	# cur.execute(sql["GetMatchSQLDetails"], (update.ID))
-	# prevDetails = cur.fetchall()
-
-	# updates = []
-
-	# for division in floEvent["divisions"]:
-	# 	for weight in division["weightClasses"]:
-	# 		for pool in weight["pools"]:
-	# 			for match in pool["matches"]:
-
-	# 				sqlMatch = [ prevMatch for prevMatch in prevDetails if prevMatch.MatchGUID == match["guid"] ]
-	# 				sqlMatch = sqlMatch[0] if len(sqlMatch) == 1 else None
-
-	# 				if sqlMatch is None:
-	# 					matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
-	# 					topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
-	# 					bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
-
-	# 					message = f"Match{ matchNumber}: { topWrestler } vs { bottomWrestler }"
-
-	# 					cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "New Match", message))
-					
-	# 				else:
-
-	# 					if match["topWrestler"] is not None and sqlMatch.TopWrestler is None:
-	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
-	# 						topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
-
-	# 						message = f"{ topWrestler } assigned to match { matchNumber } { match['round']}"
-
-	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Assignment", message))
-						
-	# 					if match["bottomWrestler"] is not None and sqlMatch.BottomWrestler is None:
-	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
-	# 						bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
-
-	# 						message = f"{ bottomWrestler } assigned to match { matchNumber } { match['round']}"
-
-	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Assignment", message))
-						
-	# 					if match["mat"] is not None and sqlMatch.Mat is None:
-	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
-	# 						topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
-	# 						bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
-
-	# 						message = f"{ topWrestler } and { bottomWrestler } assigne to mat { match['mat'] }"
-							
-	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Mat Assignment", message))
-
-	# 					if match["winType"] is not None and sqlMatch.WinType is None:
-	# 						winner = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"]["isWinner"] else f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })"
-	# 						loser = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["topWrestler"]["isWinner"] else f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })"
-
-	# 						message = f"{ winner } beat { loser } by { match['winType'] }"
-
-	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Completed", message))
-
-					
-
-	eventDetails = loadEvent(update.FlowID, update.ID)
-	eventDetails["sqlId"] = update.ID
-
-	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
-	cur.execute(sql["MeetLastUpdateSet"], (update.ID))
+	startDate = parser.parse(str(update["date"]).rstrip("Z"))
+	endDate = parser.parse(str(update["endDate"]).rstrip("Z"))
 
 	isComplete = False
-	if update.EndTime is not None:
-		timeSinceComplete = datetime.datetime.now() - update.EndTime
+	if endDate is not None:
+		timeSinceComplete = datetime.datetime.now() - endDate
 		
 		if timeSinceComplete.days > 0:
 			isComplete = True
 	else:
-		timeSinceStart = datetime.datetime.now() - update.StartTime
+		timeSinceStart = datetime.datetime.now() - startDate
 
 		if timeSinceStart.days > 1:
 			isComplete = True
 	
 	if isComplete:
-		cur.execute(sql["MeetComplete"], (update.ID))
+		cur.execute(sql["MeetComplete"], (update["sqlId"]))
+		eventDetails["isComplete"] = True
+	else:
+		eventDetails["isComplete"] = False
 
-	print(f"{ currentTime() }: Completed { update.MeetName }")
+	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
+	cur.execute(sql["MeetLastUpdateSet"], (update["sqlId"]))
+
+	print(f"{ currentTime() }: Completed { update['name'] }")
 
 cur.close()
 cn.close()
