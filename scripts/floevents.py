@@ -7,6 +7,7 @@ startTime = time.time()
 import requests
 import json
 import pyodbc
+import re
 
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
@@ -61,13 +62,15 @@ def loadEvent(eventGUID, meetId):
 
 				for matchIndex, match in enumerate(matches):
 					
-					sort = match["sequenceNumber"]
+					sort = int(match["sequenceNumber"]) if match["sequenceNumber"] is not None and (str.isnumeric(str(match["sequenceNumber"])) or str.isdecimal(str(match["sequenceNumber"]))) else None
 					if sort is None:
 						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
 					
+					boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None else None
+
 					matchSave = {
 						"round": match["roundName"]["displayName"],
-						"matchNumber": match["boutNumber"],
+						"matchNumber": boutNumber,
 						"sort": sort,
 						"mat": match["mat"]["name"] if match["mat"] is not None else None,
 						"topWrestler": {
@@ -124,7 +127,7 @@ def loadEvent(eventGUID, meetId):
 							match["winType"], # @WinType
 							match["boutVideoUrl"], # @VideoURL
 							sort, # @Sort
-							match["boutNumber"], # @MatchNumber
+							boutNumber, # @MatchNumber
 							match["mat"]["name"] if match["mat"] is not None else None, # @Mat
 							match["result"], # @Results
 							topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID

@@ -8,6 +8,7 @@ import requests
 import json
 import pyodbc
 from dateutil import parser
+import re
 
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
@@ -23,8 +24,8 @@ def loadSQL():
 	
 	return sql
 
-def loadEvent(eventGUID, meetId):
-
+def getFloEvent(eventGUID):
+	
 	output = {
 		"divisions": []
 	}
@@ -50,16 +51,80 @@ def loadEvent(eventGUID, meetId):
 						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
 					
 					matchSave = {
+						"guid": match["guid"],
 						"round": match["roundName"]["displayName"],
 						"matchNumber": match["boutNumber"],
 						"sort": sort,
 						"mat": match["mat"]["name"] if match["mat"] is not None else None,
 						"topWrestler": {
+							"guid": match["topWrestler"]["guid"],
 							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
 							"team": match["topWrestler"]["team"]["name"],
 							"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
 						} if match["topWrestler"] is not None else None,
 						"bottomWrestler": {
+							"guid": match["bottomWrestler"]["guid"],
+							"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
+							"team": match["bottomWrestler"]["team"]["name"],
+							"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+						} if match["bottomWrestler"] is not None else None,
+						"winType": match["winType"],
+						"results": match["result"],
+						"nextMatch": {
+							"winnerGUID": match["winnerToBoutGuid"],
+							"isWinnerTop": match["winnerToTop"],
+							"loserGUID": match["loserToBoutGuid"],
+							"isLoserTop": match["loserToTop"]
+						} if match["winnerToBoutGuid"] is not None else None
+					}
+					
+					poolSave["matches"].append(matchSave)
+				weightSave["pools"].append(poolSave)
+			divisionSave["weightClasses"].append(weightSave)
+		output["divisions"].append(divisionSave)
+		
+	return output
+
+def loadEvent(eventGUID, meetId):
+
+	output = {
+		"divisions": []
+	}
+
+	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
+	divisions = json.loads(response.text)["response"]["divisions"]
+
+	for divisionIndex, division in enumerate(divisions):
+		divisionSave = { "name": division["name"], "weightClasses": [] }
+
+		for weightIndex, weight in enumerate(division["weightClasses"]):
+			weightSave = { "name": weight["name"], "pools": [] }
+
+			for poolIndex, pool in enumerate(weight["boutPools"]):
+				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
+				matches = json.loads(response.text)["response"]
+				poolSave = { "name": pool["name"], "matches": [] }
+
+				for matchIndex, match in enumerate(matches):
+					
+					sort = int(match["sequenceNumber"]) if match["sequenceNumber"] is not None and (str.isnumeric(str(match["sequenceNumber"])) or str.isdecimal(str(match["sequenceNumber"]))) else None
+					if sort is None:
+						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
+					
+					matchSave = {
+						"guid": match["guid"],
+						"round": match["roundName"]["displayName"],
+						"matchNumber": match["boutNumber"],
+						"sort": sort,
+						"mat": match["mat"]["name"] if match["mat"] is not None else None,
+						"topWrestler": {
+							"guid": match["topWrestler"]["guid"],
+							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
+							"team": match["topWrestler"]["team"]["name"],
+							"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+						} if match["topWrestler"] is not None else None,
+						"bottomWrestler": {
+							"guid": match["bottomWrestler"]["guid"],
 							"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
 							"team": match["bottomWrestler"]["team"]["name"],
 							"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
@@ -98,6 +163,8 @@ def loadEvent(eventGUID, meetId):
 						))
 						bottomWrestlerId = cur.fetchval()
 
+					boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None else None
+
 					cur.execute(sql["MatchSave"], (
 							meetId, # @MeetID
 							match["guid"], # @FlowID
@@ -108,7 +175,7 @@ def loadEvent(eventGUID, meetId):
 							match["winType"], # @WinType
 							match["boutVideoUrl"], # @VideoURL
 							sort, # @Sort
-							match["boutNumber"], # @MatchNumber
+							boutNumber, # @MatchNumber
 							match["mat"]["name"] if match["mat"] is not None else None, # @Mat
 							match["result"], # @Results
 							topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID
@@ -199,7 +266,70 @@ for favorite in favorites:
 		updates.append(favorite)
 
 for update in updates:
+	# floEvent = getFloEvent(update.FlowID)
+
+	# cur.execute(sql["GetMatchSQLDetails"], (update.ID))
+	# prevDetails = cur.fetchall()
+
+	# updates = []
+
+	# for division in floEvent["divisions"]:
+	# 	for weight in division["weightClasses"]:
+	# 		for pool in weight["pools"]:
+	# 			for match in pool["matches"]:
+
+	# 				sqlMatch = [ prevMatch for prevMatch in prevDetails if prevMatch.MatchGUID == match["guid"] ]
+	# 				sqlMatch = sqlMatch[0] if len(sqlMatch) == 1 else None
+
+	# 				if sqlMatch is None:
+	# 					matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
+	# 					topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
+	# 					bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
+
+	# 					message = f"Match{ matchNumber}: { topWrestler } vs { bottomWrestler }"
+
+	# 					cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "New Match", message))
+					
+	# 				else:
+
+	# 					if match["topWrestler"] is not None and sqlMatch.TopWrestler is None:
+	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
+	# 						topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
+
+	# 						message = f"{ topWrestler } assigned to match { matchNumber } { match['round']}"
+
+	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Assignment", message))
+						
+	# 					if match["bottomWrestler"] is not None and sqlMatch.BottomWrestler is None:
+	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
+	# 						bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
+
+	# 						message = f"{ bottomWrestler } assigned to match { matchNumber } { match['round']}"
+
+	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Assignment", message))
+						
+	# 					if match["mat"] is not None and sqlMatch.Mat is None:
+	# 						matchNumber = " " + match["matchNumber"] if match["matchNumber"] is not None else ""
+	# 						topWrestler = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"] is not None else "BYE"
+	# 						bottomWrestler = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["bottomWrestler"] is not None else "BYE"
+
+	# 						message = f"{ topWrestler } and { bottomWrestler } assigne to mat { match['mat'] }"
+							
+	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Mat Assignment", message))
+
+	# 					if match["winType"] is not None and sqlMatch.WinType is None:
+	# 						winner = f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })" if match["topWrestler"]["isWinner"] else f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })"
+	# 						loser = f"{ match['bottomWrestler']['name'] } ({ match['bottomWrestler']['team'] })" if match["topWrestler"]["isWinner"] else f"{ match['topWrestler']['name'] } ({ match['topWrestler']['team'] })"
+
+	# 						message = f"{ winner } beat { loser } by { match['winType'] }"
+
+	# 						cur.execute(sql["SaveUpdate"], (sqlMatch.MatchID, "Match Completed", message))
+
+					
+
 	eventDetails = loadEvent(update.FlowID, update.ID)
+	eventDetails["sqlId"] = update.ID
+
 	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
 	cur.execute(sql["MeetLastUpdateSet"], (update.ID))
 
