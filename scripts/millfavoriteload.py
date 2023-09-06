@@ -241,7 +241,7 @@ for event in events:
 	lastUpdate = parser.parse(event["lastUpdate"]) if "lastUpdate" in event else None
 
 	timeToStart = startDate - datetime.datetime.now()
-	timeSinceUpdate = datetime.datetime.now() - lastUpdate if lastUpdate is not None else None
+	timeSinceUpdate = datetime.datetime.now(datetime.timezone.utc) - lastUpdate if lastUpdate is not None else None
 	
 	if lastUpdate is None:
 		print(f"{ currentTime() }: Update { event['name'] }, no update")
