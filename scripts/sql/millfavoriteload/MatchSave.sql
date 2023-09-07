@@ -19,5 +19,7 @@ exec dbo.MatchSave @MatchID = @output output
 	, @WinnerToTop = ?
 	, @LoserMatchFlowID = ?
 	, @LoserToTop = ?
-	, @WinnerWrestlerID = ?;
+	, @WinnerWrestlerID = ?
+	, @RoundNumber = ?
+	, @RoundSpot = ?;
 select @output as OutputValue;

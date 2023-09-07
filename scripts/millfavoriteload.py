@@ -24,67 +24,6 @@ def loadSQL():
 	
 	return sql
 
-def getFloEvent(eventGUID):
-	
-	output = {
-		"divisions": []
-	}
-
-	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
-	divisions = json.loads(response.text)["response"]["divisions"]
-
-	for divisionIndex, division in enumerate(divisions):
-		divisionSave = { "name": division["name"], "weightClasses": [] }
-
-		for weightIndex, weight in enumerate(division["weightClasses"]):
-			weightSave = { "name": weight["name"], "pools": [] }
-
-			for poolIndex, pool in enumerate(weight["boutPools"]):
-				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
-				matches = json.loads(response.text)["response"]
-				poolSave = { "name": pool["name"], "matches": [] }
-
-				for matchIndex, match in enumerate(matches):
-					
-					sort = match["sequenceNumber"]
-					if sort is None:
-						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
-					
-					matchSave = {
-						"guid": match["guid"],
-						"round": match["roundName"]["displayName"],
-						"matchNumber": match["boutNumber"],
-						"sort": sort,
-						"mat": match["mat"]["name"] if match["mat"] is not None else None,
-						"topWrestler": {
-							"guid": match["topWrestler"]["guid"],
-							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
-							"team": match["topWrestler"]["team"]["name"],
-							"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
-						} if match["topWrestler"] is not None else None,
-						"bottomWrestler": {
-							"guid": match["bottomWrestler"]["guid"],
-							"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
-							"team": match["bottomWrestler"]["team"]["name"],
-							"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
-						} if match["bottomWrestler"] is not None else None,
-						"winType": match["winType"],
-						"results": match["result"],
-						"nextMatch": {
-							"winnerGUID": match["winnerToBoutGuid"],
-							"isWinnerTop": match["winnerToTop"],
-							"loserGUID": match["loserToBoutGuid"],
-							"isLoserTop": match["loserToTop"]
-						} if match["winnerToBoutGuid"] is not None else None
-					}
-					
-					poolSave["matches"].append(matchSave)
-				weightSave["pools"].append(poolSave)
-			divisionSave["weightClasses"].append(weightSave)
-		output["divisions"].append(divisionSave)
-		
-	return output
-
 def loadEvent(eventGUID, meetId):
 
 	output = {
@@ -117,6 +56,8 @@ def loadEvent(eventGUID, meetId):
 						"matchNumber": match["boutNumber"],
 						"sort": sort,
 						"mat": match["mat"]["name"] if match["mat"] is not None else None,
+						"roundNumber": match["trueRound"],
+						"roundSpot": match["roundSpot"],
 						"topWrestler": {
 							"guid": match["topWrestler"]["guid"],
 							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
@@ -185,6 +126,8 @@ def loadEvent(eventGUID, meetId):
 							match["loserToBoutGuid"], # @LoserMatchFlowID
 							match["loserToTop"], # @LoserToTop
 							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
+							match["trueRound"], # @RoundNumber
+							match["roundSpot"], # @RoundSpot
 						))
 					
 					matchId = cur.fetchval()
@@ -238,7 +181,7 @@ for event in events:
 		continue
 
 	startDate = parser.parse(str(event["date"]).rstrip("Z"))
-	lastUpdate = parser.parse(event["lastUpdate"]) if "lastUpdate" in event else None
+	lastUpdate = parser.parse(event["lastUpdate"]) if "lastUpdate" in event and event["lastUpdate"] is not None else None
 
 	timeToStart = startDate - datetime.datetime.now()
 	timeSinceUpdate = datetime.datetime.now(datetime.timezone.utc) - lastUpdate if lastUpdate is not None else None

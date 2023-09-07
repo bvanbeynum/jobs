@@ -73,6 +73,8 @@ def loadEvent(eventGUID, meetId):
 						"matchNumber": boutNumber,
 						"sort": sort,
 						"mat": match["mat"]["name"] if match["mat"] is not None else None,
+						"roundNumber": match["trueRound"],
+						"roundSpot": match["roundSpot"],
 						"topWrestler": {
 							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
 							"team": match["topWrestler"]["team"]["name"],
@@ -137,6 +139,8 @@ def loadEvent(eventGUID, meetId):
 							match["loserToBoutGuid"], # @LoserMatchFlowID
 							match["loserToTop"], # @LoserToTop
 							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
+							match["trueRound"], # @RoundNumber
+							match["roundSpot"], # @RoundSpot
 						))
 					
 					matchId = cur.fetchval()
