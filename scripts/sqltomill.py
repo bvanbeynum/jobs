@@ -22,7 +22,7 @@ with open("./scripts/config.json", "r") as reader:
 
 print(f"{ currentTime() }: Get Wrestling Mill teams")
 
-response = requests.get(f"{ config['devServer'] }/api/externalteamsget")
+response = requests.get(f"{ config['millServer'] }/api/externalteamsget")
 mongoTeams = json.loads(response.text)["externalTeams"]
 
 print(f"{ currentTime() }: DB connect")
@@ -139,7 +139,7 @@ for mongoTeam in mongoTeams:
 
 print(f"{ currentTime() }: Updates: { len(saveTeams) }, deletes: { len(deleteTeams) }")
 
-response = requests.post(f"{ config['devServer'] }/api/externalteamssave", json={ "updateTeams": saveTeams, "deleteTeams": deleteTeams })
+response = requests.post(f"{ config['millServer'] }/api/externalteamssave", json={ "updateTeams": saveTeams, "deleteTeams": deleteTeams })
 
 print(f"{ currentTime() }: Mongo updated: { response.text }")
 print(f"{ currentTime() }: ----------- Done")

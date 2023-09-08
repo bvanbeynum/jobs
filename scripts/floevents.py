@@ -172,7 +172,7 @@ def loadEvent(eventGUID, meetId):
 def loadMill(event):
 	print(f"{ currentTime() }: Moving { event['name'] } to the wrestling mill")
 	
-	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": event })
+	response = requests.post(f"{ config['millServer'] }/api/floeventsave", json={ "floEvent": event })
 	print(f"{ currentTime() }: Complete - { response.text }")
 
 print(f"{ currentTime() }: ----------- Setup")

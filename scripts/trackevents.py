@@ -102,7 +102,7 @@ for state in states:
 				"location": address,
 				"state": state["name"]
 			}
-			response = requests.post(f"{ config['devServer'] }/api/trackeventsave", json={ "trackEvent": event })
+			response = requests.post(f"{ config['millServer'] }/api/trackeventsave", json={ "trackEvent": event })
 
 	print(f"{ currentTime() }: Finished { state['name'] }")
 

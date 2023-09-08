@@ -172,7 +172,7 @@ cur = cn.cursor()
 
 print(f"{ currentTime() }: ----------- Load data")
 
-response = requests.get(f"{ config['devServer'] }/api/floeventfavorites")
+response = requests.get(f"{ config['millServer'] }/api/floeventfavorites")
 events = json.loads(response.text)["floEvents"]
 
 updates = []
@@ -231,7 +231,7 @@ for update in updates:
 	else:
 		eventDetails["isComplete"] = False
 
-	response = requests.post(f"{ config['devServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
+	response = requests.post(f"{ config['millServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
 	cur.execute(sql["MeetLastUpdateSet"], (update["sqlId"]))
 
 	print(f"{ currentTime() }: Completed { update['name'] }")
