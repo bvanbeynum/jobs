@@ -83,6 +83,10 @@ def ServiceLoop():
 				run["messages"].extend([ { "severity": 0, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stdout.readlines() ])
 				run["messages"].extend([ { "severity": 100, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stderr.readlines() ])
 
+				# If there's a message to not log then don't load the messages
+				if len([ message for message in run["messages"] if message["message"] == "no log" ]) > 0:
+					run["messages"] = []
+
 				response = requests.post(f"http://beynum.com/sys/api/savejobrun?jobid={ running['jobId'] }", json={ "jobrun": run })
 
 				print(f"{ currentTime() }: Completed: { running['jobName'] }")

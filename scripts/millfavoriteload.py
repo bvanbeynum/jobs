@@ -202,39 +202,41 @@ for event in events:
 		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
 		updates.append(event)
 
-if len(updates) > 0:
+if len(updates) == 0:
+	print("no log") # Don't log anything if no updates
+else:
 	print(f"{ currentTime() }: Update: { len(updates) }")
 
-for update in updates:
-	eventDetails = loadEvent(update["floGUID"], update["sqlId"])
-	eventDetails["sqlId"] = update["sqlId"]
-	eventDetails["lastUpdate"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+	for update in updates:
+		eventDetails = loadEvent(update["floGUID"], update["sqlId"])
+		eventDetails["sqlId"] = update["sqlId"]
+		eventDetails["lastUpdate"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-	startDate = parser.parse(str(update["date"]).rstrip("Z"))
-	endDate = parser.parse(str(update["endDate"]).rstrip("Z"))
+		startDate = parser.parse(str(update["date"]).rstrip("Z"))
+		endDate = parser.parse(str(update["endDate"]).rstrip("Z"))
 
-	isComplete = False
-	if endDate is not None:
-		timeSinceComplete = datetime.datetime.now() - endDate
+		isComplete = False
+		if endDate is not None:
+			timeSinceComplete = datetime.datetime.now() - endDate
+			
+			if timeSinceComplete.days > 0:
+				isComplete = True
+		else:
+			timeSinceStart = datetime.datetime.now() - startDate
+
+			if timeSinceStart.days > 1:
+				isComplete = True
 		
-		if timeSinceComplete.days > 0:
-			isComplete = True
-	else:
-		timeSinceStart = datetime.datetime.now() - startDate
+		if isComplete:
+			cur.execute(sql["MeetComplete"], (update["sqlId"]))
+			eventDetails["isComplete"] = True
+		else:
+			eventDetails["isComplete"] = False
 
-		if timeSinceStart.days > 1:
-			isComplete = True
-	
-	if isComplete:
-		cur.execute(sql["MeetComplete"], (update["sqlId"]))
-		eventDetails["isComplete"] = True
-	else:
-		eventDetails["isComplete"] = False
+		response = requests.post(f"{ config['millServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
+		cur.execute(sql["MeetLastUpdateSet"], (update["sqlId"]))
 
-	response = requests.post(f"{ config['millServer'] }/api/floeventsave", json={ "floEvent": eventDetails })
-	cur.execute(sql["MeetLastUpdateSet"], (update["sqlId"]))
-
-	print(f"{ currentTime() }: Completed { update['name'] }")
+		print(f"{ currentTime() }: Completed { update['name'] }")
 
 cur.close()
 cn.close()
