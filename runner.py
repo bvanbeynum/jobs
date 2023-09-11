@@ -13,14 +13,12 @@ def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
 
 def ServiceLoop():
-	sleepShort = 3
-	sleepLong = 30
 	sleepTime = sleepLong
 
 	while True:
 
 		# Get list of jobs
-		response = requests.get("http://beynum.com/sys/api/getjobs")
+		response = requests.get(f"{ serverPath }/sys/api/getjobs")
 		jobs = json.loads(response.text)["jobs"]
 
 		# Fix dates
@@ -51,7 +49,7 @@ def ServiceLoop():
 					"messages": []
 				}
 
-				response = requests.post(f"http://beynum.com/sys/api/savejobrun?jobid={ job['id'] }", json={ "jobrun": run })
+				response = requests.post(f"{ serverPath }/sys/api/savejobrun?jobid={ job['id'] }", json={ "jobrun": run })
 				run = json.loads(response.text)["run"]
 
 				runningJobs.append({
@@ -68,7 +66,7 @@ def ServiceLoop():
 			if running["process"].poll() is not None:
 				stopJob = True
 			else:
-				response = requests.get(f"http://beynum.com/sys/api/getrun?jobid={ running['jobId'] }&runid={ running['run']['_id'] }")
+				response = requests.get(f"{ serverPath }/sys/api/getrun?jobid={ running['jobId'] }&runid={ running['run']['_id'] }")
 				run = json.loads(response.text)["run"]
 
 				if run.get("isKill"):
@@ -87,7 +85,7 @@ def ServiceLoop():
 				if len([ message for message in run["messages"] if message["message"] == "no log" ]) > 0:
 					run["messages"] = []
 
-				response = requests.post(f"http://beynum.com/sys/api/savejobrun?jobid={ running['jobId'] }", json={ "jobrun": run })
+				response = requests.post(f"{ serverPath }/sys/api/savejobrun?jobid={ running['jobId'] }", json={ "jobrun": run })
 
 				print(f"{ currentTime() }: Completed: { running['jobName'] }")
 
@@ -100,8 +98,16 @@ def ServiceLoop():
 
 print(f"{ currentTime() }: ----------- Setup")
 
+print(f"{ currentTime() }: Load config")
+
+with open("./scripts/config.json", "r") as reader:
+	config = json.load(reader)
+
 jobs = []
 runningJobs = []
+serverPath = config["apiServer"]
+sleepShort = config["sleep"]["short"]
+sleepLong = config["sleep"]["long"]
 
 print(f"{ currentTime() }: ----------- Service Loop")
 
