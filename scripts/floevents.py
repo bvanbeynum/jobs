@@ -163,6 +163,9 @@ def loadEvent(eventGUID, meetId):
 					
 					poolSave["matches"].append(matchSave)
 				weightSave["pools"].append(poolSave)
+
+				time.sleep(3) # Wait to not overload the api
+
 			divisionSave["weightClasses"].append(weightSave)
 		output["divisions"].append(divisionSave)
 		
