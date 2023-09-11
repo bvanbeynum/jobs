@@ -30,7 +30,7 @@ def loadEvent(eventGUID, meetId):
 		"divisions": []
 	}
 
-	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
+	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }", headers=requestHeaders)
 	divisions = json.loads(response.text)["response"]["divisions"]
 
 	for divisionIndex, division in enumerate(divisions):
@@ -40,7 +40,7 @@ def loadEvent(eventGUID, meetId):
 			weightSave = { "name": weight["name"], "pools": [] }
 
 			for poolIndex, pool in enumerate(weight["boutPools"]):
-				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
+				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }", headers=requestHeaders)
 				matches = json.loads(response.text)["response"]
 				poolSave = { "name": pool["name"], "matches": [] }
 
@@ -165,6 +165,8 @@ print(f"{ currentTime() }: Load config")
 
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
+
+requestHeaders = { "User-Agent": config["userAgent"] }
 
 sql = loadSQL()
 

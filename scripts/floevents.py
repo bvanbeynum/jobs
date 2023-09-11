@@ -24,7 +24,7 @@ def loadSQL():
 	return sql
 
 def getEventDetails(eventGUID):	
-	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ eventGUID }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg")
+	response = requests.get(f"https://floarena-api.flowrestling.org/events/{ eventGUID }?include=features,scheduleItems,contacts,externalLinks&fields[event]=name,timeZone,startDateTime,endDateTime,isParticipantWaiverRequired,location,approvalStatus,siteId,features,divisions,products,scheduleItems,externalLinks,contacts,isVisible,createdByUserId,createdByUserAccount,stripeAccountId,stripeAccount,maxWrestlerCount,participantAlias,participantAliasPlural,description,websiteUrl,isDual,isSetupComplete,isPresetTeams,mats,resultEmailsSentDateTime,seasons,registrationReceiptMsg", headers=requestHeaders)
 	eventInfo = json.loads(response.text)
 	location = eventInfo["data"]["attributes"].get("location") if eventInfo.get("data") and eventInfo["data"].get("attributes") and eventInfo["data"]["attributes"].get("location") else None
 
@@ -40,7 +40,7 @@ def loadEvent(eventGUID, meetId):
 		"divisions": []
 	}
 
-	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }")
+	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }", headers=requestHeaders)
 	divisions = json.loads(response.text)["response"]["divisions"]
 
 	for divisionIndex, division in enumerate(divisions):
@@ -56,7 +56,7 @@ def loadEvent(eventGUID, meetId):
 			weightSave = { "name": weight["name"], "pools": [] }
 
 			for poolIndex, pool in enumerate(weight["boutPools"]):
-				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }")
+				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }", headers=requestHeaders)
 				matches = json.loads(response.text)["response"]
 				poolSave = { "name": pool["name"], "matches": [] }
 
@@ -185,6 +185,8 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
+requestHeaders = { "User-Agent": config["userAgent"] }
+
 sql = loadSQL()
 
 print(f"{ currentTime() }: DB connect")
@@ -197,7 +199,7 @@ print(f"{ currentTime() }: ----------- Upcoming Events")
 cur.execute(sql["UpcomingLoadedGet"])
 loaded = [ loaded.FlowID for loaded in cur.fetchall() ]
 
-response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments")
+response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
 
 print(f"{ currentTime() }: { len(events) } upcoming events")
@@ -268,7 +270,7 @@ for eventIndex, event in enumerate(events):
 
 	print(f"{ currentTime() }: Get past events")
 
-	response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments")
+	response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
 	events = json.loads(response.text)["response"]
 	events = [ event for event in events if event["guid"] not in excluded ]
 
