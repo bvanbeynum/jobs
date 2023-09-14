@@ -185,15 +185,19 @@ for event in events:
 	if "isComplete" in event and event["isComplete"]:
 		continue
 
-	startDate = parser.parse(str(event["date"]).rstrip("Z"))
+	startDate = parser.parse(str(event["date"]))
 	lastUpdate = parser.parse(event["lastUpdate"]) if "lastUpdate" in event and event["lastUpdate"] is not None else None
 
-	timeToStart = startDate - datetime.datetime.now()
+	timeToStart = startDate - datetime.datetime.now(datetime.timezone.utc)
 	timeSinceUpdate = datetime.datetime.now(datetime.timezone.utc) - lastUpdate if lastUpdate is not None else None
 	
 	if lastUpdate is None:
 		print(f"{ currentTime() }: Update { event['name'] }, no update")
 		updates.append(event)
+	
+	elif 0 <= datetime.datetime.now().time().hour <= 5:
+		# Don't update during the middle of the night
+		continue
 
 	elif timeToStart.days <= 0 and timeSinceUpdate.seconds > 90:
 		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }")
