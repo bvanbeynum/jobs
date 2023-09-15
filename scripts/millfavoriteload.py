@@ -203,12 +203,12 @@ for event in events:
 		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }s - active event, every 2 minutes")
 		updates.append(event)
 
-	elif timeToStart.days == 1 and timeSinceUpdate.seconds > (60 * 30):
-		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }s - one day away, every 30 min")
+	elif timeToStart.days <= 1 and timeSinceUpdate.seconds > (60 * 30):
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds // 60) }m - one day away, every 30 min")
 		updates.append(event)
 
 	elif timeToStart.days >= 2 and timeToStart.days <= 7 and timeSinceUpdate.seconds > 60 * 60 * 24:
-		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }s - between 2 & 7 days, once per day")
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) // 60 // 60 }h - between 2 & 7 days, once per day")
 		updates.append(event)
 
 if len(updates) == 0:
