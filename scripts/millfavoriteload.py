@@ -199,7 +199,7 @@ for event in events:
 		# Don't update during the middle of the night
 		continue
 
-	elif timeToStart.days <= 0 and datetime.datetime.now().date().day >= startDate.date().day  and timeSinceUpdate.seconds > 120:
+	elif timeToStart.days <= 0 and datetime.datetime.now(datetime.timezone.utc).date().day >= startDate.date().day  and timeSinceUpdate.seconds > 120:
 		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) }s - active event, every 2 minutes")
 		updates.append(event)
 
@@ -226,12 +226,12 @@ else:
 
 		isComplete = False
 		if endDate is not None:
-			timeSinceComplete = datetime.datetime.now() - endDate
+			timeSinceComplete = datetime.datetime.now(datetime.timezone.utc) - endDate
 			
 			if timeSinceComplete.days > 0:
 				isComplete = True
 		else:
-			timeSinceStart = datetime.datetime.now() - startDate
+			timeSinceStart = datetime.datetime.now(datetime.timezone.utc) - startDate
 
 			if timeSinceStart.days > 1:
 				isComplete = True
