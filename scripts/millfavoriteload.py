@@ -221,8 +221,8 @@ else:
 		eventDetails["sqlId"] = update["sqlId"]
 		eventDetails["lastUpdate"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-		startDate = parser.parse(str(update["date"]).rstrip("Z"))
-		endDate = parser.parse(str(update["endDate"]).rstrip("Z"))
+		startDate = parser.parse(str(update["date"]))
+		endDate = parser.parse(str(update["endDate"]))
 
 		isComplete = False
 		if endDate is not None:
