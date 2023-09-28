@@ -30,7 +30,7 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-millDBURL = config["devServer"]
+millDBURL = config["millServer"]
 
 sql = loadSQL()
 
