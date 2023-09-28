@@ -23,6 +23,7 @@ def ServiceLoop():
 
 		# Fix dates
 		for job in jobs:
+
 			job["created"] = parser.parse(job["created"])
 			job["modified"] = parser.parse(job["modified"])
 
@@ -33,6 +34,9 @@ def ServiceLoop():
 		# Start jobs
 		runningIds = [ job["jobId"] for job in runningJobs ]
 		for job in jobs:
+			if job["status"] == "inactive":
+				continue
+			
 			completeDates = [ run["completeTime"] for run in job["runs"] if run["completeTime"] is not None ] if len(job["runs"]) > 0 else None
 			lastRun = None
 			if completeDates is not None and len(completeDates) > 0:
