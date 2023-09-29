@@ -31,6 +31,7 @@ with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
 sql = loadSQL("./scripts/sql/trackevents")
+requestHeaders = { "User-Agent": config["userAgent"] }
 
 print(f"{ currentTime() }: DB connect")
 
@@ -48,7 +49,7 @@ states = [
 
 for state in states:
 
-	response = requests.get(f"https://www.trackwrestling.com/Login.jsp?tName=&state={ state['id'] }&sDate=&eDate=&lastName=&firstName=&teamName=&sfvString=&city=&gbId=&camps=false")
+	response = requests.get(f"https://www.trackwrestling.com/Login.jsp?tName=&state={ state['id'] }&sDate=&eDate=&lastName=&firstName=&teamName=&sfvString=&city=&gbId=&camps=false", headers=requestHeaders)
 	soup = BeautifulSoup(response.text, "lxml")
 
 	tournamentUL = soup.find("ul", class_="tournament-ul")
