@@ -125,6 +125,8 @@ for row in cur:
 			"weightClass": row.WeightClass,
 			"round": row.RoundName,
 			"vs": row.vs,
+			"vsTeam": row.vsTeam,
+			"vsSqlId": row.vsID,
 			"isWinner": bool(row.IsWinner),
 			"winType": row.WinType,
 			"sort": row.Sort

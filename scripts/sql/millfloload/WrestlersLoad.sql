@@ -32,7 +32,9 @@ select	wrestlers.*
 		, FloWrestlerMatch.IsWinner
 		, FloMatch.WinType
 		, FloMatch.Sort
-		, vs = opponent.FirstName + ' ' + opponent.LastName + ' (' + opponent.TeamName + ')'
+		, vs = opponent.FirstName + ' ' + opponent.LastName
+		, vsTeam = opponent.TeamName
+		, vsID = opponent.ID
 from	#wrestlers wrestlers
 join	FloWrestlerMatch
 on		wrestlers.WrestlerID = FloWrestlerMatch.FloWrestlerID
