@@ -60,6 +60,7 @@ for state in states:
 	for tournamentLI in tournamentsLI:
 		eventDate = None
 		endDate = None
+		address = ""
 
 		for section in tournamentLI.find_all("div"):
 			if len(section.find_all("span")) > 1:
