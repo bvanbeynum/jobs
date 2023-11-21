@@ -154,7 +154,7 @@ matchesSave = []
 
 response = requests.get(f"{ millDBURL }/api/flomatchgetbulk")
 matchesMill = [ match["sqlId"] for match in json.loads(response.text)["floMatches"] ]
-matchesMill = sorted(matchesMill, key=lambda match: match["sqlId"])
+matchesMill = sorted(matchesMill, key=lambda match: match)
 
 print(f"{ currentTime() }: Get matches from SQL")
 cur.execute(sql["MatchesLoad"])
