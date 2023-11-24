@@ -52,7 +52,6 @@ cur.execute(sql["WrestlersLoad"])
 wrestlerUpdates = []
 wrestler = None
 event = None
-updateWrestler = False
 
 print(f"{ currentTime() }: Looping through the database")
 for row in cur:
@@ -60,10 +59,10 @@ for row in cur:
 	if wrestler == None or row.WrestlerID != wrestler["sqlId"]:
 		# New Wrestler
 
-		if event is not None and updateWrestler:
+		if event is not None:
 			wrestler["events"].append(event)
 
-		if wrestler is not None and updateWrestler:
+		if wrestler is not None:
 			wrestlerUpdates.append(wrestler)
 		
 		if len(wrestlerUpdates) >= 100:
@@ -78,12 +77,12 @@ for row in cur:
 
 			wrestlerUpdates = []
 
-		updateWrestler = False
 		event = None
 		wrestler = [ wrestler for wrestler in wrestlersMill if wrestler["sqlId"] == row.WrestlerID ]
 
 		if len(wrestler) == 1:
 			wrestler = wrestler[0]
+			wrestler["events"] = []
 
 		else:
 			wrestler = {
@@ -93,49 +92,35 @@ for row in cur:
 				"name": row.FirstName + " " + row.LastName,
 				"events": []
 			}
-			updateWrestler = True
 	
 	if event is None or event["sqlId"] != row.EventID:
-		# New Event
-
-		if event is not None and updateWrestler:
-			# This is a new event, if we already had an event, add it to the wrestler
+		if event is not None:
 			wrestler["events"].append(event)
 
-		event = [ event for event in wrestler["events"] if event["sqlId"] == row.EventID ]
-		if len(event) != 1:
-			# Event not found, create new event
-			updateWrestler = True
+		event = {
+			"sqlId": row.EventID,
+			"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
+			"name": row.EventName,
+			"team": row.Team,
+			"matches": []
+		}
 
-			event = {
-				"sqlId": row.EventID,
-				"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
-				"name": row.EventName,
-				"team": row.Team,
-				"matches": []
-			}
-		else:
-			# Event already exists, no need to update
-			event = None
-	
-	if event is not None and updateWrestler:
-		# If this hasn't been set, then it's an existing event
-		event["matches"].append({
-			"division": row.Division,
-			"weightClass": row.WeightClass,
-			"round": row.RoundName,
-			"vs": row.vs,
-			"vsTeam": row.vsTeam,
-			"vsSqlId": row.vsID,
-			"isWinner": bool(row.IsWinner),
-			"winType": row.WinType,
-			"sort": row.Sort
-		})
+	event["matches"].append({
+		"division": row.Division,
+		"weightClass": row.WeightClass,
+		"round": row.RoundName,
+		"vs": row.vs,
+		"vsTeam": row.vsTeam,
+		"vsSqlId": row.vsID,
+		"isWinner": bool(row.IsWinner),
+		"winType": row.WinType,
+		"sort": row.Sort
+	})
 
-if event is not None and updateWrestler:
+if event is not None:
 	wrestler["events"].append(event)
 
-if wrestler is not None and updateWrestler:
+if wrestler is not None:
 	wrestlerUpdates.append(wrestler)
 	
 print(f"{ currentTime() }: Loading final { len(wrestlerUpdates) } wrestlers to mill DB")

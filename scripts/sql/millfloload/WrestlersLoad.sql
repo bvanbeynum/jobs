@@ -20,7 +20,8 @@ group by
 		FloWrestler.ID
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
-		, FloWrestler.TeamName;
+		, FloWrestler.TeamName
+having	max(FloMatch.ModifiedDate) > getdate() - 2;
 
 select	wrestlers.*
 		, EventID = FloMeet.ID
@@ -49,6 +50,7 @@ join	FloWrestler opponent
 on		vsmatch.FloWrestlerID = opponent.ID
 where	FloMeet.IsExcluded = 0
 		and FloMeet.StartTime > getdate() - (365 * 2)
+		and FloMatch.WinType is not null
 order by
 		WrestlerID
 		, FloMeet.StartTime
