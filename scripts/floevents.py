@@ -265,63 +265,48 @@ for eventIndex, event in enumerate(events):
 		
 	# End upcoming events
 
-	cur.execute(sql["ExcludedGet"])
-	excluded = [ excluded.FlowID for excluded in cur.fetchall() ]
+cur.execute(sql["ExcludedGet"])
+excluded = [ excluded.FlowID for excluded in cur.fetchall() ]
 
-	print(f"{ currentTime() }: Get past events")
+print(f"{ currentTime() }: Get past events")
 
-	response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
-	events = json.loads(response.text)["response"]
-	events = [ event for event in events if event["guid"] not in excluded ]
+response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
+events = json.loads(response.text)["response"]
+events = [ event for event in events if event["guid"] not in excluded ]
 
-	for event in events:
-		event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+for event in events:
+	event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
-	events = sorted(events, key=lambda event: event["startConverted"], reverse=True)
+events = sorted(events, key=lambda event: event["startConverted"], reverse=True)
 
-	print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
+print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
 
-	for eventIndex, event in enumerate(events):
-		if event["guid"] in excluded:
-			continue
+for eventIndex, event in enumerate(events):
+	if event["guid"] in excluded:
+		continue
 
-		location = getEventDetails(event["guid"])
+	location = getEventDetails(event["guid"])
 
-		if location["state"] is None or str.lower(location["state"]) not in ["sc", "nc", "ga", "tn"]:
-			
-			# Not in state
-			print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-			cur.execute(sql["MeetSave"], (
-				event["guid"], # @FlowID
-				event["name"], # @MeetName
-				1, # @IsExcluded
-				0, # @IsComplete
-				event["locationName"], # @LocationName
-				location.get("city"), # @LocationCity
-				location["state"], # @LocationState
-				event["startConverted"], # @StartTime
-				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-				event["isPublishBrackets"], # @HasBrackets
-				))
-			continue
+	if location["state"] is None or str.lower(location["state"]) not in ["sc", "nc", "ga", "tn"]:
+		
+		# Not in state
+		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
+		cur.execute(sql["MeetSave"], (
+			event["guid"], # @FlowID
+			event["name"], # @MeetName
+			1, # @IsExcluded
+			0, # @IsComplete
+			event["locationName"], # @LocationName
+			location.get("city"), # @LocationCity
+			location["state"], # @LocationState
+			event["startConverted"], # @StartTime
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+			event["isPublishBrackets"], # @HasBrackets
+			))
+		continue
 
-		if not event["isPublishBrackets"] or not event["hasBrackets"]:
-			# No data
-			cur.execute(sql["MeetSave"], (
-				event["guid"], # @FlowID
-				event["name"], # @MeetName
-				0, # @IsExcluded
-				0, # @IsComplete
-				event["locationName"], # @LocationName
-				location.get("city"), # @LocationCity
-				location["state"], # @LocationState
-				event["startConverted"], # @StartTime
-				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-				event["isPublishBrackets"], # @HasBrackets
-				))
-			continue
-
-		print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
+	if not event["isPublishBrackets"] or not event["hasBrackets"]:
+		# No data
 		cur.execute(sql["MeetSave"], (
 			event["guid"], # @FlowID
 			event["name"], # @MeetName
@@ -334,24 +319,39 @@ for eventIndex, event in enumerate(events):
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
 			event["isPublishBrackets"], # @HasBrackets
 			))
-		meetId = cur.fetchval()
+		continue
 
-		loadEvent(event["guid"], meetId)
-		
-		cur.execute(sql["MeetSave"], (
-			event["guid"], # @FlowID
-			event["name"], # @MeetName
-			0, # @IsExcluded
-			1, # @IsComplete
-			event["locationName"], # @LocationName
-			location.get("city"), # @LocationCity
-			location["state"], # @LocationState
-			event["startConverted"], # @StartTime
-			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-			event["isPublishBrackets"], # @HasBrackets
-			))
+	print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
+	cur.execute(sql["MeetSave"], (
+		event["guid"], # @FlowID
+		event["name"], # @MeetName
+		0, # @IsExcluded
+		0, # @IsComplete
+		event["locationName"], # @LocationName
+		location.get("city"), # @LocationCity
+		location["state"], # @LocationState
+		event["startConverted"], # @StartTime
+		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+		event["isPublishBrackets"], # @HasBrackets
+		))
+	meetId = cur.fetchval()
 
-	# End past events 
+	loadEvent(event["guid"], meetId)
+	
+	cur.execute(sql["MeetSave"], (
+		event["guid"], # @FlowID
+		event["name"], # @MeetName
+		0, # @IsExcluded
+		1, # @IsComplete
+		event["locationName"], # @LocationName
+		location.get("city"), # @LocationCity
+		location["state"], # @LocationState
+		event["startConverted"], # @StartTime
+		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+		event["isPublishBrackets"], # @HasBrackets
+		))
+
+# End past events 
 
 cur.execute(sql["LastUpdateSet"])
 
