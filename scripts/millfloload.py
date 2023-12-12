@@ -82,8 +82,11 @@ for row in cur:
 
 		if len(wrestler) == 1:
 			wrestler = wrestler[0]
-			wrestler["gRating"] = float(row.gRating)
-			wrestler["gDeviation"] = float(row.gDeviation)
+			wrestler["firstName"] = row.FirstName
+			wrestler["lastName"] = row.LastName
+			wrestler["name"] = row.FirstName + " " + row.LastName
+			wrestler["gRating"] = float(row.gRating) if row.gRating is not None else None
+			wrestler["gDeviation"] = float(row.gDeviation) if row.gDeviation is not None else None
 			wrestler["events"] = []
 
 		else:
@@ -92,8 +95,8 @@ for row in cur:
 				"firstName": row.FirstName,
 				"lastName": row.LastName,
 				"name": row.FirstName + " " + row.LastName,
-				"gRating": float(row.gRating),
-				"gDeviation": float(row.gDeviation),
+				"gRating": float(row.gRating) if row.gRating is not None else None,
+				"gDeviation": float(row.gDeviation) if row.gDeviation is not None else None,
 				"events": []
 			}
 	

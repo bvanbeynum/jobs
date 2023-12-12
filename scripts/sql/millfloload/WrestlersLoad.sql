@@ -94,7 +94,7 @@ outer apply (
 		) ExistingWrestler
 where	TrackEvent.IsComplete = 1
 		and TrackEvent.EventState = 'sc'
-		and ExistingWrestler.WrestlerID = 0
+		and ExistingWrestler.WrestlerID is null
 group by
 		FloWrestler.ID
 		, FloWrestler.FirstName
@@ -207,7 +207,7 @@ join	TrackEvent
 on		TrackMatch.TrackEventID = TrackEvent.ID
 join	TrackWrestlerMatch vsmatch
 on		TrackMatch.ID = vsmatch.TrackMatchID
-		and vsmatch.TrackWrestlerID <> wrestlers.WrestlerID
+		and vsmatch.TrackWrestlerID <> TrackWrestler.ID
 join	FloWrestler opponent
 on		vsmatch.TrackWrestlerID = opponent.ID
 where	TrackEvent.IsComplete = 1
