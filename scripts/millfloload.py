@@ -146,7 +146,7 @@ cur.execute(sql["MatchesLoad"])
 
 print(f"{ currentTime() }: Looping through the database")
 for row in cur:
-	matchFound = [ match for match in matchesMill if match["sqlId"] == row.MatchID ]
+	matchFound = [ match for match in matchesMill if match == row.MatchID ]
 
 	if len(matchFound) == 0:
 		matchesSave.append({
