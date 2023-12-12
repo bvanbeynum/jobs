@@ -90,6 +90,8 @@ for row in cur:
 				"firstName": row.FirstName,
 				"lastName": row.LastName,
 				"name": row.FirstName + " " + row.LastName,
+				"gRating": row.gRating,
+				"gDeviation": row.gDeviation,
 				"events": []
 			}
 	
