@@ -1,7 +1,7 @@
-# To ensure app dependencies are ported from your virtual environment/host machine into your container, run 'pip freeze > requirements.txt' in the terminal to overwrite this file
 beautifulsoup4==4.11.1
 certifi==2023.7.22
 charset-normalizer==2.1.1
+glicko2==2.0.0
 idna==3.4
 lxml==4.9.3
 pyodbc==4.0.39
