@@ -1,14 +1,14 @@
 
--- insert TSSummary (Title) values ('Migration Test');
+-- insert TSSummary (Title) values ('12/21');
 -- update TSSummary set RunDate = null where id = 19;
--- delete from TSSummary where id in (21,22,26,36,37,38)
+-- delete from TSSummary where id in (45,46,47,48)
 
 select * from TSSummary;
 
 declare @SummaryID int;
 declare @MaxIteration int;
 
-set @SummaryID = 39;
+set @SummaryID = 46;
 
 select	@MaxIteration = max(WrestlerMatches)
 from	(
@@ -58,6 +58,6 @@ set		GRating = TSWrestler.Rating
 from	FloWrestler
 join	TSWrestler
 on		FloWrestler.ID = TSWrestler.FloWrestlerID
-		and TSWrestler.TSSummaryID = 39
+		and TSWrestler.TSSummaryID = 44
 
 */

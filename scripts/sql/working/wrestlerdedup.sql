@@ -11,13 +11,13 @@ select	NewID = FloWrestler.ID
 		, FloWrestler.LastName
 		, Duplicate.TeamName
 		, Duplicate.[State]
--- into	#fixedids
+into	#fixedids
 from	FloWrestler
 join	FloWrestler Duplicate
 on		FloWrestler.FirstName = Duplicate.FirstName
 		and FloWrestler.LastName = Duplicate.LastName
 		and FloWrestler.TeamName <> Duplicate.TeamName
-where	FloWrestler.ID = 25336
+where	FloWrestler.ID = 101906
 order by
 		Duplicate.ID
 
@@ -195,26 +195,21 @@ join	#teamcleanup cleanup
 on		FloWrestler.TeamName = cleanup.OriginalName
 
 
-select * from TrackWrestler where WrestlerName like '%beynum'
-
-select	NewID = FloWrestler.ID
+select	NewID = TrackWrestler.ID
 		, FixID = Duplicate.ID
-		, FloWrestler.FirstName
-		, FloWrestler.LastName
+		, TrackWrestler.WrestlerName
 		, Duplicate.TeamName
-		, Duplicate.[State]
 into	#fixedids
-from	FloWrestler
-join	FloWrestler Duplicate
-on		FloWrestler.FirstName = Duplicate.FirstName
-		and FloWrestler.LastName = Duplicate.LastName
-		and FloWrestler.TeamName <> Duplicate.TeamName
-where	FloWrestler.ID = 940
+from	TrackWrestler
+join	TrackWrestler Duplicate
+on		TrackWrestler.WrestlerName = Duplicate.WrestlerName
+		and TrackWrestler.TeamName <> Duplicate.TeamName
+where	TrackWrestler.ID = 936
 order by
 		Duplicate.ID
 
-select * from TrackWrestler where WrestlerName like '%beynum'
-select * from FloWrestler where LastName like '%beynum'
+select * from TrackWrestler where WrestlerName like '%Manos'
+select * from FloWrestler where FirstName + ' ' + LastName like 'Evan gates'
 
 select	*
 into	#fixedids
@@ -222,7 +217,7 @@ from	(
 		select	NewID = min(id) over ()
 				, FixID = id
 		from	TrackWrestler
-		where	WrestlerName like '%nally'
+		where	WrestlerName like 'Cj Williams'
 		) Dups
 where	newid <> FixID
 
@@ -250,15 +245,6 @@ on 		replace(TrackWrestler.WrestlerName, ' ', '') = dedup.wrestlerName
 
 -- select * from #fixedids
 
-select	dedup.WrestlerID NewID
-		, TrackWrestler.ID FixID
-into	#fixedids
-from	#dedup dedup
-join	TrackWrestler
-on 		replace(TrackWrestler.WrestlerName, ' ', '') = dedup.WrestlerName
-		and TrackWrestler.TeamName = dedup.TeamName
-		and TrackWrestler.id <> dedup.WrestlerID
-
 update	TrackWrestlerMatch
 set		TrackWrestlerID = fix.NewID
 from	TrackWrestlerMatch
@@ -273,6 +259,19 @@ left join
 on		TrackWrestler.ID = TrackWrestlerMatch.TrackWrestlerID
 where	TrackWrestlerMatch.ID is null
 
+update	TrackWrestler
+set		TeamName = 'Stratford'
+where	TeamName = 'Stratford Knights'
+
+update	TrackWrestler
+set		WrestlerName = 'Jonathan Brentlinger'
+where	WrestlerName = 'Jj Brentlinger'
+
+update	FloWrestler
+set		FirstName = 'Jantzen'
+		, LastName = 'Huneycutt'
+where	FirstName + ' ' + LastName = 'Jantzen Honeycutt'
+
 update	FloWrestler
 set		TeamName = 'Stratford'
-where	TeamName = 'Stratford HS'
+where	TeamName = 'Stratford Knights'

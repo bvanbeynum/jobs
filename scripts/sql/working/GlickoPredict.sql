@@ -10,7 +10,7 @@ order by
 */
 
 declare @OpponentTeam varchar(255)
-set @OpponentTeam = 'jl mann'
+set @OpponentTeam = 'gilbert'
 
 select	Team.WeightClass
 		, Opponent.Wrestler

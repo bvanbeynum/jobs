@@ -43,7 +43,7 @@ from	(
 								, GRating = cast(round(FloWrestler.GRating, 0) as int)
 								, GDeviation = cast(round(FloWrestler.GDeviation, 0) as int)
 						from	FloWrestler
-						where	FloWrestler.TeamName = 'Stratford'
+						where	FloWrestler.TeamName = 'gilbert'
 						union
 						select	FloWrestlerID = cast(null as int)
 								, TrackWrestlerID = TrackWrestler.ID
@@ -51,7 +51,7 @@ from	(
 								, GRating = cast(null as int)
 								, GDeviation = cast(null as int)
 						from	TrackWrestler
-						where	TrackWrestler.TeamName = 'Stratford'
+						where	TrackWrestler.TeamName = 'Gilbert'
 						) Wrestlers
 				group by
 						Wrestlers.WrestlerName
@@ -136,7 +136,7 @@ from	xx_TeamLineup TeamLineup
 left join
 		FloWrestler
 on		TeamLineup.FloWrestlerID = FloWrestler.ID
-where	TeamLineup.TeamName = 'Stratford'
+where	TeamLineup.TeamName = 'gilbert'
 order by
 		cast(TeamLineup.WeightClass as int)
 
@@ -146,8 +146,8 @@ where	TeamName = 'fort mill'
 		and WeightClass = '144'
 
 update	xx_TeamLineup
-set		FloWrestlerID = 28139
-where	id = 76
+set		FloWrestlerID = 1695
+where	id = 69
 
 -- delete from xx_TeamLineup where id in (72,73)
 

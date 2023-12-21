@@ -110,6 +110,10 @@ from	(
 		join	TSWrestler
 		on		FloWrestlerMatch.FloWrestlerID = TSWrestler.FloWrestlerID
 				and TSWrestler.TSSummaryID = @SummaryID
+		where	coalesce(FloMatch.Division, '') not like 'ms%'
+				and coalesce(FloMatch.Division, '') not like 'jv%'
+				and coalesce(FloMatch.Division, '') not like '%middle%'
+				and coalesce(FloMatch.Division, '') not like '%junior%'
 		group by
 				FloMatch.ID
 				, cast(FloMeet.StartTime as date)
@@ -135,6 +139,10 @@ from	(
 		join	TSWrestler
 		on		TrackWrestlerMatch.TrackWrestlerID = TSWrestler.TrackWrestlerID
 				and TSWrestler.TSSummaryID = @SummaryID
+		where	coalesce(TrackMatch.Division, '') not like 'ms%'
+				and coalesce(TrackMatch.Division, '') not like 'jv%'
+				and coalesce(TrackMatch.Division, '') not like '%middle%'
+				and coalesce(TrackMatch.Division, '') not like '%junior%'
 		group by
 				TrackMatch.ID
 				, cast(TrackEvent.EventDate as date)
