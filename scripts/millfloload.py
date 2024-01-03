@@ -46,6 +46,18 @@ print(f"{ currentTime() }: Get wrestlers from Mill")
 response = requests.get(f"{ millDBURL }/api/externalwrestlersbulk")
 wrestlersMill = json.loads(response.text)["externalWrestlers"]
 
+print(f"{ currentTime() }: Get wrestlers to delete")
+
+cur.execute(sql["WrestlerStageCreate"])
+cur.executemany(sql["WrestlerStageLoad"], [ (wrestler["sqlId"],) for wrestler in wrestlersMill ])
+cur.execute(sql["WrestlersMissing"])
+
+wrestlersDelete = [ wrestler.WrestlerID for wrestler in cur.fetchall() ]
+
+if len(wrestlersDelete) > 0:
+	print(f"{ currentTime() }: Delete { len(wrestlersDelete) } duplicates")
+	response = requests.post(f"{ config['devServer'] }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
+
 print(f"{ currentTime() }: Get wrestlers from DB")
 cur.execute(sql["WrestlersLoad"])
 

@@ -1,0 +1,1 @@
+insert #Mill (WrestlerID) values (?);
