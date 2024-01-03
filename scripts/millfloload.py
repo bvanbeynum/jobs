@@ -56,7 +56,7 @@ wrestlersDelete = [ wrestler.WrestlerID for wrestler in cur.fetchall() ]
 
 if len(wrestlersDelete) > 0:
 	print(f"{ currentTime() }: Delete { len(wrestlersDelete) } duplicates")
-	response = requests.post(f"{ config['devServer'] }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
+	response = requests.post(f"{ millDBURL }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
 
 print(f"{ currentTime() }: Get wrestlers from DB")
 cur.execute(sql["WrestlersLoad"])
