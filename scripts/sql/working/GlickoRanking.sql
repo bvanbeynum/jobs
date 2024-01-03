@@ -142,9 +142,13 @@ order by
 select	*
 from	#Rankings
 where	WeightClass = '106'
+		-- or Wrestler like 'p% white'
+		-- or Wrestler like 'j% stock%'
 		-- and Confrence = '5a'
 order by
 		rank
+
+select * from #Rankings where Wrestler like '% stocker%'
 
 select	TeamLineup.WeightClass
 		, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
@@ -174,7 +178,7 @@ select	Rankings.WeightClass
 from	#Rankings Rankings
 join	TSWrestler
 on		Rankings.FloID = TSWrestler.FloWrestlerID
-		and TSWrestler.TSSummaryID = 44
+		and TSWrestler.TSSummaryID = 51
 join	TSMatch
 on		TSWrestler.ID = TSMatch.TSWrestlerID
 cross apply (
@@ -208,8 +212,12 @@ outer apply (
 		where	TSMatch.EventID = TrackEvent.ID
 				and TSMatch.IsFlo = 0
 		) TrackEvent
-where	Rankings.WeightClass = '106'
-		and Rankings.Confrence is not null
+where	Rankings.Confrence is not null
+		and (
+			Rankings.WeightClass = '106' 
+			-- or Rankings.Wrestler like 'p% white'
+			-- or Rankings.Wrestler like 'j% stock%'
+		)
 order by
 		rankings.Rank
 		, TSMatch.Sort

@@ -1,3 +1,4 @@
+return;
 
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
@@ -11,13 +12,13 @@ select	NewID = FloWrestler.ID
 		, FloWrestler.LastName
 		, Duplicate.TeamName
 		, Duplicate.[State]
-into	#fixedids
+-- into	#fixedids
 from	FloWrestler
 join	FloWrestler Duplicate
 on		FloWrestler.FirstName = Duplicate.FirstName
 		and FloWrestler.LastName = Duplicate.LastName
 		and FloWrestler.TeamName <> Duplicate.TeamName
-where	FloWrestler.ID = 101906
+where	FloWrestler.ID = 102929
 order by
 		Duplicate.ID
 
@@ -38,6 +39,7 @@ select * from #fixedids
 
 update	FloWrestlerMatch
 set		FloWrestlerID = fix.NewID
+		, ModifiedDate = getdate()
 from	FloWrestlerMatch
 join	#fixedids fix
 on		FloWrestlerMatch.FloWrestlerID = fix.FixID
@@ -204,12 +206,12 @@ from	TrackWrestler
 join	TrackWrestler Duplicate
 on		TrackWrestler.WrestlerName = Duplicate.WrestlerName
 		and TrackWrestler.TeamName <> Duplicate.TeamName
-where	TrackWrestler.ID = 936
+where	TrackWrestler.ID = 3978
 order by
 		Duplicate.ID
 
-select * from TrackWrestler where WrestlerName like '%Manos'
-select * from FloWrestler where FirstName + ' ' + LastName like 'Evan gates'
+select * from FloWrestler where FirstName + ' ' + LastName like 'p% white%'
+select * from TrackWrestler where WrestlerName like 'p% whit%'
 
 select	*
 into	#fixedids
@@ -247,6 +249,7 @@ on 		replace(TrackWrestler.WrestlerName, ' ', '') = dedup.wrestlerName
 
 update	TrackWrestlerMatch
 set		TrackWrestlerID = fix.NewID
+		, ModifiedDate = getdate()
 from	TrackWrestlerMatch
 join	#fixedids fix
 on		TrackWrestlerMatch.TrackWrestlerID = fix.FixID
@@ -264,8 +267,8 @@ set		TeamName = 'Stratford'
 where	TeamName = 'Stratford Knights'
 
 update	TrackWrestler
-set		WrestlerName = 'Jonathan Brentlinger'
-where	WrestlerName = 'Jj Brentlinger'
+set		WrestlerName = 'Zachary Gomer-Chrobocinski'
+where	id in (6459, 2712, 15758)
 
 update	FloWrestler
 set		FirstName = 'Jantzen'

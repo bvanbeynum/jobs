@@ -28,10 +28,10 @@ print(f"{ currentTime() }: ----------- Setup")
 
 print(f"{ currentTime() }: Load config")
 
-with open("./config.json", "r") as reader:
+with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-sql = loadSQL("./sql/track")
+sql = loadSQL("./scripts/sql/track")
 
 trackTIM = ""
 trackTWSessionId = ""
@@ -47,9 +47,9 @@ postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
 states = [
 	# { "id": 41, "name": "SC" },
-	# { "id": 34, "name": "NC" },
+	{ "id": 34, "name": "NC" },
 	# { "id": 43, "name": "TN" },
-	{ "id": 13, "name": "GA" }
+	# { "id": 13, "name": "GA" }
 ]
 
 print(f"{ currentTime() }: Connect to DB")
@@ -59,7 +59,7 @@ cur = cn.cursor()
 
 print(f"{ currentTime() }: ----------- Pull Data")
 
-for pageIndex in range(0, 20):
+for pageIndex in range(0, 8):
 
 	response = requests.get(f"https://www.trackwrestling.com/Login.jsp?tName=&state={ states[0]['id'] }&tournamentIndex={ pageIndex }&sDate=&eDate=&lastName=&firstName=&teamName=&sfvString=&city=&gbId=&camps=false", headers=requestHeaders)
 	soup = BeautifulSoup(response.text, "lxml")
