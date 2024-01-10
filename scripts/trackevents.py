@@ -78,7 +78,7 @@ for state in states:
 					eventDate = datetime.datetime.strptime("/".join(re.findall("^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate)[0]), "%m/%d/%Y")
 					endDate = datetime.datetime.strptime(re.findall("^[\d]{2}\/[\d]{2} - ([\d]{2}\/[\d]{2}\/[\d]{4})$", sourceDate)[0], "%m/%d/%Y")
 			
-			elif len(section.select("a[href^=http\:\/\/maps\.google\.com]")) > 0:
+			elif len(section.select("table")) > 0:
 				address = section.get_text(separator="\n").strip()
 		
 		if len(eventId) > 0 and len(eventName) > 0 and eventDate is not None and len(address) > 0 and re.search("[\s]test[\s,.]", address, re.I | re.DOTALL | re.MULTILINE) is None and (eventDate - datetime.datetime.today()).days < 365:
