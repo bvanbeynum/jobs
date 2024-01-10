@@ -114,6 +114,7 @@ from	(
 				and coalesce(FloMatch.Division, '') not like 'jv%'
 				and coalesce(FloMatch.Division, '') not like '%middle%'
 				and coalesce(FloMatch.Division, '') not like '%junior%'
+				and coalesce(FloMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for', '')
 		group by
 				FloMatch.ID
 				, cast(FloMeet.StartTime as date)
@@ -143,6 +144,7 @@ from	(
 				and coalesce(TrackMatch.Division, '') not like 'jv%'
 				and coalesce(TrackMatch.Division, '') not like '%middle%'
 				and coalesce(TrackMatch.Division, '') not like '%junior%'
+				and coalesce(TrackMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for', '')
 		group by
 				TrackMatch.ID
 				, cast(TrackEvent.EventDate as date)

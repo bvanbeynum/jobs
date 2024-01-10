@@ -18,7 +18,7 @@ join	FloWrestler Duplicate
 on		FloWrestler.FirstName = Duplicate.FirstName
 		and FloWrestler.LastName = Duplicate.LastName
 		and FloWrestler.TeamName <> Duplicate.TeamName
-where	FloWrestler.ID = 102929
+where	FloWrestler.ID = 28377
 order by
 		Duplicate.ID
 
@@ -276,5 +276,5 @@ set		FirstName = 'Jantzen'
 where	FirstName + ' ' + LastName = 'Jantzen Honeycutt'
 
 update	FloWrestler
-set		TeamName = 'Stratford'
-where	TeamName = 'Stratford Knights'
+set		TeamName = 'Clover'
+where	TeamName = 'Clover B'
