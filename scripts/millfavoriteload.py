@@ -138,6 +138,7 @@ def loadEvent(eventGUID, meetId):
 							topWrestlerId, # @WrestlerID
 							matchId, # @MatchID
 							1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+							match["topWrestler"]["team"]["name"], # @TeamName
 						))
 
 					if match["bottomWrestler"] is not None:
@@ -146,6 +147,7 @@ def loadEvent(eventGUID, meetId):
 							bottomWrestlerId, # @WrestlerID
 							matchId, # @MatchID
 							1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+							match["bottomWrestler"]["team"]["name"], # @TeamName
 						))
 					
 					poolSave["matches"].append(matchSave)

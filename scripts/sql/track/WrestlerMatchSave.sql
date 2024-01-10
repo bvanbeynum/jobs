@@ -4,10 +4,12 @@ declare @WrestlerMatchID int;
 declare @MatchID int;
 declare @WrestlerID int;
 declare @IsWinner bit;
+declare @Team varchar(255);
 
 set @MatchID = ?;
 set @WrestlerID = ?;
 set @IsWinner = ?;
+set @Team = ?;
 
 select	@WrestlerMatchID = TrackWrestlerMatch.ID
 from	TrackWrestlerMatch
@@ -21,11 +23,13 @@ begin
 			TrackMatchID
 			, TrackWrestlerID
 			, IsWinner
+			, Team
 			)
 	values	(
 			@MatchID
 			, @WrestlerID
 			, @IsWinner
+			, @Team
 			);
 
 	select	@WrestlerMatchID = scope_identity();
@@ -35,6 +39,7 @@ begin
 
 	update	TrackWrestlerMatch
 	set		IsWinner = @IsWinner
+			, Team = @Team
 			, ModifiedDate = getdate()
 	where	ID = @WrestlerMatchID;
 

@@ -47,8 +47,8 @@ postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
 states = [
 	# { "id": 41, "name": "SC" },
-	{ "id": 34, "name": "NC" },
-	# { "id": 43, "name": "TN" },
+	# { "id": 34, "name": "NC" },
+	{ "id": 43, "name": "TN" },
 	# { "id": 13, "name": "GA" }
 ]
 
@@ -59,7 +59,7 @@ cur = cn.cursor()
 
 print(f"{ currentTime() }: ----------- Pull Data")
 
-for pageIndex in range(0, 8):
+for pageIndex in range(0, 5):
 
 	response = requests.get(f"https://www.trackwrestling.com/Login.jsp?tName=&state={ states[0]['id'] }&tournamentIndex={ pageIndex }&sDate=&eDate=&lastName=&firstName=&teamName=&sfvString=&city=&gbId=&camps=false", headers=requestHeaders)
 	soup = BeautifulSoup(response.text, "lxml")
@@ -232,7 +232,8 @@ for pageIndex in range(0, 8):
 						cur.execute(sql["WrestlerMatchSave"], (
 							matchId,
 							winnerWrestlerId,
-							1
+							1,
+							match["winnerTeam"]
 						))
 						
 						# Loser save
@@ -246,7 +247,8 @@ for pageIndex in range(0, 8):
 						cur.execute(sql["WrestlerMatchSave"], (
 							matchId,
 							loserWrestlerId,
-							0
+							0,
+							match["loserTeam"]
 						))
 
 			cur.execute(sql["EventSave"], (
