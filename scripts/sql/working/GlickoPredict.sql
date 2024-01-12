@@ -10,7 +10,7 @@ order by
 */
 
 declare @OpponentTeam varchar(255)
-set @OpponentTeam = 'clover'
+set @OpponentTeam = 'rock hill'
 
 select	Team.WeightClass
 		, Opponent.Wrestler
@@ -70,7 +70,7 @@ select	WeightClass
 		, WinType
 from	(
 		select	TeamLineup.WeightClass
-				, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName + ' (' + cast(cast(FloWrestler.GRating as int) as varchar(max)) + ')'
+				, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName + ' (' + cast(cast(coalesce(FloWrestler.GRating, 1500) as int) as varchar(max)) + ')'
 				, EventDate = cast(FloMeet.StartTime as date)
 				, [Event] = FloMeet.MeetName
 				, FloMatch.Division
