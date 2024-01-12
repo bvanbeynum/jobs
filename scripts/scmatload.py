@@ -100,7 +100,8 @@ for confrenceIndex, confrence in enumerate(confrences):
 
 			if lastLoadDates.WrestlerDate is None or sourceDate > lastLoadDates.WrestlerDate:
 				weights = re.findall("\n([\d]+) lbs\.", section.text, flags=re.IGNORECASE)
-				rankings = re.findall("\n([\d])\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \(([A-Za-z]{2})\.", section.text, flags=re.IGNORECASE)
+				# rankings = re.findall("\n([\d])\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \(([A-Za-z]{2})\.", section.text, flags=re.IGNORECASE)
+				rankings = re.findall("\n([\d])\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \((([A-Za-z]{2})\.[^\)]*)?\)", section.text, flags=re.IGNORECASE)
 				
 				weightIndex = 0
 				print(f"{ currentTime() }: Loading { len(rankings) } individual rankings. Source: { datetime.datetime.strftime(sourceDate, '%m/%d/%Y') }")
@@ -115,7 +116,7 @@ for confrenceIndex, confrence in enumerate(confrences):
 						ranking[2].strip(), # Team Name
 						weights[weightIndex].strip(),
 						int(ranking[0]), # Rank
-						ranking[3].strip(), # Grade
+						ranking[4].strip(), # Grade
 						sourceDate
 					))
 				
