@@ -163,7 +163,7 @@ where	TeamName = 'fort mill'
 		and WeightClass = '144'
 
 update	xx_TeamLineup
-set		FloWrestlerID = 1695
-where	id = 69
+set		FloWrestlerID = 56835
+where	id = 196
 
 -- delete from xx_TeamLineup where teamname = 'Blythewood'
