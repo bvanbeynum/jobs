@@ -141,7 +141,7 @@ order by
 
 select	*
 from	#Rankings
-where	WeightClass = '106'
+where	WeightClass = '175'
 		-- or Wrestler like 'p% white'
 		-- or Wrestler like 'j% stock%'
 		-- and Confrence = '5a'

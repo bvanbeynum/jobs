@@ -1,1 +1,1 @@
-insert #TSStage (TSWrestlerID, TSMatchID, Rating, Deviation, Volatility) values (?,?,?,?,?);
+insert #TSStage (TSWrestlerID, TSMatchID, WinProbability, Rating, Deviation, Volatility) values (?,?,?,?,?,?);

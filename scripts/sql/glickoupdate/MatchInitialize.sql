@@ -73,7 +73,7 @@ from	(
 				and coalesce(FloMatch.Division, '') not like 'jv%'
 				and coalesce(FloMatch.Division, '') not like '%middle%'
 				and coalesce(FloMatch.Division, '') not like '%junior%'
-				and coalesce(FloMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for', '')
+				and coalesce(FloMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
 				and TSMatch.ID is null
 
 		union all
@@ -105,7 +105,7 @@ from	(
 				and coalesce(TrackMatch.Division, '') not like 'jv%'
 				and coalesce(TrackMatch.Division, '') not like '%middle%'
 				and coalesce(TrackMatch.Division, '') not like '%junior%'
-				and coalesce(TrackMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for', '')
+				and coalesce(TrackMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
 				and TSMatch.ID is null
 		) AllMatches;
 

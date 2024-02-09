@@ -6,6 +6,7 @@ if object_id('tempdb..#TSStage') is not null
 create table #TSStage (
 	TSWrestlerID int
 	, TSMatchID int
+	, WinProbability decimal(18,9)
 	, Rating decimal(18,9)
 	, Deviation decimal(18,9)
 	, Volatility decimal(18,9)

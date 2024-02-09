@@ -8,6 +8,8 @@ import math
 import json
 import pyodbc
 
+TAU = 0.5  # System constant
+
 class Player:
 
 	# The system constant, which constrains
@@ -183,6 +185,21 @@ def loadSQL():
 	
 	return sql
 
+# Calculate the Glicko-2 scale
+def scale(phi):
+	return 1 / math.sqrt(1 + 3 * phi**2 / math.pi**2)
+
+def calculateProbaility(rating1, rating2, rd1, rd2):
+
+	# Calculate the expected outcome for each player
+	expected1 = 1 / (1 + math.exp(-TAU * scale(rd2) * (rating1 - rating2)))
+	expected2 = 1 / (1 + math.exp(-TAU * scale(rd1) * (rating2 - rating1)))
+
+	# Calculate the win probability for Player 1
+	winProbability = expected1 / (expected1 + expected2)
+
+	return winProbability
+
 def processBatch(matches):
 	wrestlerIds = list(set([ match.TSWrestlerID for match in matches ]))
 
@@ -193,10 +210,10 @@ def processBatch(matches):
 		wrestlers.append({
 			"wrestlerId": wrestlerId,
 			"glicko": Player(rating = float(wrestlerMatches[0].Rating), rd = float(wrestlerMatches[0].Deviation), vol = float(wrestlerMatches[0].Volatility)),
-			"matchIds": [ match.TSMatchID for match in wrestlerMatches if match.TSMatchID is not None ],
+			"matches": [ { "matchId": match.TSMatchID, "probability": calculateProbaility(float(wrestlerMatches[0].Rating), float(match.OpponentRating), float(wrestlerMatches[0].Deviation), float(match.OpponentDeviation))} for match in wrestlerMatches if match.TSMatchID is not None ],
 			"matchRatings": [ float(match.OpponentRating) for match in wrestlerMatches if match.TSMatchID is not None ],
 			"matchDeviations": [ float(match.OpponentDeviation) for match in wrestlerMatches if match.TSMatchID is not None ],
-			"matchOutcomes": [ float(match.MatchResult) for match in wrestlerMatches if match.TSMatchID is not None ]
+			"matchOutcomes": [ float(match.MatchResult) for match in wrestlerMatches if match.TSMatchID is not None ],
 		})
 
 	return wrestlers
@@ -237,15 +254,15 @@ while len(wrestlers) > 0:
 	cur.execute(sql["StageCreate"])
 
 	for wrestler in wrestlers:
-		if len(wrestler["matchIds"]) > 0:
+		if len(wrestler["matches"]) > 0:
 
 			wrestler["glicko"].update_player(wrestler["matchRatings"], wrestler["matchDeviations"], wrestler["matchOutcomes"])
-			cur.executemany(sql["StageLoad"], [ [ wrestler["wrestlerId"], match, wrestler["glicko"].rating, wrestler["glicko"].rd, wrestler["glicko"].vol ] for match in wrestler["matchIds"] ])
+			cur.executemany(sql["StageLoad"], [ [ wrestler["wrestlerId"], match["matchId"], match["probability"], wrestler["glicko"].rating, wrestler["glicko"].rd, wrestler["glicko"].vol ] for match in wrestler["matches"] ])
 
 		else:
 
 			wrestler["glicko"].did_not_compete()
-			cur.executemany(sql["StageLoad"], [ [ wrestler["wrestlerId"], None, wrestler["glicko"].rating, wrestler["glicko"].rd, wrestler["glicko"].vol ] ])
+			cur.executemany(sql["StageLoad"], [ [ wrestler["wrestlerId"], None, None, wrestler["glicko"].rating, wrestler["glicko"].rd, wrestler["glicko"].vol ] ])
 
 	cur.execute(sql["StageUpdate"])
 	

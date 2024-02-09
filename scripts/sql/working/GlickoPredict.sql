@@ -10,7 +10,7 @@ order by
 */
 
 declare @OpponentTeam varchar(255)
-set @OpponentTeam = 'fort mill'
+set @OpponentTeam = 'Goose Creek'
 
 if object_id('tempdb..#wrestlers') is not null
 	drop table #Wrestlers
@@ -61,7 +61,7 @@ from	(
 		left join
 				TSWrestler
 		on		FloWrestler.ID = TSWrestler.FloWrestlerID
-				and TSWrestler.TSSummaryID = 51
+				and TSWrestler.TSSummaryID = (select max(id) from TSSummary where RunDate is not null)
 		where	TeamLineup.TeamName = 'fort mill'
 		) Team
 left join
@@ -78,7 +78,7 @@ left join
 		left join
 				TSWrestler
 		on		FloWrestler.ID = TSWrestler.FloWrestlerID
-				and TSWrestler.TSSummaryID = 51
+				and TSWrestler.TSSummaryID = (select max(id) from TSSummary where RunDate is not null)
 		where	TeamLineup.TeamName = @OpponentTeam
 		) Opponent
 on		team.WeightClass = Opponent.WeightClass
@@ -106,7 +106,10 @@ from	(
 				, EventWeight = FloMatch.WeightClass
 				, FloMatch.RoundName
 				, Rating = cast(cast(WrestlerRating.Rating as int) as varchar(max))
-				, Result = case when FloWrestlerMatch.IsWinner = 1 then 'Beat' else 'Lost To' end
+				, Result = case 
+					when FloWrestlerMatch.IsWinner = 1 then 'Beat' 
+					when FloWrestlerMatch.IsWinner = 0 then 'Lost To' 
+					else '' end
 				, Vs = Opponent.FirstName + ' ' + Opponent.LastName + ' (' + cast(cast(coalesce(OpponentRating.Rating, 0) as int) as varchar(max)) + ')'
 				, Team = Opponent.TeamName
 				, FloMatch.WinType
@@ -144,8 +147,8 @@ from	(
 				) OpponentRating
 		join	FloMatch
 		on		FloWrestlerMatch.FloMatchID = FloMatch.ID
-				and FloMatch.WinType is not null
-				and FloMatch.WinType <> 'bye'
+				-- and FloMatch.WinType is not null
+				and coalesce(FloMatch.WinType, '') <> 'bye'
 		join	FloMeet
 		on		FloMatch.FloMeetID = FloMeet.ID
 		where	TeamLineup.TeamName = @OpponentTeam
@@ -158,7 +161,10 @@ from	(
 				, EventWeight = TrackMatch.WeightClass
 				, TrackMatch.RoundName
 				, Rating = cast(cast(WrestlerRating.Rating as int) as varchar(max))
-				, Result = case when TrackWrestlerMatch.IsWinner = 1 then 'Beat' else 'Lost To' end
+				, Result = case 
+					when TrackWrestlerMatch.IsWinner = 1 then 'Beat' 
+					when TrackWrestlerMatch.IsWinner = 0 then 'Lost To' 
+					else '' end
 				, Vs = Opponent.WrestlerName + ' (' + cast(cast(coalesce(OpponentRating.Rating, 0) as int) as varchar(max)) + ')'
 				, Team = Opponent.TeamName
 				, TrackMatch.WinType
@@ -200,9 +206,9 @@ from	(
 		on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 		join	TrackEvent
 		on		TrackMatch.TrackEventID = TrackEvent.ID
-		where	TrackMatch.WinType is not null
-				and TrackMatch.WinType <> 'bye'
-				and TeamLineup.TeamName = @OpponentTeam
+		where	TeamLineup.TeamName = @OpponentTeam
+				-- and TrackMatch.WinType is not null
+				and coalesce(TrackMatch.WinType, '') <> 'bye'
 		) Events
 order by
 		WeightClass

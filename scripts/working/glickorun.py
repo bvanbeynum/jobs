@@ -213,6 +213,10 @@ def scale(phi):
 
 def calculateProbaility(rating1, rd1, rating2, rd2):
 
+	# Adjust to 90%
+	rating1 = rating1 - rd1
+	rating2 = rating2 - rd2
+
 	# Calculate the expected outcome for each player
 	expected1 = 1 / (1 + math.exp(-TAU * scale(rd2) * (rating1 - rating2)))
 	expected2 = 1 / (1 + math.exp(-TAU * scale(rd1) * (rating2 - rating1)))

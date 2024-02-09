@@ -2,12 +2,17 @@
 if object_id('tempdb..#wrestlers') is not null
 	drop table #Wrestlers
 
+declare @Team varchar(255)
+set @Team = 'Goose Creek'
+
 select	WrestlerID = row_number() over (order by coalesce(max(wrestlers.FloWrestlerID), max(wrestlers.TrackWrestlerID)))
-		, FloWrestlerID = max(wrestlers.FloWrestlerID)
-		, TrackWrestlerID = max(wrestlers.TrackWrestlerID)
+		, FloWrestlerID = min(wrestlers.FloWrestlerID)
+		, TrackWrestlerID = min(wrestlers.TrackWrestlerID)
 		, Wrestlers.WrestlerName
-		, GRating = max(Wrestlers.Rating)
-		, GDeviation = max(Wrestlers.Deviation)
+		, GRating = string_agg(Wrestlers.Rating, ', ')
+		, GDeviation = string_agg(Wrestlers.Deviation, ', ')
+		, AllFlo = string_agg(wrestlers.FloWrestlerID, ', ')
+		, AllTrack = string_agg(wrestlers.TrackWrestlerID, ', ')
 into	#Wrestlers
 from	(
 		select	FloWrestlerMatch.FloWrestlerID
@@ -18,7 +23,7 @@ from	(
 		from	FloWrestlerMatch
 		join	FloWrestler
 		on		FloWrestlerMatch.FloWrestlerID = FloWrestler.ID
-		where	FloWrestlerMatch.team = 'rock hill'
+		where	FloWrestlerMatch.team = @Team
 		union
 		select	FloWrestlerID = cast(null as int)
 				, TrackWrestlerID = TrackWrestlerMatch.TrackWrestlerID
@@ -28,7 +33,7 @@ from	(
 		from	TrackWrestlerMatch
 		join	TrackWrestler
 		on		TrackWrestlerMatch.TrackWrestlerID = TrackWrestler.ID
-		where	TrackWrestlerMatch.team = 'rock hill'
+		where	TrackWrestlerMatch.team = @Team
 		) Wrestlers
 group by
 		Wrestlers.WrestlerName;
@@ -38,8 +43,8 @@ select	LastMatch.WeightClass
 		, Wrestlers.WrestlerName
 		, Wrestlers.GRating
 		, wrestlers.GDeviation
-		, wrestlers.FloWrestlerID
-		, Wrestlers.TrackWrestlerID
+		-- , wrestlers.AllFlo
+		-- , Wrestlers.AllTrack
 		, Events = string_agg(cast(AllMatches.EventDate as varchar(max)) + ': ' + AllMatches.EventName, '; ') 
 			within group (order by AllMatches.EventDate desc)
 from	#wrestlers Wrestlers
@@ -118,6 +123,8 @@ group by
 		, wrestlers.GDeviation
 		, wrestlers.FloWrestlerID
 		, Wrestlers.TrackWrestlerID
+		, wrestlers.AllFlo
+		, Wrestlers.AllTrack
 order by
 		case when isnumeric(LastMatch.WeightClass) = 1 then cast(LastMatch.WeightClass as int) else 999 end
 		, LastMatch.WeightClass
@@ -127,20 +134,44 @@ order by
 
 return;
 
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '106', 106598);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '113', 106604);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '120', 871);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '126', 910);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '132', 96978);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '138', 25160);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '144', 104769);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '150', 21768);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '157', 8203);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '165', 978);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '175', 104780);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '190', 993);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '215', 1013);
-insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Rock Hill', '285', 18019);
+select	FloMeet.StartTime
+		, FloMeet.MeetName
+		, FloMatch.WeightClass
+		, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
+		, FloWrestlerMatch.FloWrestlerID
+from	FloWrestlerMatch
+join	FloMatch
+on		FloWrestlerMatch.FloMatchID = FloMatch.ID
+join	FloMeet
+on		FloMatch.FloMeetID = FloMeet.ID
+join	FloWrestler
+on		FloWrestlerMatch.FloWrestlerID = FloWrestler.ID
+where	FloWrestlerMatch.Team = 'Boiling Springs'
+		and FloMeet.MeetName like '2024 rock hill%'
+group by
+		FloMeet.StartTime
+		, FloMeet.MeetName
+		, FloMatch.WeightClass
+		, FloWrestler.FirstName
+		, FloWrestler.LastName
+		, FloWrestlerMatch.FloWrestlerID
+order by
+		case when isnumeric(FloMatch.WeightClass) = 1 then cast(FloMatch.WeightClass as int) else FloMatch.WeightClass end
+
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '106', 25346);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '113', 79318);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '120', 80606);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '126', 106617);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '132', 25206);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '138', 21957);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '144', 25224);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '150', 22040);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '157', 21991);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '165', 56576);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '175', 105829);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '190', 80645);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '215', 80643);
+insert xx_TeamLineup (TeamName, WeightClass, FloWrestlerID) values ('Goose Creek', '285', 27971);
 
 select	TeamLineup.ID
 		, TeamLineup.WeightClass
@@ -157,13 +188,23 @@ where	TeamLineup.TeamName = 'rock hill'
 order by
 		cast(TeamLineup.WeightClass as int)
 
+select	TeamName
+		, Wrestlers = count(distinct TeamLineup.FloWrestlerID)
+from	xx_TeamLineup TeamLineup
+group by
+		TeamName
+order by
+		TeamName
+
 select	*
 from	xx_TeamLineup
-where	TeamName = 'fort mill'
-		and WeightClass = '144'
+where	TeamName = 'byrnes'
+		and WeightClass = '215'
 
 update	xx_TeamLineup
-set		FloWrestlerID = 56835
-where	id = 196
+set		FloWrestlerID = 1021
+where	id = 203
+
+select * from xx_TeamLineup where id = 1215
 
 -- delete from xx_TeamLineup where teamname = 'Blythewood'
