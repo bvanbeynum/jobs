@@ -30,9 +30,13 @@ def scale(phi):
 
 def calculateProbaility(rating1, rating2, rd1, rd2):
 
+	# Get 1 SD
+	rating1Adjusted = rating1 - rd1
+	rating2Adjusted = rating2 - rd2
+
 	# Calculate the expected outcome for each player
-	expected1 = 1 / (1 + math.exp(-TAU * scale(rd2) * (rating1 - rating2)))
-	expected2 = 1 / (1 + math.exp(-TAU * scale(rd1) * (rating2 - rating1)))
+	expected1 = 1 / (1 + math.exp(-TAU * scale(rd2) * (rating1Adjusted - rating2Adjusted)))
+	expected2 = 1 / (1 + math.exp(-TAU * scale(rd1) * (rating2Adjusted - rating1Adjusted)))
 
 	# Calculate the win probability for Player 1
 	winProbability = expected1 / (expected1 + expected2)
@@ -55,12 +59,14 @@ print(f"{ currentTime() }: DB connect")
 cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
 cur = cn.cursor()
 
-print(f"{ currentTime() }: ----------- Load Data")
+print(f"{ currentTime() }: ----------- Load Team Data")
 
 cur.execute(sql["GetTeams"])
 teamData = cur.fetchall()
 
 teams = list(set([ team.TeamName for team in teamData ]))
+
+print(f"{ currentTime() }: { len(teams) } teams")
 
 for teamName in teams:
 	weightClasses = [ { 
@@ -76,6 +82,37 @@ for teamName in teams:
 	for weightClass in weightClasses:
 		probability = calculateProbaility(weightClass["vsMean"], weightClass["fmMean"], weightClass["vsSD"], weightClass["fmSD"])
 		cur.execute(sql["SavePrediction"], (weightClass["teamId"], probability))
+
+print(f"{ currentTime() }: ----------- Run Wrestler Probabilities")
+
+cur.execute(sql["CreateStage"])
+cur.execute(sql["GetWrestlers"])
+wrestlers = cur.fetchall()
+
+rowIndex = 0
+wrestlerCount = len(wrestlers)
+updates = []
+
+print(f"{ currentTime() }: Looping through wrestlers")
+
+for wrestler in wrestlers:
+	probability = calculateProbaility(float(wrestler.Wrestler1Rating), float(wrestler.Wrestler2Rating), float(wrestler.Wrestler1Deviation), float(wrestler.Wrestler2Deviation))
+	updates.append([wrestler.Wrester1ID, wrestler.Wrester2ID, probability])
+
+	rowIndex += 1
+
+	if len(updates) >= 10000:
+		print(f"{ currentTime() }: { wrestlerCount } total, { rowIndex } completed, { (wrestlerCount - rowIndex) } remain")
+
+		cur.executemany(sql["StageWrestlers"], updates)
+
+		updates = []
+
+if len(updates) > 0:
+	print(f"{ currentTime() }: { wrestlerCount } total, { rowIndex } completed, { (wrestlerCount - rowIndex) } remain")
+	cur.executemany(sql["StageWrestlers"], updates)
+
+cur.execute(sql["UpdateProbability"])
 
 cur.close()
 cn.close()

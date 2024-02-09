@@ -1,0 +1,1 @@
+insert #GlickPredict_Stage (Wrestler1ID, Wrestler2ID, Probability) values (?, ?, ?);

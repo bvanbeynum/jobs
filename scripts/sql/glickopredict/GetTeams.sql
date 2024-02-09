@@ -13,7 +13,7 @@ from	xx_TeamLineup team
 left join
 		TSWrestler
 on		team.FloWrestlerID = TSWrestler.FloWrestlerID
-		and TSWrestler.TSSummaryID = (select max(ID) from TSSummary)
+		and TSWrestler.TSSummaryID = (select max(ID) from TSSummary where RunDate is not null)
 left join
 		xx_TeamLineup FortMill
 on		team.WeightClass = FortMill.WeightClass
@@ -21,7 +21,7 @@ on		team.WeightClass = FortMill.WeightClass
 left join
 		TSWrestler FMRank
 on		FortMill.FloWrestlerID = FMRank.FloWrestlerID
-		and FMRank.TSSummaryID = (select max(ID) from TSSummary)
+		and FMRank.TSSummaryID = (select max(ID) from TSSummary where RunDate is not null)
 where	team.TeamName <> 'fort mill'
 		and TSWrestler.Rating is not null
 		and FMRank.Rating is not null
