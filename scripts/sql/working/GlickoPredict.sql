@@ -10,7 +10,7 @@ order by
 */
 
 declare @OpponentTeam varchar(255)
-set @OpponentTeam = 'Goose Creek'
+set @OpponentTeam = 'Summerville'
 
 if object_id('tempdb..#wrestlers') is not null
 	drop table #Wrestlers
@@ -98,7 +98,9 @@ select	WeightClass
 		, Team
 		, WinType
 from	(
-		select	WeightClass = TeamLineup.WeightClass -- last_value(TrackMatch.WeightClass) over (partition by TeamLineup.WrestlerID order by TrackEvent.EventDate desc, TrackMatch.Sort desc)
+		select	
+				-- WeightClass = TeamLineup.WeightClass -- last_value(TrackMatch.WeightClass) over (partition by TeamLineup.WrestlerID order by TrackEvent.EventDate desc, TrackMatch.Sort desc)
+				WeightClass = first_value(FloMatch.WeightClass) over (partition by TeamLineup.WrestlerID order by FloMeet.StartTime desc, FloMatch.Sort desc)
 				, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
 				, EventDate = cast(FloMeet.StartTime as date)
 				, [Event] = FloMeet.MeetName
@@ -115,7 +117,8 @@ from	(
 				, FloMatch.WinType
 				, FloMatch.Sort
 				, MatchID = FloMatch.ID
-		from	xx_TeamLineup TeamLineup
+		-- from	xx_TeamLineup TeamLineup
+		from	#Wrestlers TeamLineup
 		join	FloWrestler
 		on		TeamLineup.FloWrestlerID = FloWrestler.ID
 		join	FloWrestlerMatch
@@ -151,9 +154,13 @@ from	(
 				and coalesce(FloMatch.WinType, '') <> 'bye'
 		join	FloMeet
 		on		FloMatch.FloMeetID = FloMeet.ID
-		where	TeamLineup.TeamName = @OpponentTeam
+		where	1 = 1
+				-- and TeamLineup.TeamName = @OpponentTeam
+				and FloWrestlerMatch.Team = @OpponentTeam
 		union all
-		select	WeightClass = TeamLineup.WeightClass -- last_value(TrackMatch.WeightClass) over (partition by TeamLineup.WrestlerID order by TrackEvent.EventDate desc, TrackMatch.Sort desc)
+		select	
+				-- WeightClass = TeamLineup.WeightClass
+				WeightClass = first_value(TrackMatch.WeightClass) over (partition by TeamLineup.WrestlerID order by TrackEvent.EventDate desc, TrackMatch.Sort desc)
 				, Wrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
 				, EventDate = cast(TrackEvent.EventDate as date)
 				, [Event] = TrackEvent.EventName
@@ -170,7 +177,8 @@ from	(
 				, TrackMatch.WinType
 				, TrackMatch.Sort
 				, MatchID = TrackMatch.ID
-		from	xx_TeamLineup TeamLineup
+		-- from	xx_TeamLineup TeamLineup
+		from	#Wrestlers TeamLineup
 		join	FloWrestler
 		on		TeamLineup.FloWrestlerID = FloWrestler.ID
 		join	TrackWrestler
@@ -206,7 +214,9 @@ from	(
 		on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 		join	TrackEvent
 		on		TrackMatch.TrackEventID = TrackEvent.ID
-		where	TeamLineup.TeamName = @OpponentTeam
+		where	1 = 1
+				-- and TeamLineup.TeamName = @OpponentTeam
+				and TrackWrestlerMatch.Team = @OpponentTeam
 				-- and TrackMatch.WinType is not null
 				and coalesce(TrackMatch.WinType, '') <> 'bye'
 		) Events

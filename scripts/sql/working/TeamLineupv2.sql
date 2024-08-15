@@ -3,7 +3,7 @@ if object_id('tempdb..#wrestlers') is not null
 	drop table #Wrestlers
 
 declare @Team varchar(255)
-set @Team = 'Goose Creek'
+set @Team = 'woodmont'
 
 select	WrestlerID = row_number() over (order by coalesce(max(wrestlers.FloWrestlerID), max(wrestlers.TrackWrestlerID)))
 		, FloWrestlerID = min(wrestlers.FloWrestlerID)

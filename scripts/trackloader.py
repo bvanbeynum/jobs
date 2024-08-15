@@ -31,7 +31,7 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-sql = loadSQL("./scripts/sql/track")
+sql = loadSQL("./scripts/sql//track")
 
 trackTIM = ""
 trackTWSessionId = ""
@@ -47,9 +47,9 @@ postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
 states = [
 	{ "id": 41, "name": "SC", "pages": 6 },
-	{ "id": 34, "name": "NC", "pages": 10 },
+	{ "id": 34, "name": "NC", "pages": 8 },
 	{ "id": 43, "name": "TN", "pages": 8 },
-	{ "id": 13, "name": "GA", "pages": 8 }
+	{ "id": 13, "name": "GA", "pages": 10 }
 ]
 
 print(f"{ currentTime() }: Connect to DB")
@@ -98,19 +98,15 @@ for state in states:
 				elif len(section.select("a[href^=http\:\/\/maps\.google\.com]")) > 0:
 					address = section.get_text(separator="\n").strip()
 			
-			if eventId is not None and eventDate is not None and eventDate < datetime.datetime.today() and eventType is not None:
+			if eventId is not None and eventDate is not None and eventType is not None and re.search("[\s]test[\s,.]", address, re.I | re.DOTALL | re.MULTILINE) is None:
+
+				trackId = None
+				isComplete = None
 				cur.execute(sql["EventGet"], (eventId,))
-				trackId, isComplete = [ [ event.TrackID, event.IsComplete ] for event in cur.fetchall() ][0]
+				data = cur.fetchall()
 
-				if isComplete == 1:
-					continue
-
-				print(f"{ currentTime() }: Event { eventName } - { sourceDate }")
-
-				division = None
-				updates = []
-
-				session = requests.Session()
+				if len(data) == 1:
+					trackId, isComplete = data[0]
 
 				tournamentLink = ""
 				if eventType == 1:
@@ -124,18 +120,57 @@ for state in states:
 				elif eventType == 5:
 					tournamentLink = "seasontournaments"
 
-				cur.execute(sql["EventSave"], (
-					eventId,
-					tournamentLink,
-					eventName,
-					eventDate,
-					endDate,
-					sourceDate,
-					address,
-					state["name"],
-					0
-				))
-				trackId = cur.fetchval()
+				if trackId is None:
+					cur.execute(sql["EventSave"], (
+						eventId,
+						tournamentLink,
+						eventName,
+						eventDate,
+						endDate,
+						sourceDate,
+						address,
+						state["name"],
+						0
+						))
+
+					cur.execute(sql["EventGet"], (eventId,))
+					trackId = cur.fetchval()
+
+					event = {
+						"sqlId": trackId,
+						"trackId": eventId,
+						"name": eventName,
+						"date": datetime.datetime.strftime(eventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+						"endDate": datetime.datetime.strftime(endDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z" if endDate is not None else None,
+						"location": address,
+						"state": state["name"]
+					}
+					response = requests.post(f"{ config['millServer'] }/api/trackeventsave", json={ "trackEvent": event })
+				
+				if eventDate >= datetime.datetime.today():
+					# Update the data in case they are making changes
+					cur.execute(sql["EventSave"], (
+						eventId,
+						tournamentLink,
+						eventName,
+						eventDate,
+						endDate,
+						sourceDate,
+						address,
+						state["name"],
+						0
+					))
+					continue
+				
+				if isComplete == 1:
+					continue
+
+				print(f"{ currentTime() }: Event { eventName } - { sourceDate }")
+
+				division = None
+				updates = []
+
+				session = requests.Session()
 
 				response = session.get(f"https://www.trackwrestling.com/tw/{ tournamentLink }/VerifyPassword.jsp?tournamentId={ eventId }", headers=requestHeaders)
 				time.sleep(2)
@@ -149,17 +184,21 @@ for state in states:
 				response = session.get(f"https://www.trackwrestling.com/{ tournamentLink }/RoundResults.jsp?TIM={ trackTIM }&twSessionId={ trackTWSessionId }", headers=requestHeaders)
 
 				if response.status_code == 404 or re.search("This information is not being released to the public yet", response.text, re.I) is not None:
-					cur.execute(sql["EventSave"], (
-						eventId,
-						tournamentLink,
-						eventName,
-						eventDate,
-						endDate,
-						sourceDate,
-						address,
-						state["name"],
-						1
-					))
+
+					if eventDate < datetime.datetime.today():
+						# Event is in the past, so it's not valid
+						cur.execute(sql["EventSave"], (
+							eventId,
+							tournamentLink,
+							eventName,
+							eventDate,
+							endDate,
+							sourceDate,
+							address,
+							state["name"],
+							1
+						))
+
 					continue
 
 				time.sleep(2)

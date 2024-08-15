@@ -1,5 +1,5 @@
 
--- insert TSSummary (Title) values ('Deduped');
+-- insert TSSummary (Title) values ('2/20');
 -- update TSSummary set RunDate = null where id = 19;
 -- delete from TSSummary where id in (57, 58, 59, 60)
 
@@ -58,6 +58,6 @@ set		GRating = TSWrestler.Rating
 from	FloWrestler
 join	TSWrestler
 on		FloWrestler.ID = TSWrestler.FloWrestlerID
-		and TSWrestler.TSSummaryID = 61
+		and TSWrestler.TSSummaryID = 64
 
 */
