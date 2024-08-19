@@ -95,7 +95,7 @@ for state in states:
 						eventDate = datetime.datetime.strptime("/".join(re.findall("^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate)[0]), "%m/%d/%Y")
 						endDate = datetime.datetime.strptime(re.findall("^[\d]{2}\/[\d]{2} - ([\d]{2}\/[\d]{2}\/[\d]{4})$", sourceDate)[0], "%m/%d/%Y")
 				
-				elif len(section.select("a[href^=http\:\/\/maps\.google\.com]")) > 0:
+				elif len(section.select("a[href^=https\:\/\/www\.google\.com\/maps]")) > 0:
 					address = section.get_text(separator="\n").strip()
 			
 			if eventId is not None and eventDate is not None and eventType is not None and re.search("[\s]test[\s,.]", address, re.I | re.DOTALL | re.MULTILINE) is None:
