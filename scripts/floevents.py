@@ -199,7 +199,7 @@ cur = cn.cursor()
 print(f"{ currentTime() }: ----------- Upcoming Events")
 
 cur.execute(sql["UpcomingLoadedGet"])
-loaded = [ loaded.FlowID for loaded in cur.fetchall() ]
+loaded = [ { "flowId": loaded.FlowID, "name": loaded.MeetName } for loaded in cur.fetchall() ]
 
 response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
@@ -212,7 +212,25 @@ for event in events:
 events = sorted(events, key=lambda event: event["startConverted"])
 
 for eventIndex, event in enumerate(events):
-	if event["guid"] in loaded:
+	eventDB = [ eventDB for eventDB in loaded if eventDB["flowId"] == event["guid"]]
+	if len(eventDB) > 0:
+		if event["name"] != eventDB[0]["name"]:
+			location = getEventDetails(event["guid"])
+
+			print(f"{ currentTime() }: Data Changed { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
+			cur.execute(sql["MeetSave"], (
+				event["guid"], # @FlowID
+				event["name"], # @MeetName
+				None, # @IsExcluded
+				None, # @IsComplete
+				event["locationName"], # @LocationName
+				location.get("city"), # @LocationCity
+				location["state"], # @LocationState
+				event["startConverted"], # @StartTime
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
+				event["isPublishBrackets"], # @HasBrackets
+				))
+
 		continue
 
 	location = getEventDetails(event["guid"])
