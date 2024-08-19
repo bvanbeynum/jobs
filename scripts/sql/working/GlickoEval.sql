@@ -8,7 +8,7 @@ select * from TSSummary;
 declare @SummaryID int;
 declare @MaxIteration int;
 
-set @SummaryID = 61;
+set @SummaryID = 66;
 
 select	@MaxIteration = max(WrestlerMatches)
 from	(
@@ -58,6 +58,6 @@ set		GRating = TSWrestler.Rating
 from	FloWrestler
 join	TSWrestler
 on		FloWrestler.ID = TSWrestler.FloWrestlerID
-		and TSWrestler.TSSummaryID = 64
+		and TSWrestler.TSSummaryID = 66
 
 */

@@ -144,7 +144,7 @@ order by
 
 select	*
 from	#Rankings
-where	WeightClass in ('106', '113', '120')
+where	WeightClass in ('106')
 		or FloID in (724, 21908, 28194, 8145)
 		-- or Wrestler like 'ja% nathan'
 		-- or Wrestler like 'j% stock%'
