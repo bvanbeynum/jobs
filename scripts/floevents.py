@@ -199,7 +199,7 @@ cur = cn.cursor()
 print(f"{ currentTime() }: ----------- Upcoming Events")
 
 cur.execute(sql["UpcomingLoadedGet"])
-loaded = [ { "flowId": loaded.FlowID, "name": loaded.MeetName } for loaded in cur.fetchall() ]
+loaded = [ { "flowId": loaded.FlowID, "name": loaded.MeetName, "start": loaded.StartTime, "location": loaded.LocationName } for loaded in cur.fetchall() ]
 
 response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
@@ -214,7 +214,7 @@ events = sorted(events, key=lambda event: event["startConverted"])
 for eventIndex, event in enumerate(events):
 	eventDB = [ eventDB for eventDB in loaded if eventDB["flowId"] == event["guid"]]
 	if len(eventDB) > 0:
-		if event["name"] != eventDB[0]["name"]:
+		if event["name"] != eventDB[0]["name"] or event["startConverted"] != eventDB[0]["start"] or event["locationName"] != eventDB[0]["location"]:
 			location = getEventDetails(event["guid"])
 
 			print(f"{ currentTime() }: Data Changed { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
