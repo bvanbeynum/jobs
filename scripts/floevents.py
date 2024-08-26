@@ -230,6 +230,21 @@ for eventIndex, event in enumerate(events):
 				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
 				event["isPublishBrackets"], # @HasBrackets
 				))
+			meetId = cur.fetchval()
+			
+			eventDetails = {
+				"sqlId": meetId,
+				"floGUID": event["guid"],
+				"name": event["name"],
+				"location": event["locationName"],
+				"city": location.get("city"),
+				"state": location["state"],
+				"date": event["startDate"],
+				"endDate": event["endDate"],
+				"hasBrackets": event["isPublishBrackets"],
+				"divisions": []
+			}
+			loadMill(eventDetails)
 
 		continue
 
