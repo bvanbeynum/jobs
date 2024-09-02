@@ -31,7 +31,7 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-sql = loadSQL("./scripts/sql//track")
+sql = loadSQL("./scripts/sql/track")
 
 trackTIM = ""
 trackTWSessionId = ""
@@ -46,9 +46,9 @@ postHeaders = copy.deepcopy(requestHeaders)
 postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
 states = [
-	{ "id": 41, "name": "SC", "pages": 6 },
-	{ "id": 34, "name": "NC", "pages": 8 },
-	{ "id": 43, "name": "TN", "pages": 8 },
+	# { "id": 41, "name": "SC", "pages": 6 },
+	# { "id": 34, "name": "NC", "pages": 8 },
+	# { "id": 43, "name": "TN", "pages": 8 },
 	{ "id": 13, "name": "GA", "pages": 10 }
 ]
 
@@ -203,6 +203,8 @@ for state in states:
 
 				time.sleep(2)
 
+				matchesLoaded = False
+
 				soup = BeautifulSoup(response.text, "lxml")
 
 				for weightHTML in soup.find(id="groupIdBox").descendants:
@@ -250,6 +252,8 @@ for state in states:
 						for match in reversed(matches):
 							weightSort += 1
 
+							matchesLoaded = True
+
 							# Match save
 							cur.execute(sql["MatchSave"], (
 								trackId,
@@ -291,17 +295,18 @@ for state in states:
 								match["loserTeam"]
 							))
 
-				cur.execute(sql["EventSave"], (
-					eventId,
-					tournamentLink,
-					eventName,
-					eventDate,
-					endDate,
-					sourceDate,
-					address,
-					state["name"],
-					1
-				))
+				if matchesLoaded:
+					cur.execute(sql["EventSave"], (
+						eventId,
+						tournamentLink,
+						eventName,
+						eventDate,
+						endDate,
+						sourceDate,
+						address,
+						state["name"],
+						1
+					))
 							
 	print(f"{ currentTime() }: Finished { state['name'] }")
 
