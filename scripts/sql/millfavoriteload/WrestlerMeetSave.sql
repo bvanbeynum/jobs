@@ -14,8 +14,8 @@ set @WeightClass = ?;
 
 select	@FloWrestlerMeetID = FloWrestlerMeet.ID
 		, @IsUpdate = case 
-			when coalesce(FloWrestlerMeet.Division, '') <>  then 1
-			when coalesce(FloWrestlerMeet.weightClass, '') <> '' then 1
+			when coalesce(FloWrestlerMeet.Division, '') <> @Division then 1
+			when coalesce(FloWrestlerMeet.weightClass, '') <> @WeightClass then 1
 			else 0
 			end
 from	FloWrestlerMeet
