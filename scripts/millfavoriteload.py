@@ -172,6 +172,8 @@ def loadEvent(eventGUID, meetId):
 						cur.execute(sql["WrestlerMeetSave"], (
 							meetId, # @FloMeetID
 							wrestlerId, # @FloWrestlerID
+							division["name"], # @Division
+							weight["name"], # @WeightClass
 						))
 					
 				time.sleep(1) # Wait one second to not overload the api
