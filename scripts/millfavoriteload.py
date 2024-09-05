@@ -174,6 +174,7 @@ def loadEvent(eventGUID, meetId):
 							wrestlerId, # @FloWrestlerID
 							division["name"], # @Division
 							weight["name"], # @WeightClass
+							wrestler["team"]["name"], # @TeamName
 						))
 					
 				time.sleep(1) # Wait one second to not overload the api
