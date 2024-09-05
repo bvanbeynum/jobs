@@ -44,115 +44,136 @@ def loadEvent(eventGUID, meetId):
 				matches = json.loads(response.text)["response"]
 				poolSave = { "name": pool["name"], "matches": [] }
 
-				for matchIndex, match in enumerate(matches):
-					
-					sort = int(match["sequenceNumber"]) if match["sequenceNumber"] is not None and (str.isnumeric(str(match["sequenceNumber"])) or str.isdecimal(str(match["sequenceNumber"]))) else None
-					if sort is None:
-						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
-					
-					matchSave = {
-						"guid": match["guid"],
-						"round": match["roundName"]["displayName"],
-						"matchNumber": match["boutNumber"],
-						"sort": sort,
-						"mat": match["mat"]["name"] if match["mat"] is not None else None,
-						"roundNumber": match["trueRound"],
-						"roundSpot": match["roundSpot"],
-						"topWrestler": {
-							"guid": match["topWrestler"]["guid"],
-							"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
-							"team": match["topWrestler"]["team"]["name"],
-							"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
-						} if match["topWrestler"] is not None else None,
-						"bottomWrestler": {
-							"guid": match["bottomWrestler"]["guid"],
-							"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
-							"team": match["bottomWrestler"]["team"]["name"],
-							"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
-						} if match["bottomWrestler"] is not None else None,
-						"winType": match["winType"],
-						"results": match["result"],
-						"nextMatch": {
-							"winnerGUID": match["winnerToBoutGuid"],
-							"isWinnerTop": match["winnerToTop"],
-							"loserGUID": match["loserToBoutGuid"],
-							"isLoserTop": match["loserToTop"]
-						} if match["winnerToBoutGuid"] is not None else None
-					}
-					
-					if match["topWrestler"] is not None:
-						# Top wrestler
+				if len(matches) > 0:
+					for matchIndex, match in enumerate(matches):
 						
+						sort = int(match["sequenceNumber"]) if match["sequenceNumber"] is not None and (str.isnumeric(str(match["sequenceNumber"])) or str.isdecimal(str(match["sequenceNumber"]))) else None
+						if sort is None:
+							sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
+						
+						matchSave = {
+							"guid": match["guid"],
+							"round": match["roundName"]["displayName"],
+							"matchNumber": match["boutNumber"],
+							"sort": sort,
+							"mat": match["mat"]["name"] if match["mat"] is not None else None,
+							"roundNumber": match["trueRound"],
+							"roundSpot": match["roundSpot"],
+							"topWrestler": {
+								"guid": match["topWrestler"]["guid"],
+								"name": match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(),
+								"team": match["topWrestler"]["team"]["name"],
+								"isWinner": True if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+							} if match["topWrestler"] is not None else None,
+							"bottomWrestler": {
+								"guid": match["bottomWrestler"]["guid"],
+								"name": match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(),
+								"team": match["bottomWrestler"]["team"]["name"],
+								"isWinner": True if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else False
+							} if match["bottomWrestler"] is not None else None,
+							"winType": match["winType"],
+							"results": match["result"],
+							"nextMatch": {
+								"winnerGUID": match["winnerToBoutGuid"],
+								"isWinnerTop": match["winnerToTop"],
+								"loserGUID": match["loserToBoutGuid"],
+								"isLoserTop": match["loserToTop"]
+							} if match["winnerToBoutGuid"] is not None else None
+						}
+						
+						if match["topWrestler"] is not None:
+							# Top wrestler
+							
+							cur.execute(sql["WrestlerSave"], (
+								match["topWrestler"]["guid"], # @FlowID
+								match["topWrestler"]["firstName"].title(), # @FirstName
+								match["topWrestler"]["lastName"].title(), # @LastName
+								match["topWrestler"]["team"]["name"], # @TeamName
+								match["topWrestler"]["team"]["guid"], # @TeamFlowID
+							))
+							topWrestlerId = cur.fetchval()
+
+						if match["bottomWrestler"] is not None:
+							# Bottom wrestler
+
+							cur.execute(sql["WrestlerSave"], (
+								match["bottomWrestler"]["guid"], # @FlowID
+								match["bottomWrestler"]["firstName"].title(), # @FirstName
+								match["bottomWrestler"]["lastName"].title(), # @LastName
+								match["bottomWrestler"]["team"]["name"], # @TeamName
+								match["bottomWrestler"]["team"]["guid"], # @TeamFlowID
+							))
+							bottomWrestlerId = cur.fetchval()
+
+						boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None else None
+
+						cur.execute(sql["MatchSave"], (
+								meetId, # @MeetID
+								match["guid"], # @FlowID
+								division["name"], # @Division
+								weight["name"], # @WeightClass
+								pool["name"], # @PoolName
+								match["roundName"]["displayName"], # @RoundName
+								match["winType"], # @WinType
+								match["boutVideoUrl"], # @VideoURL
+								sort, # @Sort
+								boutNumber, # @MatchNumber
+								match["mat"]["name"] if match["mat"] is not None else None, # @Mat
+								match["result"], # @Results
+								topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID
+								bottomWrestlerId if match["bottomWrestler"] is not None else None, # @BottomFlowWrestlerID
+								match["winnerToBoutGuid"], # @WinnerMatchFlowID
+								match["winnerToTop"], # @WinnerToTop
+								match["loserToBoutGuid"], # @LoserMatchFlowID
+								match["loserToTop"], # @LoserToTop
+								topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
+								match["trueRound"], # @RoundNumber
+								match["roundSpot"], # @RoundSpot
+							))
+						
+						matchId = cur.fetchval()
+
+						if match["topWrestler"] is not None:
+							# Save wrestler match
+							cur.execute(sql["WrestlerMatchSave"], (
+								topWrestlerId, # @WrestlerID
+								matchId, # @MatchID
+								1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+								match["topWrestler"]["team"]["name"], # @TeamName
+							))
+
+						if match["bottomWrestler"] is not None:
+							# Save wrestler match
+							cur.execute(sql["WrestlerMatchSave"], (
+								bottomWrestlerId, # @WrestlerID
+								matchId, # @MatchID
+								1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
+								match["bottomWrestler"]["team"]["name"], # @TeamName
+							))
+						
+						poolSave["matches"].append(matchSave)
+					weightSave["pools"].append(poolSave)
+
+				else:
+					# No matches posted yet. pull in wrestlers instead
+					response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/division/{ division['guid'] }/weight/{ weight['guid'] }/athletes", headers=requestHeaders)
+					wrestlers = json.loads(response.text)["response"]
+
+					for wrestler in wrestlers:
 						cur.execute(sql["WrestlerSave"], (
-							match["topWrestler"]["guid"], # @FlowID
-							match["topWrestler"]["firstName"].title(), # @FirstName
-							match["topWrestler"]["lastName"].title(), # @LastName
-							match["topWrestler"]["team"]["name"], # @TeamName
-							match["topWrestler"]["team"]["guid"], # @TeamFlowID
+							wrestler["guid"], # @FlowID
+							wrestler["firstName"].title(), # @FirstName
+							wrestler["lastName"].title(), # @LastName
+							wrestler["team"]["name"], # @TeamName
+							wrestler["team"]["guid"], # @TeamFlowID
 						))
-						topWrestlerId = cur.fetchval()
+						wrestlerId = cur.fetchval()
 
-					if match["bottomWrestler"] is not None:
-						# Bottom wrestler
-
-						cur.execute(sql["WrestlerSave"], (
-							match["bottomWrestler"]["guid"], # @FlowID
-							match["bottomWrestler"]["firstName"].title(), # @FirstName
-							match["bottomWrestler"]["lastName"].title(), # @LastName
-							match["bottomWrestler"]["team"]["name"], # @TeamName
-							match["bottomWrestler"]["team"]["guid"], # @TeamFlowID
-						))
-						bottomWrestlerId = cur.fetchval()
-
-					boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None else None
-
-					cur.execute(sql["MatchSave"], (
-							meetId, # @MeetID
-							match["guid"], # @FlowID
-							division["name"], # @Division
-							weight["name"], # @WeightClass
-							pool["name"], # @PoolName
-							match["roundName"]["displayName"], # @RoundName
-							match["winType"], # @WinType
-							match["boutVideoUrl"], # @VideoURL
-							sort, # @Sort
-							boutNumber, # @MatchNumber
-							match["mat"]["name"] if match["mat"] is not None else None, # @Mat
-							match["result"], # @Results
-							topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID
-							bottomWrestlerId if match["bottomWrestler"] is not None else None, # @BottomFlowWrestlerID
-							match["winnerToBoutGuid"], # @WinnerMatchFlowID
-							match["winnerToTop"], # @WinnerToTop
-							match["loserToBoutGuid"], # @LoserMatchFlowID
-							match["loserToTop"], # @LoserToTop
-							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
-							match["trueRound"], # @RoundNumber
-							match["roundSpot"], # @RoundSpot
+						cur.execute(sql["WrestlerMeetSave"], (
+							meetId, # @FloMeetID
+							wrestlerId, # @FloWrestlerID
 						))
 					
-					matchId = cur.fetchval()
-
-					if match["topWrestler"] is not None:
-						# Save wrestler match
-						cur.execute(sql["WrestlerMatchSave"], (
-							topWrestlerId, # @WrestlerID
-							matchId, # @MatchID
-							1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
-							match["topWrestler"]["team"]["name"], # @TeamName
-						))
-
-					if match["bottomWrestler"] is not None:
-						# Save wrestler match
-						cur.execute(sql["WrestlerMatchSave"], (
-							bottomWrestlerId, # @WrestlerID
-							matchId, # @MatchID
-							1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
-							match["bottomWrestler"]["team"]["name"], # @TeamName
-						))
-					
-					poolSave["matches"].append(matchSave)
-				weightSave["pools"].append(poolSave)
-
 				time.sleep(1) # Wait one second to not overload the api
 
 			divisionSave["weightClasses"].append(weightSave)
@@ -210,7 +231,7 @@ for event in events:
 		updates.append(event)
 
 	elif timeToStart.days >= 2 and timeToStart.days <= 7 and timeSinceUpdate.seconds > 60 * 60 * 24:
-		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds) // 60 // 60 }h - between 2 & 7 days, once per day")
+		print(f"{ currentTime() }: Update { event['name'] }, start date { str(timeToStart.days) } days, last update { str(timeSinceUpdate.seconds // 60 // 60) }h - between 2 & 7 days, once per day")
 		updates.append(event)
 
 if len(updates) == 0:
