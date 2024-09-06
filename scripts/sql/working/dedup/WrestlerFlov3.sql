@@ -1,5 +1,5 @@
 
--- select * from FloWrestler where FirstName + ' ' + LastName like 'T% Wilder'
+-- select * from FloWrestler where FirstName + ' ' + LastName like 'j% Stocker'
 
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
@@ -7,7 +7,7 @@ if object_id('tempdb..#dedup') is not null
 declare @LookupID int;
 declare @Length int;
 
-set	@LookupID = 85717;
+set	@LookupID = 727;
 set @Length = 1;
 
 select	SaveID = FloWrestler.ID

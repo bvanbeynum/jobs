@@ -1,5 +1,5 @@
 declare @LookupID int;
-set	@LookupID = 869;
+set	@LookupID = 8163;
 
 -- select * from FloWrestler where FirstName + ' ' + LastName like 'T% Wilder'
 
@@ -25,6 +25,13 @@ left join (
 		group by
 				FloWrestlerID
 				, Team
+		union
+		select	FloWrestlerID
+				, TeamName
+		from	FloWrestlerMeet
+		group by
+				FloWrestlerID
+				, TeamName
 		) Teams
 on		Dup.ID = Teams.FloWrestlerID
 left join (
@@ -56,16 +63,22 @@ from	#dedup
 
 return;
 
--- delete from #dedup where DupID in (86169)
+-- delete from #dedup where DupID in (75378)
 
-select @@trancount
-
-begin transaction;
+if @@trancount = 0
+	begin transaction
+else
+	throw 50000, 'Existing transaction', 16
 
 select	Matches = count(distinct FloWrestlerMatch.ID)
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
+
+select	Meets = count(distinct FloWrestlerMeet.ID)
+from	FloWrestlerMeet
+join	#dedup dedup
+on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
 
 select	count(distinct FloWrestler.ID)
 from	FloWrestler
@@ -77,6 +90,12 @@ set		FloWrestlerID = dedup.NewID
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
+
+update	FloWrestlerMeet
+set		FloWrestlerID = dedup.NewID
+from	FloWrestlerMeet
+join	#dedup dedup
+on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
 
 delete
 from	FloWrestler
