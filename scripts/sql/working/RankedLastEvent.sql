@@ -22,6 +22,7 @@ from	(
 				on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 				join	FloMeet
 				on		FloMatch.FloMeetID = FloMeet.ID
+				where	FloMeet.StartTime > '3/1/2024'
 				group by
 						FloWrestler.ID
 						, FloWrestler.FirstName
@@ -41,6 +42,7 @@ from	(
 				on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 				join	TrackEvent
 				on		TrackMatch.TrackEventID = TrackEvent.ID
+				where	TrackEvent.EventDate > '3/1/2024'
 				group by
 						TrackWrestler.ID
 						, TrackWrestler.WrestlerName
@@ -63,7 +65,7 @@ from	WrestlerRank
 left join
 		LastEventCTE
 on		WrestlerRank.FirstName + ' ' + WrestlerRank.LastName = LastEventCTE.WrestlerName
-where	WrestlerRank.WeightClass = '106'
+where	WrestlerRank.WeightClass = '138'
 		and WrestlerRank.SourceDate = '2/21/2024'
 order by
 		WrestlerRank.Ranking
