@@ -46,9 +46,9 @@ postHeaders = copy.deepcopy(requestHeaders)
 postHeaders["Content-Type"] = "application/x-www-form-urlencoded"
 
 states = [
-	# { "id": 41, "name": "SC", "pages": 6 },
-	# { "id": 34, "name": "NC", "pages": 8 },
-	# { "id": 43, "name": "TN", "pages": 8 },
+	{ "id": 41, "name": "SC", "pages": 6 },
+	{ "id": 34, "name": "NC", "pages": 8 },
+	{ "id": 43, "name": "TN", "pages": 8 },
 	{ "id": 13, "name": "GA", "pages": 10 }
 ]
 
