@@ -176,7 +176,11 @@ for state in states:
 				time.sleep(2)
 				
 				trackTIM = re.search("TIM=([\d]+)", response.text)[1]
-				trackTWSessionId = re.search("twSessionId=([^\"&]+)", response.text)[1]
+				trackTWSessionId = re.search("twSessionId=([^\"&]+)", response.text)
+				if trackTWSessionId is not None and len(trackTWSessionId) > 0:
+					trackTWSessionId = trackTWSessionId[1]
+				else:
+					continue
 				
 				response = session.get(f"https://www.trackwrestling.com/{ tournamentLink }/MainFrame.jsp?newSession=false&TIM={ trackTIM }&pageName=&twSessionId={ trackTWSessionId }", headers=requestHeaders)
 				time.sleep(2)
