@@ -157,8 +157,8 @@ print(f"{ currentTime() }: Get matches from Mongo")
 matchesSave = []
 
 response = requests.get(f"{ millDBURL }/api/flomatchgetbulk")
-matchesMill = [ match["sqlId"] for match in json.loads(response.text)["floMatches"] ]
-matchesMill = sorted(matchesMill, key=lambda match: match)
+matchesMill = json.loads(response.text)["floMatches"]
+matchesMill = sorted(matchesMill, key=lambda match: match, reverse=True)
 
 print(f"{ currentTime() }: Get matches from SQL")
 cur.execute(sql["MatchesLoad"])
