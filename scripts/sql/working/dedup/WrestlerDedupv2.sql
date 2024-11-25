@@ -87,12 +87,14 @@ on		FloWrestler.ID = dedup.DupID;
 
 update	FloWrestlerMatch
 set		FloWrestlerID = dedup.NewID
+		, ModifiedDate = getdate()
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
 
 update	FloWrestlerMeet
 set		FloWrestlerID = dedup.NewID
+		, ModifiedDate = getdate()
 from	FloWrestlerMeet
 join	#dedup dedup
 on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;

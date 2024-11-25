@@ -7,7 +7,7 @@ if object_id('tempdb..#dedup') is not null
 declare @LookupID int;
 declare @Length int;
 
-set	@LookupID = 727;
+set	@LookupID = 1402;
 set @Length = 1;
 
 select	SaveID = FloWrestler.ID
@@ -74,16 +74,28 @@ order by
 
 return;
 
--- delete from #dedup where DupID in (69687)
+-- delete from #dedup where DupID in (3633, 82252)
 
-select @@trancount
-
-begin transaction;
+if @@trancount = 0
+	begin transaction
+else
+	throw 50000, 'Existing transaction', 16
 
 select	Matches = count(distinct FloWrestlerMatch.ID)
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
+
+select	Meets = count(distinct FloWrestlerMeet.ID)
+from	FloWrestlerMeet
+join	#dedup dedup
+on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
+
+select	Predictions = count(distinct GlickoPrediction.ID)
+from	GlickoPrediction
+join	#dedup dedup
+on		GlickoPrediction.Wrestler1FloID = dedup.DupID
+		or GlickoPrediction.Wrestler2FloID = dedup.DupID
 
 select	count(distinct FloWrestler.ID)
 from	FloWrestler
@@ -92,9 +104,25 @@ on		FloWrestler.ID = dedup.DupID;
 
 update	FloWrestlerMatch
 set		FloWrestlerID = dedup.SaveID
+		, ModifiedDate = getdate()
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
+
+update	FloWrestlerMeet
+set		FloWrestlerID = dedup.SaveID
+		, ModifiedDate = getdate()
+from	FloWrestlerMeet
+join	#dedup dedup
+on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
+
+update	GlickoPrediction
+set		GlickoPrediction.Wrestler1FloID = case when GlickoPrediction.Wrestler1FloID = dedup.DupID then dedup.SaveID else GlickoPrediction.Wrestler1FloID end
+		, GlickoPrediction.Wrestler2FloID = case when GlickoPrediction.Wrestler2FloID = dedup.DupID then dedup.SaveID else GlickoPrediction.Wrestler2FloID end
+from	GlickoPrediction
+join	#dedup dedup
+on		GlickoPrediction.Wrestler1FloID = dedup.DupID
+		or GlickoPrediction.Wrestler2FloID = dedup.DupID
 
 delete
 from	FloWrestler
@@ -110,5 +138,5 @@ where	FloWrestler.ID in (
 		);
 
 commit;
-
+ 
 rollback;
