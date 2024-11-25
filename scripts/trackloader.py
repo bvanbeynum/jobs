@@ -176,8 +176,8 @@ for state in states:
 				time.sleep(2)
 				
 				trackTIM = re.search("TIM=([\d]+)", response.text)[1]
-				trackTWSessionId = re.search("twSessionId=([^\"&]+)", response.text)
-				if trackTWSessionId is not None and len(trackTWSessionId) > 0:
+				trackTWSessionId = re.search("name=\"twSessionId\" value=\"([^\"]+)\"", response.text)
+				if trackTWSessionId is not None and trackTWSessionId.lastindex > 0:
 					trackTWSessionId = trackTWSessionId[1]
 				else:
 					continue
