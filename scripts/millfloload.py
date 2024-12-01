@@ -46,17 +46,18 @@ print(f"{ currentTime() }: Get wrestlers from Mill")
 response = requests.get(f"{ millDBURL }/api/externalwrestlersbulk")
 wrestlersMill = json.loads(response.text)["externalWrestlers"]
 
-print(f"{ currentTime() }: Get wrestlers to delete")
+if len(wrestlersMill) > 0: # if the data hasn't been wiped out
+	print(f"{ currentTime() }: Get wrestlers to delete")
 
-cur.execute(sql["WrestlerStageCreate"])
-cur.executemany(sql["WrestlerStageLoad"], [ (wrestler["sqlId"],) for wrestler in wrestlersMill ])
-cur.execute(sql["WrestlersMissing"])
+	cur.execute(sql["WrestlerStageCreate"])
+	cur.executemany(sql["WrestlerStageLoad"], [ (wrestler["sqlId"],) for wrestler in wrestlersMill ])
+	cur.execute(sql["WrestlersMissing"])
 
-wrestlersDelete = [ wrestler.WrestlerID for wrestler in cur.fetchall() ]
+	wrestlersDelete = [ wrestler.WrestlerID for wrestler in cur.fetchall() ]
 
-if len(wrestlersDelete) > 0:
-	print(f"{ currentTime() }: Delete { len(wrestlersDelete) } duplicates")
-	response = requests.post(f"{ millDBURL }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
+	if len(wrestlersDelete) > 0:
+		print(f"{ currentTime() }: Delete { len(wrestlersDelete) } duplicates")
+		response = requests.post(f"{ millDBURL }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
 
 print(f"{ currentTime() }: Get wrestlers from DB")
 cur.execute(sql["WrestlersLoad"])
@@ -84,8 +85,8 @@ for row in cur:
 			if response.status_code >= 400:
 				print(f"{ currentTime() }: Error saving external wrestlers: { response.status_code }")
 				data = json.loads(response.text)
-				print([ row for row in data["externalWrestlers"] if row["error"] is not None ])
-				print([ row for row in data["externalTeams"] if row["error"] is not None ])
+				print([ row for row in data["externalWrestlers"] if "error" in row and row["error"] is not None ])
+				print([ row for row in data["externalTeams"] if "error" in row and row["error"] is not None ])
 
 			wrestlerUpdates = []
 
@@ -149,57 +150,6 @@ if response.status_code >= 400:
 	print(f"{ currentTime() }: Error saving external wrestlers: { response.status_code }")
 	data = json.loads(response.text)["externalWrestlers"]
 	print([ row for row in data if row["error"] is not None ])
-
-print(f"{ currentTime() }: ----------- Matches")
-
-print(f"{ currentTime() }: Get matches from Mongo")
-
-matchesSave = []
-
-response = requests.get(f"{ millDBURL }/api/flomatchgetbulk")
-matchesMill = json.loads(response.text)["floMatches"]
-matchesMill = sorted(matchesMill, key=lambda match: match, reverse=True)
-
-print(f"{ currentTime() }: Get matches from SQL")
-cur.execute(sql["MatchesLoad"])
-
-print(f"{ currentTime() }: Looping through the database")
-for row in cur:
-	matchFound = [ match for match in matchesMill if match == row.MatchID ]
-
-	if len(matchFound) == 0:
-		matchesSave.append({
-			"sqlId": row.MatchID,
-			"winnerSqlId": row.WinnerID,
-			"winner": row.Winner,
-			"winnerTeam": row.WinnerTeam,
-			"loserSqlId": row.LoserID,
-			"loser": row.Loser,
-			"loserTeam": row.LoserTeam,
-			"winType": row.WinType,
-			"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
-			"event": row.EventName
-		})
-		
-		if len(matchesSave) >= 100:
-			print(f"{ currentTime() }: Loading { len(matchesSave) } matches to mill")
-			response = requests.post(f"{ millDBURL }/api/flomatchsavebulk", json={ "matchessave": matchesSave })
-
-			if response.status_code >= 400:
-				print(f"{ currentTime() }: Error saving matches: { response.status_code }")
-				data = json.loads(response.text)
-				print([ row for row in data["floMatches"] if row["error"] is not None ])
-
-			matchesSave = []
-
-if len(matchesSave) > 0:
-	print(f"{ currentTime() }: Loading { len(matchesSave) } matches to mill")
-	response = requests.post(f"{ millDBURL }/api/flomatchsavebulk", json={ "matchessave": matchesSave })
-
-	if response.status_code >= 400:
-		print(f"{ currentTime() }: Error saving matches: { response.status_code }")
-		data = json.loads(response.text)
-		print([ row for row in data["floMatches"] if row["error"] is not None ])
 
 cur.close()
 cn.close()

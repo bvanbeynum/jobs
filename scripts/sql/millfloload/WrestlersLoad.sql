@@ -4,7 +4,6 @@ declare @Wrestler table (
 	WrestlerID int
 	, FirstName varchar(255)
 	, LastName varchar(255)
-	, Team varchar(255)
 	, gRating decimal(18,9)
 	, gDeviation decimal(18,9)
 );
@@ -35,14 +34,12 @@ insert	@Wrestler (
 		WrestlerID
 		, FirstName
 		, LastName
-		, Team
 		, gRating
 		, gDeviation
 		)
 select	WrestlerID = FloWrestler.ID
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
-		, Team = FloWrestler.TeamName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
 from	FloWrestler
@@ -53,29 +50,26 @@ on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 join	FloMeet
 on		FloMatch.FloMeetID = FloMeet.ID
 where	FloMeet.IsExcluded = 0
-		and FloMeet.LocationState = 'sc'
+		and FloMeet.LocationState in ('sc')
 group by
 		FloWrestler.ID
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
-		, FloWrestler.TeamName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
-having	max(case when FloMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
+-- having	max(case when FloMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
 
 -- Get Track wrestlers that've changed in the past 2 days
 insert	@Wrestler (
 		WrestlerID
 		, FirstName
 		, LastName
-		, Team
 		, gRating
 		, gDeviation
 		)
 select	WrestlerID = FloWrestler.ID
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
-		, Team = FloWrestler.TeamName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
 from	FloWrestler
@@ -93,16 +87,15 @@ outer apply (
 		where	FloWrestler.ID = Wrestler.WrestlerID
 		) ExistingWrestler
 where	TrackEvent.IsComplete = 1
-		and TrackEvent.EventState = 'sc'
+		and TrackEvent.EventState in ('sc')
 		and ExistingWrestler.WrestlerID is null
 group by
 		FloWrestler.ID
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
-		, FloWrestler.TeamName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
-having	max(case when TrackMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
+-- having	max(case when TrackMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
 
 insert	@WrestlerMatch (
 		WrestlerID
@@ -127,7 +120,7 @@ insert	@WrestlerMatch (
 select	wrestlers.WrestlerID
 		, wrestlers.FirstName
 		, wrestlers.LastName
-		, wrestlers.Team
+		, FloWrestlerMatch.Team
 		, wrestlers.gRating
 		, wrestlers.gDeviation
 		, EventID = FloMeet.ID
@@ -140,7 +133,7 @@ select	wrestlers.WrestlerID
 		, FloMatch.WinType
 		, FloMatch.Sort
 		, vs = opponent.FirstName + ' ' + opponent.LastName
-		, vsTeam = opponent.TeamName
+		, vsTeam = vsmatch.Team
 		, vsID = opponent.ID
 from	@Wrestler wrestlers
 join	FloWrestlerMatch
@@ -181,7 +174,7 @@ insert	@WrestlerMatch (
 select	wrestlers.WrestlerID
 		, wrestlers.FirstName
 		, wrestlers.LastName
-		, wrestlers.Team
+		, TrackWrestlerMatch.Team
 		, wrestlers.gRating
 		, wrestlers.gDeviation
 		, EventID = TrackEvent.ID
@@ -193,8 +186,8 @@ select	wrestlers.WrestlerID
 		, TrackWrestlerMatch.IsWinner
 		, TrackMatch.WinType
 		, TrackMatch.Sort
-		, vs = opponent.FirstName + ' ' + opponent.LastName
-		, vsTeam = opponent.TeamName
+		, vs = opponent.WrestlerName
+		, vsTeam = vsmatch.Team
 		, vsID = opponent.ID
 from	@Wrestler wrestlers
 join	TrackWrestler
@@ -208,7 +201,7 @@ on		TrackMatch.TrackEventID = TrackEvent.ID
 join	TrackWrestlerMatch vsmatch
 on		TrackMatch.ID = vsmatch.TrackMatchID
 		and vsmatch.TrackWrestlerID <> TrackWrestler.ID
-join	FloWrestler opponent
+join	TrackWrestler opponent
 on		vsmatch.TrackWrestlerID = opponent.ID
 where	TrackEvent.IsComplete = 1
 		and TrackEvent.EventDate > getdate() - (365 * 2)
