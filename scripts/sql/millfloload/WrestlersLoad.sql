@@ -41,8 +41,9 @@ group by
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
 		, FloWrestler.gRating
-		, FloWrestler.gDeviation;
--- having	max(case when FloMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
+		, FloWrestler.gDeviation
+having	max(FloWrestler.ModifiedDate) > getdate() - 2
+		or max(FloMatch.ModifiedDate) > getdate() - 2;
 
 -- Get Track wrestlers that've changed in the past 2 days
 insert	#Wrestlers (
@@ -81,7 +82,8 @@ group by
 		, FloWrestler.FirstName
 		, FloWrestler.LastName
 		, FloWrestler.gRating
-		, FloWrestler.gDeviation;
--- having	max(case when TrackMatch.ModifiedDate > getdate() - 2 then 1 else 0 end) = 1;
+		, FloWrestler.gDeviation
+having	max(TrackWrestler.ModifiedDate) > getdate() - 2
+		or max(TrackMatch.ModifiedDate) > getdate() - 2;
 
 set nocount off;
