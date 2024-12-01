@@ -1,12 +1,12 @@
 declare @LookupID int;
-set	@LookupID = 8163;
+set	@LookupID = 17793;
 
 -- select * from FloWrestler where FirstName + ' ' + LastName like 'T% Wilder'
 
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
 
-select	NewID = Original.ID
+select	SaveID = Original.ID
 		, DupID = Dup.ID
 		, Wrestler = Original.FirstName + ' ' + Original.LastName
 		, Teams = string_agg(Teams.Team, '; ')
@@ -80,24 +80,38 @@ from	FloWrestlerMeet
 join	#dedup dedup
 on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
 
-select	count(distinct FloWrestler.ID)
+select	Predictions = count(distinct GlickoPrediction.ID)
+from	GlickoPrediction
+join	#dedup dedup
+on		GlickoPrediction.Wrestler1FloID = dedup.DupID
+		or GlickoPrediction.Wrestler2FloID = dedup.DupID
+
+select	Wrestlers = count(distinct FloWrestler.ID)
 from	FloWrestler
 join	#dedup dedup
 on		FloWrestler.ID = dedup.DupID;
 
 update	FloWrestlerMatch
-set		FloWrestlerID = dedup.NewID
+set		FloWrestlerID = dedup.SaveID
 		, ModifiedDate = getdate()
 from	FloWrestlerMatch
 join	#dedup dedup
 on		FloWrestlerMatch.FloWrestlerID = dedup.DupID;
 
 update	FloWrestlerMeet
-set		FloWrestlerID = dedup.NewID
+set		FloWrestlerID = dedup.SaveID
 		, ModifiedDate = getdate()
 from	FloWrestlerMeet
 join	#dedup dedup
 on		FloWrestlerMeet.FloWrestlerID = dedup.DupID;
+
+update	GlickoPrediction
+set		GlickoPrediction.Wrestler1FloID = case when GlickoPrediction.Wrestler1FloID = dedup.DupID then dedup.SaveID else GlickoPrediction.Wrestler1FloID end
+		, GlickoPrediction.Wrestler2FloID = case when GlickoPrediction.Wrestler2FloID = dedup.DupID then dedup.SaveID else GlickoPrediction.Wrestler2FloID end
+from	GlickoPrediction
+join	#dedup dedup
+on		GlickoPrediction.Wrestler1FloID = dedup.DupID
+		or GlickoPrediction.Wrestler2FloID = dedup.DupID
 
 delete
 from	FloWrestler
@@ -108,7 +122,7 @@ on		FloWrestler.ID = dedup.DupID;
 update	FloWrestler
 set		ModifiedDate = getdate()
 where	FloWrestler.ID in (
-			select	distinct NewID
+			select	distinct SaveID
 			from	#dedup
 		);
 

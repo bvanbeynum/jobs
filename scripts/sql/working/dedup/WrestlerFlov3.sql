@@ -7,7 +7,7 @@ if object_id('tempdb..#dedup') is not null
 declare @LookupID int;
 declare @Length int;
 
-set	@LookupID = 1402;
+set	@LookupID = 17793;
 set @Length = 1;
 
 select	SaveID = FloWrestler.ID
@@ -97,7 +97,7 @@ join	#dedup dedup
 on		GlickoPrediction.Wrestler1FloID = dedup.DupID
 		or GlickoPrediction.Wrestler2FloID = dedup.DupID
 
-select	count(distinct FloWrestler.ID)
+select	Wrestlers = count(distinct FloWrestler.ID)
 from	FloWrestler
 join	#dedup dedup
 on		FloWrestler.ID = dedup.DupID;

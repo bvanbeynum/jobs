@@ -1,58 +1,19 @@
+/*
 
-if object_id('tempdb..#dups') is not null
-	drop table #dups
+commit;
+
+rollback;
+
+*/
 
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
 
-select	GroupID
-		, Priority
-		, WrestlerID
-		, FirstName
-		, LastName
-		, WrestlerTeams.Teams
-into	#Dups
-from	(
-		select	GroupID = rank() over (order by FloWrestler.FirstName, FloWrestler.LastName, FloWrestlerMatch.Team)
-				, Priority = row_number() over (partition by FloWrestler.FirstName, FloWrestler.LastName, FloWrestlerMatch.Team order by FloWrestler.ID)
-				, WrestlerID = FloWrestler.ID
-				, FloWrestler.FirstName
-				, FloWrestler.LastName
-				, FloWrestlerMatch.Team
-				, Wrestlers = count(0) over (partition by FloWrestler.FirstName, FloWrestler.LastName, FloWrestlerMatch.Team)
-		from	FloWrestler
-		join	FloWrestlerMatch
-		on		FloWrestler.ID = FloWrestlerMatch.FloWrestlerID
-		group by
-				FloWrestler.ID
-				, FloWrestler.FirstName
-				, FloWrestler.LastName
-				, FloWrestlerMatch.Team
-		) DupWrestlers
-cross apply (
-		select	Teams = string_agg(team, ', ')
-		from	(
-				select	distinct FloWrestlerMatch.Team
-				from	FloWrestlerMatch
-				where	DupWrestlers.WrestlerID = FloWrestlerMatch.FloWrestlerID
-				) WrestlerTeamsGroup
-		) WrestlerTeams
-where	Wrestlers > 1
-order by
-		GroupID
-		, WrestlerID
-		, FirstName
-		, LastName
-		, Team
-
-select	SaveID = PrimaryWrestler.WrestlerID
-		, DupID = Duplicate.WrestlerID
+select	SaveID = 80728
+		, DupID = FloWrestler.ID
 into	#dedup
-from	#Dups PrimaryWrestler
-join	#Dups Duplicate
-on		PrimaryWrestler.GroupID = Duplicate.GroupID
-		and Duplicate.Priority > 1
-where	PrimaryWrestler.Priority = 1;
+from	FloWrestler
+where	FloWrestler.ID in (101360);
 
 select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct FloWrestlerMatch.ID) from FloWrestlerMatch join #dedup dedup on FloWrestlerMatch.FloWrestlerID = dedup.DupID)
@@ -98,11 +59,3 @@ where	FloWrestler.ID in (
 			select	distinct SaveID
 			from	#dedup
 		);
-
-/*
-
-commit;
-
-rollback;
-
-*/

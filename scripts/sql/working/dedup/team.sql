@@ -1,6 +1,6 @@
 
 declare @TeamName varchar(max);
-set @TeamName = 'byrnes';
+set @TeamName = 'greenwood';
 
 select	Team
 		, Wrestlers = count(distinct FloWrestlerID)
@@ -26,13 +26,27 @@ select @@trancount;
 
 begin transaction
 
-update	FloWrestlerMatch
-set		team = 'Hillcrest'
-where	Team in ('Hillcrest B')
+-- update	FloWrestlerMatch
+-- set		team = 'Greenwood'
+-- where	Team in ('Greenwood Grapplers')
+
+-- update	FloWrestler
+-- set		ModifiedDate = getdate()
+-- from	FloWrestler
+-- join	FloWrestlerMatch
+-- on		FloWrestler.ID = FloWrestlerMatch.FloWrestlerID
+-- where	FloWrestlerMatch.team = 'Greenwood Eagles'
 
 update	TrackWrestlerMatch
-set		team = 'Byrnes'
-where	Team in ('James F Byrnes')
+set		team = 'Greenwood'
+where	Team in ('Greenwood Eagles')
+
+update	TrackWrestler
+set		ModifiedDate = getdate()
+from	TrackWrestler
+join	TrackWrestlerMatch
+on		TrackWrestler.ID = TrackWrestlerMatch.TrackWrestlerID
+where	TrackWrestlerMatch.team = 'Greenwood Eagles'
 
 commit
 
