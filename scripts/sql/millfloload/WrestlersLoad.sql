@@ -148,8 +148,7 @@ on		FloMatch.ID = vsmatch.FloMatchID
 join	FloWrestler opponent
 on		vsmatch.FloWrestlerID = opponent.ID
 where	FloMeet.IsExcluded = 0
-		and FloMeet.StartTime > getdate() - (365 * 2)
-		and FloMatch.WinType is not null;
+		and FloMeet.StartTime > getdate() - (365 * 2);
 
 insert	@WrestlerMatch (
 		WrestlerID
@@ -204,8 +203,7 @@ on		TrackMatch.ID = vsmatch.TrackMatchID
 join	TrackWrestler opponent
 on		vsmatch.TrackWrestlerID = opponent.ID
 where	TrackEvent.IsComplete = 1
-		and TrackEvent.EventDate > getdate() - (365 * 2)
-		and TrackMatch.WinType is not null;
+		and TrackEvent.EventDate > getdate() - (365 * 2);
 
 select	*
 from	@WrestlerMatch

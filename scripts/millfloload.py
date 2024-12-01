@@ -65,6 +65,7 @@ cur.execute(sql["WrestlersLoad"])
 wrestlerUpdates = []
 wrestler = None
 event = None
+wrestlersSaved = 0
 
 print(f"{ currentTime() }: Looping through the database")
 for row in cur:
@@ -79,7 +80,8 @@ for row in cur:
 			wrestlerUpdates.append(wrestler)
 		
 		if len(wrestlerUpdates) >= 100:
-			print(f"{ currentTime() }: Loading { len(wrestlerUpdates) } wrestlers to mill DB")
+			wrestlersSaved += len(wrestlerUpdates)
+			print(f"{ currentTime() }: Loading { len(wrestlerUpdates) }. { wrestlersSaved } loaded")
 			response = requests.post(f"{ millDBURL }/api/externalwrestlersbulksave", json={ "externalwrestlers": wrestlerUpdates })
 
 			if response.status_code >= 400:
@@ -143,7 +145,8 @@ if event is not None:
 if wrestler is not None:
 	wrestlerUpdates.append(wrestler)
 	
-print(f"{ currentTime() }: Loading final { len(wrestlerUpdates) } wrestlers to mill DB")
+wrestlersSaved += len(wrestlerUpdates)
+print(f"{ currentTime() }: Loading final { len(wrestlerUpdates) }. { wrestlersSaved } total")
 response = requests.post(f"{ millDBURL }/api/externalwrestlersbulksave", json={ "externalwrestlers": wrestlerUpdates })
 
 if response.status_code >= 400:
