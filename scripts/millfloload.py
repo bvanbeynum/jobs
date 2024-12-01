@@ -59,100 +59,97 @@ if len(wrestlersMill) > 0: # if the data hasn't been wiped out
 		print(f"{ currentTime() }: Delete { len(wrestlersDelete) } duplicates")
 		response = requests.post(f"{ millDBURL }/api/externalwrestlersbulkdelete", json={ "wrestlerids": wrestlersDelete })
 
-print(f"{ currentTime() }: Get wrestlers from DB")
+print(f"{ currentTime() }: Load all wrestlers to be moved")
 cur.execute(sql["WrestlersLoad"])
+cur.execute(sql["CreateBatchTable"])
+cur.execute(sql["WrestlerCount"])
+totalWrestlers = cur.fetchval()
 
 wrestlerUpdates = []
 wrestler = None
 event = None
 wrestlersSaved = 0
+batchSize = 100
 
-print(f"{ currentTime() }: Looping through the database")
-for row in cur:
+print(f"{ currentTime() }: Batch processing { totalWrestlers } wrestlers")
 
-	if wrestler == None or row.WrestlerID != wrestler["sqlId"]:
-		# New Wrestler
+while wrestlersSaved < totalWrestlers:
 
-		if event is not None:
-			wrestler["events"].append(event)
+	cur.execute(sql["WrestlerBatchLoad"], (batchSize,))
+	cur.execute(sql["WrestlerMatchesLoad"])
 
-		if wrestler is not None:
-			wrestlerUpdates.append(wrestler)
+	for row in cur:
+		if wrestler == None or row.WrestlerID != wrestler["sqlId"]:
+			# New Wrestler
+
+			if event is not None:
+				wrestler["events"].append(event)
+
+			if wrestler is not None:
+				wrestlerUpdates.append(wrestler)
+			
+			event = None
+			wrestler = [ wrestler for wrestler in wrestlersMill if wrestler["sqlId"] == row.WrestlerID ]
+
+			if len(wrestler) == 1:
+				wrestler = wrestler[0]
+				wrestler["firstName"] = row.FirstName
+				wrestler["lastName"] = row.LastName
+				wrestler["name"] = row.FirstName + " " + row.LastName
+				wrestler["gRating"] = float(row.gRating) if row.gRating is not None else None
+				wrestler["gDeviation"] = float(row.gDeviation) if row.gDeviation is not None else None
+				wrestler["events"] = []
+
+			else:
+				wrestler = {
+					"sqlId": row.WrestlerID,
+					"firstName": row.FirstName,
+					"lastName": row.LastName,
+					"name": row.FirstName + " " + row.LastName,
+					"gRating": float(row.gRating) if row.gRating is not None else None,
+					"gDeviation": float(row.gDeviation) if row.gDeviation is not None else None,
+					"events": []
+				}
 		
-		if len(wrestlerUpdates) >= 100:
-			wrestlersSaved += len(wrestlerUpdates)
-			print(f"{ currentTime() }: Loading { len(wrestlerUpdates) }. { wrestlersSaved } loaded")
-			response = requests.post(f"{ millDBURL }/api/externalwrestlersbulksave", json={ "externalwrestlers": wrestlerUpdates })
+		if event is None or event["sqlId"] != row.EventID:
+			if event is not None:
+				wrestler["events"].append(event)
 
-			if response.status_code >= 400:
-				print(f"{ currentTime() }: Error saving external wrestlers: { response.status_code }")
-				data = json.loads(response.text)
-				print([ row for row in data["externalWrestlers"] if "error" in row and row["error"] is not None ])
-				print([ row for row in data["externalTeams"] if "error" in row and row["error"] is not None ])
-
-			wrestlerUpdates = []
-
-		event = None
-		wrestler = [ wrestler for wrestler in wrestlersMill if wrestler["sqlId"] == row.WrestlerID ]
-
-		if len(wrestler) == 1:
-			wrestler = wrestler[0]
-			wrestler["firstName"] = row.FirstName
-			wrestler["lastName"] = row.LastName
-			wrestler["name"] = row.FirstName + " " + row.LastName
-			wrestler["gRating"] = float(row.gRating) if row.gRating is not None else None
-			wrestler["gDeviation"] = float(row.gDeviation) if row.gDeviation is not None else None
-			wrestler["events"] = []
-
-		else:
-			wrestler = {
-				"sqlId": row.WrestlerID,
-				"firstName": row.FirstName,
-				"lastName": row.LastName,
-				"name": row.FirstName + " " + row.LastName,
-				"gRating": float(row.gRating) if row.gRating is not None else None,
-				"gDeviation": float(row.gDeviation) if row.gDeviation is not None else None,
-				"events": []
+			event = {
+				"sqlId": row.EventID,
+				"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
+				"name": row.EventName,
+				"team": row.Team,
+				"matches": []
 			}
+
+		event["matches"].append({
+			"division": row.Division,
+			"weightClass": row.WeightClass,
+			"round": row.RoundName,
+			"vs": row.vs,
+			"vsTeam": row.vsTeam,
+			"vsSqlId": row.vsID,
+			"isWinner": bool(row.IsWinner),
+			"winType": row.WinType,
+			"sort": row.Sort
+		})
 	
-	if event is None or event["sqlId"] != row.EventID:
-		if event is not None:
-			wrestler["events"].append(event)
+	wrestlersSaved += batchSize
+	print(f"{ currentTime() }: Loading { wrestlersSaved } of { totalWrestlers }")
+	response = requests.post(f"{ millDBURL }/api/externalwrestlersbulksave", json={ "externalwrestlers": wrestlerUpdates })
 
-		event = {
-			"sqlId": row.EventID,
-			"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
-			"name": row.EventName,
-			"team": row.Team,
-			"matches": []
-		}
+	if response.status_code >= 400:
+		print(f"{ currentTime() }: Error saving external wrestlers: { response.status_code }")
+		data = json.loads(response.text)
+		print([ row for row in data["externalWrestlers"] if "error" in row and row["error"] is not None ])
+		print([ row for row in data["externalTeams"] if "error" in row and row["error"] is not None ])
 
-	event["matches"].append({
-		"division": row.Division,
-		"weightClass": row.WeightClass,
-		"round": row.RoundName,
-		"vs": row.vs,
-		"vsTeam": row.vsTeam,
-		"vsSqlId": row.vsID,
-		"isWinner": bool(row.IsWinner),
-		"winType": row.WinType,
-		"sort": row.Sort
-	})
-
-if event is not None:
-	wrestler["events"].append(event)
-
-if wrestler is not None:
-	wrestlerUpdates.append(wrestler)
-	
-wrestlersSaved += len(wrestlerUpdates)
-print(f"{ currentTime() }: Loading final { len(wrestlerUpdates) }. { wrestlersSaved } total")
-response = requests.post(f"{ millDBURL }/api/externalwrestlersbulksave", json={ "externalwrestlers": wrestlerUpdates })
-
-if response.status_code >= 400:
-	print(f"{ currentTime() }: Error saving external wrestlers: { response.status_code }")
-	data = json.loads(response.text)["externalWrestlers"]
-	print([ row for row in data if row["error"] is not None ])
+		time.sleep(20)
+	else:
+		cur.execute(sql["WrestlerBatchClear"])
+		
+	wrestlerUpdates = []
 
 cur.close()
 cn.close()
