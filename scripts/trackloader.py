@@ -247,7 +247,7 @@ for state in states:
 										"winType": re.search("over[^)]+\)[ ]*([^$]+)$", match.string, re.I)[1].strip(),
 										"winnerWrestler": re.search(" - ([^(]+)\(", match.string, re.I)[1].strip(),
 										"winnerTeam": re.search(" - [^(]+\(([^)]+)\)", match.string, re.I)[1].strip(),
-										"loserWrestler": re.search("over[ ]*([^(]+)", match.string, re.I)[1].strip(),
+										"loserWrestler": re.search("over[ ]*([^(]+)\(", match.string, re.I)[1].strip(),
 										"loserTeam": re.search("over[ ]*[^(]+\(([^)]+)\)", match.string, re.I)[1].strip()
 									})
 
