@@ -9,11 +9,11 @@ rollback;
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
 
-select	SaveID = 7148
+select	SaveID = 34301
 		, DupID = TrackWrestler.ID
 into	#dedup
 from	TrackWrestler
-where	TrackWrestler.ID in (27421, 66209, 107128, 8632, 103817);
+where	TrackWrestler.ID in (117826);
 
 select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct TrackWrestlerMatch.ID) from TrackWrestlerMatch join #dedup dedup on TrackWrestlerMatch.TrackWrestlerID = dedup.DupID)

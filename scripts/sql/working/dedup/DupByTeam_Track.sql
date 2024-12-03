@@ -25,12 +25,15 @@ from	(
 				, TrackWrestlerMatch.TrackWrestlerID
 				, Wrestlers = count(0) over (partition by TrackWrestlerMatch.Team)
 		from	TrackWrestlerMatch
-		-- where	len(TrackWrestlerMatch.Team) > 2
+		join	TrackWrestler
+		on		TrackWrestlerMatch.TrackWrestlerID = TrackWrestler.ID
+		where	len(TrackWrestlerMatch.Team) > 2
+				and len(trim(TrackWrestler.WrestlerName)) > 0
 		group by
 				TrackWrestlerMatch.Team
 				, TrackWrestlerMatch.TrackWrestlerID
 		) WrestlerTeam
--- where	Wrestlers < 500
+where	Wrestlers < 500
 order by
 		Wrestlers desc
 
@@ -61,7 +64,7 @@ left join
 on		NextTeam.Team = Excluded.Team
 		and AllTeam.TeamID = Excluded.TeamID
 where	Excluded.Team is null
-		and AllTeam.Iteration = 3
+		and AllTeam.Iteration = 1
 group by
 		AllTeam.TeamID
 		, NextTeam.Team
@@ -100,6 +103,7 @@ from	(
 						where	TrackWrestler.ID = AllTeams.TrackWrestlerID
 						) DistinctTeams
 				) AllTeams
+		where	len(trim(TrackWrestler.WrestlerName)) > 0
 		group by
 				TrackWrestler.ID
 				, TrackWrestler.WrestlerName
