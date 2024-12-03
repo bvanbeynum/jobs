@@ -35,7 +35,6 @@ on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 join	FloMeet
 on		FloMatch.FloMeetID = FloMeet.ID
 where	FloMeet.IsExcluded = 0
-		and FloMeet.LocationState in ('sc')
 group by
 		FloWrestler.ID
 		, FloWrestler.FirstName
@@ -75,7 +74,6 @@ outer apply (
 		where	FloWrestler.ID = Wrestler.WrestlerID
 		) ExistingWrestler
 where	TrackEvent.IsComplete = 1
-		and TrackEvent.EventState in ('sc')
 		and ExistingWrestler.WrestlerID is null
 group by
 		FloWrestler.ID
