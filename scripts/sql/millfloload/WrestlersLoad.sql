@@ -9,6 +9,7 @@ create table #Wrestlers (
 	, LastName varchar(255)
 	, gRating decimal(18,9)
 	, gDeviation decimal(18,9)
+	, Teams varchar(max)
 	, LastModified datetime
 );
 
@@ -19,6 +20,7 @@ insert	#Wrestlers (
 		, LastName
 		, gRating
 		, gDeviation
+		, Teams
 		, LastModified
 		)
 select	WrestlerID = FloWrestler.ID
@@ -26,6 +28,7 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
+		, Teams = '|' + string_agg(FloWrestlerMatch.Team, '|') + '|'
 		, LastModified = case when max(FloWrestler.ModifiedDate) > max(FloMatch.ModifiedDate) then max(FloWrestler.ModifiedDate) else max(FloMatch.ModifiedDate) end
 from	FloWrestler
 join	FloWrestlerMatch
@@ -51,6 +54,7 @@ insert	#Wrestlers (
 		, LastName
 		, gRating
 		, gDeviation
+		, Teams
 		, LastModified
 		)
 select	WrestlerID = FloWrestler.ID
@@ -58,6 +62,7 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
+		, Teams = '|' + string_agg(TrackWrestlerMatch.Team, '|') + '|'
 		, LastModified = case when max(TrackWrestler.ModifiedDate) > max(TrackMatch.ModifiedDate) then max(TrackWrestler.ModifiedDate) else max(TrackMatch.ModifiedDate) end
 from	FloWrestler
 join	TrackWrestler

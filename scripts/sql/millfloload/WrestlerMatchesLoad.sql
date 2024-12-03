@@ -117,6 +117,7 @@ join	TrackWrestler
 on		wrestlers.FirstName + ' ' + wrestlers.LastName = TrackWrestler.WrestlerName
 join	TrackWrestlerMatch
 on		TrackWrestler.ID = TrackWrestlerMatch.TrackWrestlerID
+		and wrestlers.Teams like '%|' + TrackWrestlerMatch.Team + '|%'
 join	TrackMatch
 on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 join	TrackEvent
