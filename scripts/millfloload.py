@@ -120,6 +120,7 @@ while wrestlersSaved < totalWrestlers:
 				"date": datetime.datetime.strftime(row.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3],
 				"name": row.EventName,
 				"team": row.Team,
+				"locationState": row.LocationState,
 				"matches": []
 			}
 

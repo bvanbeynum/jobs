@@ -9,6 +9,7 @@ create table #WrestlerLoadBatch (
 	, LastName varchar(255)
 	, gRating decimal(18,9)
 	, gDeviation decimal(18,9)
+	, Teams varchar(max)
 	, LastModified datetime
 );
 

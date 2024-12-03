@@ -10,6 +10,7 @@ declare @WrestlerMatch table (
 	, EventID int
 	, EventDate date
 	, EventName varchar(255)
+	, LocationState varchar(255)
 	, Division varchar(255)
 	, WeightClass varchar(255)
 	, RoundName varchar(255)
@@ -31,6 +32,7 @@ insert	@WrestlerMatch (
 		, EventID
 		, EventDate
 		, EventName
+		, LocationState
 		, Division
 		, WeightClass
 		, RoundName
@@ -50,6 +52,7 @@ select	wrestlers.WrestlerID
 		, EventID = FloMeet.ID
 		, EventDate = cast(FloMeet.StartTime as date)
 		, EventName = FloMeet.MeetName
+		, FloMeet.LocationState
 		, FloMatch.Division
 		, FloMatch.WeightClass
 		, FloMatch.RoundName
@@ -84,6 +87,7 @@ insert	@WrestlerMatch (
 		, EventID
 		, EventDate
 		, EventName
+		, LocationState
 		, Division
 		, WeightClass
 		, RoundName
@@ -102,7 +106,8 @@ select	wrestlers.WrestlerID
 		, wrestlers.gDeviation
 		, EventID = TrackEvent.ID
 		, EventDate = cast(TrackEvent.EventDate as date)
-		, EventName = TrackEvent.EventName
+		, TrackEvent.EventName
+		, TrackEvent.EventState
 		, TrackMatch.Division
 		, TrackMatch.WeightClass
 		, TrackMatch.RoundName
