@@ -309,6 +309,12 @@ response = requests.get(f"https://arena.flowrestling.org/events/past?year={ date
 events = json.loads(response.text)["response"]
 events = [ event for event in events if event["guid"] not in excluded ]
 
+# Load custom event
+# excluded = []
+# events = [
+# 	{ "guid": "cb1cc0a5-9e6c-462d-82fa-7fb4cd7b861b", "startDate": "2023-12-08T21:00:00+0000", "endDate": "2023-12-10T03:00:00+0000", "name": "2023 Kingsley Classic", "locationName": "Nation Ford High School", "isPublishBrackets": True, "hasBrackets": True }
+# 	]
+
 for event in events:
 	event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
