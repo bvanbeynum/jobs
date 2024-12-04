@@ -30,7 +30,6 @@ select	TSSummaryID = @SummaryID
 		, Volatility = @Volatility
 from	(
 		select	Wrestler = trim(FloWrestler.FirstName) + ' ' + trim(FloWrestler.LastName)
-				, Team = trim(FloWrestler.TeamName)
 				, FloWrestlerID = FloWrestlerMatch.FloWrestlerID
 				, TrackWrestlerID = null
 				, EventCount = count(distinct FloMeet.ID)
@@ -45,12 +44,10 @@ from	(
 				FloWrestlerMatch.FloWrestlerID
 				, FloWrestler.FirstName
 				, FloWrestler.LastName
-				, FloWrestler.TeamName
 
 		union
 
 		select	Wrestler = trim(TrackWrestler.WrestlerName)
-				, Team = trim(TrackWrestler.TeamName)
 				, FloWrestlerID = null
 				, TrackWrestlerID = TrackWrestlerMatch.TrackWrestlerID
 				, EventCount = count(distinct TrackEvent.ID)
@@ -64,11 +61,9 @@ from	(
 		group by
 				TrackWrestlerMatch.TrackWrestlerID
 				, TrackWrestler.WrestlerName
-				, TrackWrestler.TeamName
 		) AllWrestlers
 group by
 		Wrestler
-		, Team
 having	sum(EventCount) > 1;
 
 declare @AllMatches table (
@@ -110,11 +105,11 @@ from	(
 		join	TSWrestler
 		on		FloWrestlerMatch.FloWrestlerID = TSWrestler.FloWrestlerID
 				and TSWrestler.TSSummaryID = @SummaryID
-		where	coalesce(FloMatch.Division, '') not like 'ms%'
+		where	coalesce(FloMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
 				and coalesce(FloMatch.Division, '') not like 'jv%'
 				and coalesce(FloMatch.Division, '') not like '%middle%'
 				and coalesce(FloMatch.Division, '') not like '%junior%'
-				and coalesce(FloMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
+				and coalesce(FloMatch.Division, '') not like 'ms%'
 		group by
 				FloMatch.ID
 				, cast(FloMeet.StartTime as date)
@@ -140,11 +135,11 @@ from	(
 		join	TSWrestler
 		on		TrackWrestlerMatch.TrackWrestlerID = TSWrestler.TrackWrestlerID
 				and TSWrestler.TSSummaryID = @SummaryID
-		where	coalesce(TrackMatch.Division, '') not like 'ms%'
+		where	coalesce(TrackMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
+				and coalesce(TrackMatch.Division, '') not like 'ms%'
 				and coalesce(TrackMatch.Division, '') not like 'jv%'
 				and coalesce(TrackMatch.Division, '') not like '%middle%'
 				and coalesce(TrackMatch.Division, '') not like '%junior%'
-				and coalesce(TrackMatch.WinType, '') not in ('bye', 'for', 'nc', 'm for')
 		group by
 				TrackMatch.ID
 				, cast(TrackEvent.EventDate as date)

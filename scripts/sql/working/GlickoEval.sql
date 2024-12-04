@@ -1,14 +1,14 @@
 
--- insert TSSummary (Title) values ('9/4');
+-- insert TSSummary (Title) values ('12/4/2024 - Varsity only');
 -- update TSSummary set RunDate = null where id = 19;
--- delete from TSSummary where id in (57, 58, 59, 60)
+-- delete from TSSummary where id in (68)
 
 select * from TSSummary;
 
 declare @SummaryID int;
 declare @MaxIteration int;
 
-set @SummaryID = 67;
+set @SummaryID = 71;
 
 select	@MaxIteration = max(WrestlerMatches)
 from	(
@@ -29,7 +29,7 @@ from	(
 		group by
 				WrestlerMatches
 		) MatchAggregate
-where	RunningPercent <= 90;
+where	RunningPercent <= 95;
 
 select	Iteration
 		, Correct = sum(Correct) / count(0)

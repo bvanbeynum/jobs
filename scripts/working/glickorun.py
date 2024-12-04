@@ -277,7 +277,7 @@ for run in runs:
 			loserProbability = calculateProbaility(loserRating, loserDeviation, winnerRating, winnerDeviation)
 
 			winOutcome = 1
-			if match["winType"].lower() == "f":
+			if match["winType"] is not None and match["winType"].lower() == "f":
 				winOutcome = 1.2
 
 			winner.update_player([loserRating], [loserDeviation], [winOutcome])
