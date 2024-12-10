@@ -47,7 +47,15 @@ cross apply (
 		where	DupWrestlerMatch.FloWrestlerID = LastMatch.FloWrestlerID
 		) LastMatch
 
-select	*
+select	NewWrestlerID
+		, NewWrestler
+		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
+		, ExistingWrestlerID
+		, ExistingWrestler
+		, ExisitngWrestlerTeam
+		, LastEvent
 from	#PartialNameSameTeam
 order by
 		NewWrestlerTeam
+		, NewWrestler
+		, ExistingWrestler

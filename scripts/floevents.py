@@ -312,7 +312,7 @@ events = [ event for event in events if event["guid"] not in excluded ]
 # Load custom event
 # excluded = []
 # events = [
-# 	{ "guid": "cb1cc0a5-9e6c-462d-82fa-7fb4cd7b861b", "startDate": "2023-12-08T21:00:00+0000", "endDate": "2023-12-10T03:00:00+0000", "name": "2023 Kingsley Classic", "locationName": "Nation Ford High School", "isPublishBrackets": True, "hasBrackets": True }
+# 	{ "guid": "ea76598d-ec3d-40ca-84c0-e34d6906a1f9", "startDate": "2024-01-05T20:00:00+0000", "endDate": "2024-01-07T03:00:00+0000", "name": "2024 Area 4 JV/MS Qualifier - Fort Mill", "locationName": "Fort Mill High School", "isPublishBrackets": True, "hasBrackets": True }
 # 	]
 
 for event in events:
