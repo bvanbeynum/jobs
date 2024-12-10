@@ -116,7 +116,7 @@ select	wrestlers.WrestlerID
 		, TrackMatch.Sort
 		, vs = opponent.WrestlerName
 		, vsTeam = vsmatch.Team
-		, vsID = opponent.ID
+		, vsID = OpponentFlo.WrestlerID
 from	#WrestlerLoadBatch wrestlers
 join	TrackWrestler
 on		wrestlers.FirstName + ' ' + wrestlers.LastName = TrackWrestler.WrestlerName
@@ -132,6 +132,14 @@ on		TrackMatch.ID = vsmatch.TrackMatchID
 		and vsmatch.TrackWrestlerID <> TrackWrestler.ID
 join	TrackWrestler opponent
 on		vsmatch.TrackWrestlerID = opponent.ID
+outer apply (
+		select	top 1 WrestlerID = FloWrestler.ID
+		from	FloWrestler
+		join	FloWrestlerMatch
+		on		FloWrestler.ID = FloWrestlerMatch.FloWrestlerID
+		where	opponent.WrestlerName = FloWrestler.FirstName + ' ' + FloWrestler.LastName
+				and FloWrestlerMatch.Team = vsmatch.Team
+		) OpponentFlo
 where	TrackEvent.IsComplete = 1
 		and TrackEvent.EventDate > getdate() - (365 * 2);
 
