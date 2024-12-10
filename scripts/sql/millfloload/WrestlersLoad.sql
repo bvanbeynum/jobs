@@ -28,11 +28,19 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
-		, Teams = '|' + string_agg(FloWrestlerMatch.Team, '|') + '|'
+		, WrestlerTeams.Teams
 		, LastModified = case when max(FloWrestler.ModifiedDate) > max(FloMatch.ModifiedDate) then max(FloWrestler.ModifiedDate) else max(FloMatch.ModifiedDate) end
 from	FloWrestler
 join	FloWrestlerMatch
 on		FloWrestler.ID = FloWrestlerMatch.FloWrestlerID
+cross apply (
+		select	Teams = '|' + string_agg(DistinctTeams.Team, '|') + '|'
+		from	(
+				select	distinct team
+				from	FloWrestlerMatch TeamList
+				where	FloWrestler.ID = TeamList.FloWrestlerID
+				) DistinctTeams
+		) WrestlerTeams
 join	FloMatch
 on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 join	FloMeet
@@ -44,6 +52,7 @@ group by
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
+		, WrestlerTeams.Teams
 having	max(FloWrestler.ModifiedDate) > getdate() - 2
 		or max(FloMatch.ModifiedDate) > getdate() - 2;
 
@@ -62,13 +71,21 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
-		, Teams = '|' + string_agg(TrackWrestlerMatch.Team, '|') + '|'
+		, WrestlerTeams.Teams
 		, LastModified = case when max(TrackWrestler.ModifiedDate) > max(TrackMatch.ModifiedDate) then max(TrackWrestler.ModifiedDate) else max(TrackMatch.ModifiedDate) end
 from	FloWrestler
 join	TrackWrestler
 on		FloWrestler.FirstName + ' ' + FloWrestler.LastName = TrackWrestler.WrestlerName
 join	TrackWrestlerMatch
 on		TrackWrestler.ID = TrackWrestlerMatch.TrackWrestlerID
+cross apply (
+		select	Teams = '|' + string_agg(DistinctTeams.Team, '|') + '|'
+		from	(
+				select	distinct team
+				from	TrackWrestlerMatch TeamList
+				where	TrackWrestler.ID = TeamList.TrackWrestlerID
+				) DistinctTeams
+		) WrestlerTeams
 join	TrackMatch
 on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 join	TrackEvent
@@ -86,6 +103,7 @@ group by
 		, FloWrestler.LastName
 		, FloWrestler.gRating
 		, FloWrestler.gDeviation
+		, WrestlerTeams.Teams
 having	max(TrackWrestler.ModifiedDate) > getdate() - 2
 		or max(TrackMatch.ModifiedDate) > getdate() - 2;
 
