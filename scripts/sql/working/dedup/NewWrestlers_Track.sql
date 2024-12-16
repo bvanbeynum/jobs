@@ -11,11 +11,10 @@ from	TrackWrestler
 where	TrackWrestler.InsertDate > getdate() - 4
 
 select	distinct NewWrestlerID = TrackWrestler.ID
-		, NewWrestler = TrackWrestler.WrestlerName
-		, NewWrestlerTeam = WrestlerTeams.Teams
 		, ExistingWrestlerID = DupWrestler.ID
+		, NewWrestler = TrackWrestler.WrestlerName
 		, ExistingWrestler = DupWrestler.WrestlerName
-		, ExisitngWrestlerTeam = DupWrestlerMatch.Team
+		, NewWrestlerTeam = WrestlerTeams.Teams
 		, LastEvent = LastMatch.EventDate
 into	#PartialNameSameTeam
 from	#NewWrestlers NewWrestlers
