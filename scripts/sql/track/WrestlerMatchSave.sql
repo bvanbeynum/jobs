@@ -5,11 +5,13 @@ declare @MatchID int;
 declare @WrestlerID int;
 declare @IsWinner bit;
 declare @Team varchar(255);
+declare @WrestlerName varchar(255)
 
 set @MatchID = ?;
 set @WrestlerID = ?;
 set @IsWinner = ?;
 set @Team = ?;
+set @WrestlerName = ?;
 
 select	@WrestlerMatchID = TrackWrestlerMatch.ID
 from	TrackWrestlerMatch
@@ -23,12 +25,14 @@ begin
 			TrackMatchID
 			, TrackWrestlerID
 			, IsWinner
+			, WrestlerName
 			, Team
 			)
 	values	(
 			@MatchID
 			, @WrestlerID
 			, @IsWinner
+			, @WrestlerName
 			, @Team
 			);
 
@@ -39,6 +43,7 @@ begin
 
 	update	TrackWrestlerMatch
 	set		IsWinner = @IsWinner
+			, WrestlerName = @WrestlerName
 			, Team = @Team
 			, ModifiedDate = getdate()
 	where	ID = @WrestlerMatchID;

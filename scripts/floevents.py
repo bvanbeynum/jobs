@@ -66,7 +66,7 @@ def loadEvent(eventGUID, meetId):
 					if sort is None:
 						sort = (divisionIndex + 1) * (weightIndex + 1) * (poolIndex + 1) * (matchIndex + 1)
 					
-					boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None else None
+					boutNumber = int(re.search("\d+", match["boutNumber"])[0]) if match["boutNumber"] is not None and len(match["boutNumber"]) > 0 else None
 
 					matchSave = {
 						"round": match["roundName"]["displayName"],
@@ -152,6 +152,8 @@ def loadEvent(eventGUID, meetId):
 							matchId, # @MatchID
 							1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
 							match["topWrestler"]["team"]["name"], # @TeamName
+							match["topWrestler"]["firstName"].title(), # @FirstName
+							match["topWrestler"]["lastName"].title(), # @LastName
 						))
 
 					if match["bottomWrestler"] is not None:
@@ -161,6 +163,8 @@ def loadEvent(eventGUID, meetId):
 							matchId, # @MatchID
 							1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
 							match["bottomWrestler"]["team"]["name"], # @TeamName
+							match["bottomWrestler"]["firstName"].title(), # @FirstName
+							match["bottomWrestler"]["lastName"].title(), # @LastName
 						))
 					
 					poolSave["matches"].append(matchSave)
@@ -311,9 +315,15 @@ events = [ event for event in events if event["guid"] not in excluded ]
 
 # Load custom event
 # excluded = []
-# events = [
-# 	{ "guid": "ea76598d-ec3d-40ca-84c0-e34d6906a1f9", "startDate": "2024-01-05T20:00:00+0000", "endDate": "2024-01-07T03:00:00+0000", "name": "2024 Area 4 JV/MS Qualifier - Fort Mill", "locationName": "Fort Mill High School", "isPublishBrackets": True, "hasBrackets": True }
-# 	]
+# events = [{ 
+# 	"guid": "0feea7ce-0379-426d-93f1-e027b31fc261", 
+# 	"startDate": "2024-09-29T13:30:00+0000", 
+# 	"endDate": "2024-09-30T03:00:00+0000", 
+# 	"name": "Pins in the Park - Carowinds 2024", 
+# 	"locationName": "Carowinds", 
+# 	"isPublishBrackets": True, 
+# 	"hasBrackets": True 
+# 	}]
 
 for event in events:
 	event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")

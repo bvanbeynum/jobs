@@ -281,7 +281,8 @@ for state in states:
 								matchId,
 								winnerWrestlerId,
 								1,
-								match["winnerTeam"]
+								match["winnerTeam"],
+								match["winnerWrestler"]
 							))
 							
 							# Loser save
@@ -296,7 +297,8 @@ for state in states:
 								matchId,
 								loserWrestlerId,
 								0,
-								match["loserTeam"]
+								match["loserTeam"],
+								match["loserWrestler"]
 							))
 
 				if matchesLoaded:
