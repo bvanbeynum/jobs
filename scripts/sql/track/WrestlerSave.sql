@@ -10,7 +10,7 @@ set @TeamName = ?;
 select	@WrestlerID = min(TrackWrestlerMatch.TrackWrestlerID)
 from	TrackWrestlerMatch
 cross apply (
-		select	LookupName = replace(trim(@FirstName), ' ', '') + replace(trim(@LastName), ' ', '')
+		select	LookupName = replace(trim(@WrestlerName), ' ', '')
 				, LookupTeam = replace(replace(replace(replace(replace(@TeamName, '-', ''), '/', ''), '.', ''), ',', ''), ' ', '')
 				, WrestlerName = replace(trim(TrackWrestlerMatch.WrestlerName), ' ', '')
 				, TeamName = replace(replace(replace(replace(replace(TrackWrestlerMatch.Team, '-', ''), '/', ''), '.', ''), ',', ''), ' ', '')
