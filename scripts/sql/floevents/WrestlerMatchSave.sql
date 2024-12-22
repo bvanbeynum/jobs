@@ -4,5 +4,7 @@ exec dbo.WrestlerMatchSave @WrestlerMatchID = @output output
 	, @WrestlerID = ?
 	, @MatchID = ?
 	, @IsWinner = ?
-	, @Team = ?;
+	, @Team = ?
+	, @FirstName = ?
+	, @LastName = ?;
 select @output as OutputValue;
