@@ -8,7 +8,7 @@ if object_id('tempdb..#PartialNameSameTeam') is not null
 select	WrestlerID = TrackWrestler.ID
 into	#NewWrestlers
 from	TrackWrestler
-where	TrackWrestler.InsertDate > getdate() - 4
+where	TrackWrestler.InsertDate > getdate() - 3
 
 select	distinct NewWrestlerID = TrackWrestler.ID
 		, ExistingWrestlerID = DupWrestler.ID
@@ -31,8 +31,14 @@ cross apply (
 		) WrestlerTeams
 join	TrackWrestler DupWrestler
 on		(
-			substring(TrackWrestler.WrestlerName, 0, charindex(' ', TrackWrestler.WrestlerName)) = substring(DupWrestler.WrestlerName, 0, charindex(' ', DupWrestler.WrestlerName))
-			or substring(TrackWrestler.WrestlerName, charindex(' ', TrackWrestler.WrestlerName) + 1, len(TrackWrestler.WrestlerName)) = substring(DupWrestler.WrestlerName, charindex(' ', DupWrestler.WrestlerName) + 1, len(DupWrestler.WrestlerName))
+			(
+				substring(TrackWrestler.WrestlerName, 0, charindex(' ', TrackWrestler.WrestlerName)) = substring(DupWrestler.WrestlerName, 0, charindex(' ', DupWrestler.WrestlerName))
+				and substring(TrackWrestler.WrestlerName, charindex(' ', TrackWrestler.WrestlerName) + 1, 1) = substring(DupWrestler.WrestlerName, charindex(' ', DupWrestler.WrestlerName) + 1, 1)
+			)
+			or (
+				substring(TrackWrestler.WrestlerName, charindex(' ', TrackWrestler.WrestlerName) + 1, len(TrackWrestler.WrestlerName)) = substring(DupWrestler.WrestlerName, charindex(' ', DupWrestler.WrestlerName) + 1, len(DupWrestler.WrestlerName))
+				and substring(TrackWrestler.WrestlerName, 1, 1) = substring(DupWrestler.WrestlerName, 1, 1)
+			)
 		)
 		and TrackWrestler.ID <> DupWrestler.ID
 join	TrackWrestlerMatch DupWrestlerMatch
@@ -49,12 +55,11 @@ cross apply (
 		where	DupWrestlerMatch.TrackWrestlerID = LastMatch.TrackWrestlerID
 		) LastMatch
 
-select	NewWrestlerID
+select	SaveID = ExistingWrestlerID
+		, DupID = NewWrestlerID
 		, NewWrestler
-		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
-		, ExistingWrestlerID
 		, ExistingWrestler
-		, ExisitngWrestlerTeam
+		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
 		, LastEvent
 from	#PartialNameSameTeam
 order by

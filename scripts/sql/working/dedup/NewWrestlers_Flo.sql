@@ -11,11 +11,10 @@ from	FloWrestler
 where	FloWrestler.InsertDate > getdate() - 7
 
 select	distinct NewWrestlerID = FloWrestler.ID
-		, NewWrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
-		, NewWrestlerTeam = WrestlerTeams.Teams
 		, ExistingWrestlerID = DupWrestler.ID
+		, NewWrestler = FloWrestler.FirstName + ' ' + FloWrestler.LastName
 		, ExistingWrestler = DupWrestler.FirstName + ' ' + DupWrestler.LastName
-		, ExisitngWrestlerTeam = DupWrestlerMatch.Team
+		, NewWrestlerTeam = WrestlerTeams.Teams
 		, LastEvent = LastMatch.EventDate
 into	#PartialNameSameTeam
 from	#NewWrestlers NewWrestlers
@@ -31,7 +30,10 @@ cross apply (
 				) DistinctTeams
 		) WrestlerTeams
 join	FloWrestler DupWrestler
-on		(FloWrestler.FirstName = DupWrestler.FirstName or FloWrestler.LastName = DupWrestler.LastName)
+on		(
+			(FloWrestler.FirstName = DupWrestler.FirstName and substring(FloWrestler.LastName, 1, 1) = substring(DupWrestler.LastName, 1, 1))
+			or (FloWrestler.LastName = DupWrestler.LastName and substring(FloWrestler.FirstName, 1, 1) = substring(DupWrestler.FirstName, 1, 1))
+		)
 		and FloWrestler.ID <> DupWrestler.ID
 join	FloWrestlerMatch DupWrestlerMatch
 on		DupWrestler.ID = DupWrestlerMatch.FloWrestlerID
@@ -47,12 +49,11 @@ cross apply (
 		where	DupWrestlerMatch.FloWrestlerID = LastMatch.FloWrestlerID
 		) LastMatch
 
-select	NewWrestlerID
+select	SaveID = ExistingWrestlerID
+		, DupID = NewWrestlerID
 		, NewWrestler
-		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
-		, ExistingWrestlerID
 		, ExistingWrestler
-		, ExisitngWrestlerTeam
+		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
 		, LastEvent
 from	#PartialNameSameTeam
 order by

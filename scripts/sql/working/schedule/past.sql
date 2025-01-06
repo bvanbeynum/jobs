@@ -28,7 +28,7 @@ outer apply (
 		order by
 				count(distinct DivisionWrestler.TrackWrestlerID)
 		) LargestDivision
-where	TrackEvent.EventDate between '1/1/2023' and '1/1/2024'
+where	TrackEvent.EventDate between '1/1/2024' and '1/1/2025'
 group by
 		TrackEvent.EventDate
 		, TrackEvent.EndDate
@@ -68,7 +68,7 @@ outer apply (
 		order by
 				count(distinct DivisionWrestler.FloWrestlerID)
 		) LargestDivision
-where	FloMeet.StartTime between '1/1/2023' and '1/1/2024'
+where	FloMeet.StartTime between '1/1/2024' and '1/1/2025'
 group by
 		FloMeet.StartTime
 		, FloMeet.EndTime

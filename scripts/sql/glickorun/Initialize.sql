@@ -110,6 +110,7 @@ from	(
 				and coalesce(FloMatch.Division, '') not like '%middle%'
 				and coalesce(FloMatch.Division, '') not like '%junior%'
 				and coalesce(FloMatch.Division, '') not like 'ms%'
+				and coalesce(FloMatch.Division, '') not like '%girls%'
 		group by
 				FloMatch.ID
 				, cast(FloMeet.StartTime as date)
@@ -140,6 +141,7 @@ from	(
 				and coalesce(TrackMatch.Division, '') not like 'jv%'
 				and coalesce(TrackMatch.Division, '') not like '%middle%'
 				and coalesce(TrackMatch.Division, '') not like '%junior%'
+				and coalesce(TrackMatch.Division, '') not like '%girls%'
 		group by
 				TrackMatch.ID
 				, cast(TrackEvent.EventDate as date)

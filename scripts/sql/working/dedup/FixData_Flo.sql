@@ -6,24 +6,24 @@ rollback;
 
 */
 
+if @@trancount = 0
+	begin transaction
+else
+	throw 50000, 'Existing transaction', 16
+
 if object_id('tempdb..#dedup') is not null
 	drop table #dedup
 
-select	SaveID = 80728
+select	SaveID = 102293
 		, DupID = FloWrestler.ID
 into	#dedup
 from	FloWrestler
-where	FloWrestler.ID in (101360);
+where	FloWrestler.ID in (120941);
 
 select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct FloWrestlerMatch.ID) from FloWrestlerMatch join #dedup dedup on FloWrestlerMatch.FloWrestlerID = dedup.DupID)
 		, TempMeets = (select count(distinct FloWrestlerMeet.ID) from FloWrestlerMeet join #dedup dedup on FloWrestlerMeet.FloWrestlerID = dedup.DupID)
 		, Predictions = (select count(distinct GlickoPrediction.ID) from GlickoPrediction join #dedup dedup on GlickoPrediction.Wrestler1FloID = dedup.DupID or GlickoPrediction.Wrestler2FloID = dedup.DupID)
-
-if @@trancount = 0
-	begin transaction
-else
-	throw 50000, 'Existing transaction', 16
 
 update	FloWrestlerMatch
 set		FloWrestlerID = dedup.SaveID
