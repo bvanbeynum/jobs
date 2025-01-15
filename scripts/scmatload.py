@@ -41,8 +41,7 @@ confrences = [
 	{ "name": "5A", "url": "http://scmat.com/scmat5Arank.html" }, 
 	{ "name": "4A", "url": "http://scmat.com/scmat4Arank.html" }, 
 	{ "name": "3A", "url": "http://scmat.com/scmat3Arank.html" }, 
-	{ "name": "2A-1A", "url": "http://scmat.com/scmat2A1Arank.html" }, 
-	{ "name": "SCISA", "url": "http://scmat.com/scmatSCISArank.html" }
+	{ "name": "2A-1A", "url": "http://scmat.com/scmat2A1Arank.html" }
 	]
 
 print(f"{ currentTime() }: DB connect")
@@ -64,57 +63,56 @@ for confrenceIndex, confrence in enumerate(confrences):
 	soup = BeautifulSoup(response.text, "lxml")
 
 	content = soup.find("div", class_="content-full")
-	sections = content.find_all("p")
+	sections = re.findall("!([^!]+)", content.get_text().replace("\n\n", "!"))
 	
 	sourceDate = None
 
-	sourceDateSection = [ section for section in sections if re.search("- (?:pre-season )?team rankings$", section.text, flags=re.IGNORECASE) ]
-	if len(sourceDateSection) == 0:
-		sourceDateSection = [ section for section in sections if re.search("individual rankings - state qualifiers", section.text, flags=re.IGNORECASE) ]
-	
-	if len(sourceDateSection) > 0:
-		sourceDate = re.search("^[\w]+ [\d]{1,2}, [\d]{4}", sourceDateSection[0].text).group(0).strip()
-		sourceDate = parser.parse(sourceDate)
-
 	for sectionIndex, section in enumerate(sections):
-		if re.search("- (?:pre-season )?team rankings$", section.text, flags=re.IGNORECASE):
+		if re.search("\\n[\w]+ [\d]{1,2}, [\d]{4}", section):
+			sourceDate = re.search("\\n[\w]+ [\d]{1,2}, [\d]{4}", section).group(0).strip()
+			sourceDate = parser.parse(sourceDate)
 
+		elif re.search("([\d]a){1}( division [\d])* - (?:pre-season )?team rankings$", section, flags=re.IGNORECASE | re.MULTILINE):
+			
 			if lastLoadDates.TeamDate is None or sourceDate > lastLoadDates.TeamDate:
-				teams = re.findall("([\d]+). ([^\n]+)\n", sections[sectionIndex + 1].text.strip() + "\n", flags=re.MULTILINE)
+				pageConfrence = re.search("([^-]+)-[ ]*team rankings", section.strip(), flags=re.MULTILINE | re.IGNORECASE).group(1)
+				if pageConfrence:
+					pageConfrence = pageConfrence.strip()
+				else:
+					pageConfrence = confrence["name"]
+
+				teams = re.findall("([\d]+). ([^\n]+)\n", section.strip() + "\n", flags=re.MULTILINE)
 				
 				print(f"{ currentTime() }: Loading { len(teams) } team rankings. Source: { datetime.datetime.strftime(sourceDate, '%m/%d/%Y') }")
 				for team in teams:
-					cur.execute(sql["TeamRankSave"], (
-						confrence["name"],
-						team[1].strip(), # Team Name
-						int(team[0]), # Rank
-						sourceDate
-					))
+					if not re.search("team rankings", team[1], flags=re.MULTILINE | re.IGNORECASE):
+						cur.execute(sql["TeamRankSave"], (
+							pageConfrence,
+							team[1].strip(), # Team Name
+							int(team[0]), # Rank
+							sourceDate
+						))
 				
-				hasUpdates = True
+						hasUpdates = True
 
 			else:
 				print(f"{ currentTime() }: Team rankings already loaded. Source: { datetime.datetime.strftime(sourceDate, '%m/%d/%Y') }")
 
-		elif re.search("individual rankings by weight class", section.text, flags=re.IGNORECASE):
+		elif re.search("([\d]{3}) lbs", section, flags=re.IGNORECASE):
 
 			if lastLoadDates.WrestlerDate is None or sourceDate > lastLoadDates.WrestlerDate:
-				weights = re.findall("\n([\d]+) lbs\.", section.text, flags=re.IGNORECASE)
-				# rankings = re.findall("\n([\d])\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \(([A-Za-z]{2})\.", section.text, flags=re.IGNORECASE)
-				rankings = re.findall("\n([\d])\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \((([A-Za-z]{2})\.[^\)]*)?\)", section.text, flags=re.IGNORECASE)
+				weightClass = re.search("([\d]{3}) lbs", section, flags=re.IGNORECASE).group(1)
 				
-				weightIndex = 0
+				rankings = re.findall("([\d]+)\. ([A-Za-z\.\- ]+) - ([A-Za-z\.\- ]+) \((([A-Za-z]{2})\.[^\)]*)?\)", section, flags=re.IGNORECASE)
+
 				print(f"{ currentTime() }: Loading { len(rankings) } individual rankings. Source: { datetime.datetime.strftime(sourceDate, '%m/%d/%Y') }")
 				for rankingIndex, ranking in enumerate(rankings):
-					if rankingIndex > 0 and int(rankings[rankingIndex - 1][0]) > int(ranking[0]):
-						weightIndex += 1
-
 					cur.execute(sql["WrestlerRankSave"], (
 						confrence["name"],
 						ranking[1].split(" ")[0].strip(), # First Name
 						str.join(" ", ranking[1].split(" ")[1:]).strip(), # Last Name
 						ranking[2].strip(), # Team Name
-						weights[weightIndex].strip(),
+						weightClass,
 						int(ranking[0]), # Rank
 						ranking[4].strip(), # Grade
 						sourceDate
