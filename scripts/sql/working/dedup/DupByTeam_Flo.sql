@@ -118,6 +118,11 @@ order by
 
 return;
 
+if @@trancount = 0
+	begin transaction
+else
+	throw 50000, 'Existing transaction', 16
+
 select	SaveID = PrimaryWrestler.WrestlerID
 		, DupID = Duplicate.WrestlerID
 into	#dedup
@@ -131,11 +136,6 @@ select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct FloWrestlerMatch.ID) from FloWrestlerMatch join #dedup dedup on FloWrestlerMatch.FloWrestlerID = dedup.DupID)
 		, TempMeets = (select count(distinct FloWrestlerMeet.ID) from FloWrestlerMeet join #dedup dedup on FloWrestlerMeet.FloWrestlerID = dedup.DupID)
 		, Predictions = (select count(distinct GlickoPrediction.ID) from GlickoPrediction join #dedup dedup on GlickoPrediction.Wrestler1FloID = dedup.DupID or GlickoPrediction.Wrestler2FloID = dedup.DupID)
-
-if @@trancount = 0
-	begin transaction
-else
-	throw 50000, 'Existing transaction', 16
 
 update	FloWrestlerMatch
 set		FloWrestlerID = dedup.SaveID

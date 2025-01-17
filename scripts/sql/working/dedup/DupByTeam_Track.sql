@@ -127,6 +127,11 @@ order by
 
 return;
 
+if @@trancount = 0
+	begin transaction
+else
+	throw 50000, 'Existing transaction', 16
+
 select	SaveID = PrimaryWrestler.WrestlerID
 		, DupID = Duplicate.WrestlerID
 into	#dedup
@@ -141,11 +146,6 @@ group by
 
 select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct TrackWrestlerMatch.ID) from TrackWrestlerMatch join #dedup dedup on TrackWrestlerMatch.TrackWrestlerID = dedup.DupID)
-
-if @@trancount = 0
-	begin transaction
-else
-	throw 50000, 'Existing transaction', 16
 
 update	TrackWrestlerMatch
 set		TrackWrestlerID = dedup.SaveID
