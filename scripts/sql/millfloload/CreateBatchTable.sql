@@ -11,6 +11,7 @@ create table #WrestlerLoadBatch (
 	, gDeviation decimal(18,9)
 	, Teams varchar(max)
 	, LastModified datetime
+	, IsLineageModified int
 );
 
 set nocount off;

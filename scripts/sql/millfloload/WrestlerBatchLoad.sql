@@ -11,6 +11,7 @@ insert	#WrestlerLoadBatch (
 		, gRating
 		, gDeviation
 		, Teams
+		, IsLineageModified
 		)
 select	WrestlerID
 		, FirstName
@@ -18,6 +19,7 @@ select	WrestlerID
 		, gRating
 		, gDeviation
 		, Teams
+		, IsLineageModified
 from	(
 		select	Wrestlers.WrestlerID
 				, Wrestlers.FirstName
@@ -25,6 +27,7 @@ from	(
 				, Wrestlers.gRating
 				, Wrestlers.gDeviation
 				, Wrestlers.Teams
+				, Wrestlers.IsLineageModified
 				, RowFilter = row_number() over (order by Wrestlers.LastModified desc)
 		from	#Wrestlers Wrestlers
 		) Batch

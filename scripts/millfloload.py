@@ -76,6 +76,11 @@ print(f"{ currentTime() }: Batch processing { totalWrestlers } wrestlers")
 while wrestlersSaved < totalWrestlers:
 
 	cur.execute(sql["WrestlerBatchLoad"], (batchSize,))
+	
+	cur.execute(sql["WrestlerLineageLoad"])
+	lineagePackets = [ { "sqlId": wrestler.WrestlerID, "packet": json.loads(wrestler.Packet) } for  wrestler in cur.fetchall() ]
+	print(f"{ currentTime() }: { len(lineagePackets) } packets loaded")
+
 	cur.execute(sql["WrestlerMatchesLoad"])
 
 	for row in cur:
@@ -91,6 +96,12 @@ while wrestlersSaved < totalWrestlers:
 			event = None
 			wrestler = [ wrestler for wrestler in wrestlersMill if wrestler["sqlId"] == row.WrestlerID ]
 
+			if row.IsLineageModified == 1:
+				wrestlerLineage = [ packet for packet in lineagePackets if packet["sqlId"] == row.WrestlerID ]
+				wrestlerLineage = wrestlerLineage[0]["packet"] if len(wrestlerLineage) == 1 else None
+			else:
+				wrestlerLineage = []
+
 			if len(wrestler) == 1:
 				wrestler = wrestler[0]
 				wrestler["firstName"] = row.FirstName
@@ -98,9 +109,12 @@ while wrestlersSaved < totalWrestlers:
 				wrestler["name"] = row.FirstName + " " + row.LastName
 				wrestler["gRating"] = float(row.gRating) if row.gRating is not None else None
 				wrestler["gDeviation"] = float(row.gDeviation) if row.gDeviation is not None else None
+				wrestler["lineage"] = wrestlerLineage
 				wrestler["events"] = []
 
 			else:
+				wrestlerLineage = [ packet for packet in lineagePackets if packet["sqlId"] == row.WrestlerID ]
+
 				wrestler = {
 					"sqlId": row.WrestlerID,
 					"firstName": row.FirstName,
@@ -108,6 +122,7 @@ while wrestlersSaved < totalWrestlers:
 					"name": row.FirstName + " " + row.LastName,
 					"gRating": float(row.gRating) if row.gRating is not None else None,
 					"gDeviation": float(row.gDeviation) if row.gDeviation is not None else None,
+					"lineage": wrestlerLineage,
 					"events": []
 				}
 		
