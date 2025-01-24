@@ -7,7 +7,6 @@ declare @WrestlerMatch table (
 	, Team varchar(255)
 	, gRating decimal(18,9)
 	, gDeviation decimal(18,9)
-	, IsLineageModified int
 	, EventID int
 	, EventDate date
 	, EventName varchar(255)
@@ -30,7 +29,6 @@ insert	@WrestlerMatch (
 		, Team
 		, gRating
 		, gDeviation
-		, IsLineageModified
 		, EventID
 		, EventDate
 		, EventName
@@ -51,7 +49,6 @@ select	wrestlers.WrestlerID
 		, FloWrestlerMatch.Team
 		, wrestlers.gRating
 		, wrestlers.gDeviation
-		, wrestlers.IsLineageModified
 		, EventID = FloMeet.ID
 		, EventDate = cast(FloMeet.StartTime as date)
 		, EventName = FloMeet.MeetName
@@ -87,7 +84,6 @@ insert	@WrestlerMatch (
 		, Team
 		, gRating
 		, gDeviation
-		, IsLineageModified
 		, EventID
 		, EventDate
 		, EventName
@@ -108,7 +104,6 @@ select	wrestlers.WrestlerID
 		, TrackWrestlerMatch.Team
 		, wrestlers.gRating
 		, wrestlers.gDeviation
-		, wrestlers.IsLineageModified
 		, EventID = TrackEvent.ID
 		, EventDate = cast(TrackEvent.EventDate as date)
 		, TrackEvent.EventName

@@ -76,11 +76,6 @@ print(f"{ currentTime() }: Batch processing { totalWrestlers } wrestlers")
 while wrestlersSaved < totalWrestlers:
 
 	cur.execute(sql["WrestlerBatchLoad"], (batchSize,))
-	
-	cur.execute(sql["WrestlerLineageLoad"])
-	lineagePackets = [ { "sqlId": wrestler.WrestlerID, "packet": json.loads(wrestler.Packet) } for  wrestler in cur.fetchall() ]
-	print(f"{ currentTime() }: { len(lineagePackets) } packets loaded")
-
 	cur.execute(sql["WrestlerMatchesLoad"])
 
 	for row in cur:
@@ -96,12 +91,6 @@ while wrestlersSaved < totalWrestlers:
 			event = None
 			wrestler = [ wrestler for wrestler in wrestlersMill if wrestler["sqlId"] == row.WrestlerID ]
 
-			if row.IsLineageModified == 1:
-				wrestlerLineage = [ packet for packet in lineagePackets if packet["sqlId"] == row.WrestlerID ]
-				wrestlerLineage = wrestlerLineage[0]["packet"] if len(wrestlerLineage) == 1 else None
-			else:
-				wrestlerLineage = []
-
 			if len(wrestler) == 1:
 				wrestler = wrestler[0]
 				wrestler["firstName"] = row.FirstName
@@ -109,12 +98,9 @@ while wrestlersSaved < totalWrestlers:
 				wrestler["name"] = row.FirstName + " " + row.LastName
 				wrestler["gRating"] = float(row.gRating) if row.gRating is not None else None
 				wrestler["gDeviation"] = float(row.gDeviation) if row.gDeviation is not None else None
-				wrestler["lineage"] = wrestlerLineage
 				wrestler["events"] = []
 
 			else:
-				wrestlerLineage = [ packet for packet in lineagePackets if packet["sqlId"] == row.WrestlerID ]
-
 				wrestler = {
 					"sqlId": row.WrestlerID,
 					"firstName": row.FirstName,
@@ -122,7 +108,6 @@ while wrestlersSaved < totalWrestlers:
 					"name": row.FirstName + " " + row.LastName,
 					"gRating": float(row.gRating) if row.gRating is not None else None,
 					"gDeviation": float(row.gDeviation) if row.gDeviation is not None else None,
-					"lineage": wrestlerLineage,
 					"events": []
 				}
 		
@@ -166,6 +151,41 @@ while wrestlersSaved < totalWrestlers:
 		cur.execute(sql["WrestlerBatchClear"])
 		
 	wrestlerUpdates = []
+
+print(f"{ currentTime() }: ----------- Lineage Loop")
+
+cur.execute(sql["LineageUpdatedGet"])
+lineageWrestlers = cur.fetchall()
+
+print(f"{ currentTime() }: Load { len(lineageWrestlers) } wrestlers")
+
+updateCount = 0
+errorCount = 0
+
+for lineageWrestler in lineageWrestlers:
+	cur.execute(sql["LineageGet"], (lineageWrestler[0],))
+	responseDB = cur.fetchval()
+
+	if responseDB is None:
+		continue
+	
+	wrestlerLineage = json.loads(responseDB)
+	
+	response = requests.post(f"{ millDBURL }/api/externalwrestlerlineagesave", json={ "sqlid": lineageWrestler[1], "lineage": wrestlerLineage })
+
+	if response.status_code >= 400:
+		errorCount += 1
+		print(f"{ currentTime() }: Error saving wrestler: { response.status_code } - { response.text }")
+
+	if errorCount > 15:
+		print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+		break
+
+	updateCount += 1
+	if updateCount > 1 and updateCount % 100 == 0:
+		print(f"{ currentTime() }: {updateCount} updates loaded of { len(lineageWrestlers) }. { len(lineageWrestlers) - updateCount } remaining")
+
+print(f"{ currentTime() }: { len(lineageWrestlers) } completed")
 
 cur.close()
 cn.close()

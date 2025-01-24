@@ -1,7 +1,10 @@
 set nocount on;
 
+declare @LookupWrestler int;
+set @LookupWrestler = ?;
+
 ;with lineagecte as (
-select	WrestlerLoadBatch.WrestlerID
+select	WrestlerLineage.WrestlerID
 		, WrestlerLineage.Tier
 		, WrestlerLineage.Wrestler2ID
 		, WrestlerLineage.Wrestler2Team
@@ -18,10 +21,9 @@ select	WrestlerLoadBatch.WrestlerID
 			'"eventDate": "' + replace(convert(varchar(max), WrestlerLineage.EventDate, 111), '/', '-') + '"' +
 			'}'
 			as varchar(max))
-from	#WrestlerLoadBatch WrestlerLoadBatch
-join	WrestlerLineage
-on		WrestlerLoadBatch.WrestlerID = WrestlerLineage.FloWrestlerID
+from	WrestlerLineage
 where	WrestlerLineage.Tier = 1
+		and WrestlerLineage.WrestlerID = @LookupWrestler
 union all
 select	lineagecte.WrestlerID
 		, opponents.Tier
@@ -43,10 +45,9 @@ from	lineagecte
 join	WrestlerLineage opponents
 on		lineagecte.Wrestler2ID = opponents.Wrestler1ID
 		and lineagecte.Tier = opponents.Tier - 1
-		and lineagecte.WrestlerID = opponents.FloWrestlerID
+		and lineagecte.WrestlerID = opponents.WrestlerID
 )
-select	lineagecte.WrestlerID
-		, Packet = '[' + string_agg('[' + lineagecte.Packet + ']', ',') + ']'
+select	Packet = '[' + string_agg('[' + lineagecte.Packet + ']', ',') + ']'
 from	lineagecte
 where	lineagecte.Wrestler2Team = 'fort mill'
 group by

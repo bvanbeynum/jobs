@@ -11,7 +11,6 @@ create table #Wrestlers (
 	, gDeviation decimal(18,9)
 	, Teams varchar(max)
 	, LastModified datetime
-	, IsLineageModified int
 );
 
 -- Get Flo wrestlers that've changed in the past 2 days
@@ -23,7 +22,6 @@ insert	#Wrestlers (
 		, gDeviation
 		, Teams
 		, LastModified
-		, IsLineageModified
 		)
 select	WrestlerID = FloWrestler.ID
 		, FloWrestler.FirstName
@@ -32,7 +30,6 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.gDeviation
 		, WrestlerTeams.Teams
 		, LastModified = case when max(FloWrestler.ModifiedDate) > max(FloMatch.ModifiedDate) then max(FloWrestler.ModifiedDate) else max(FloMatch.ModifiedDate) end
-		, IsLineageModified = case when max(LineageModified.LastModified) > getdate() - 7 then 1 else 0 end
 from	FloWrestler
 join	FloWrestlerMatch
 on		FloWrestler.ID = FloWrestlerMatch.FloWrestlerID
@@ -48,11 +45,6 @@ join	FloMatch
 on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 join	FloMeet
 on		FloMatch.FloMeetID = FloMeet.ID
-outer apply (
-		select	LastModified = max(WrestlerLineage.ModifiedDate)
-		from	WrestlerLineage
-		where	FloWrestler.ID = WrestlerLineage.FloWrestlerID
-		) LineageModified
 where	FloMeet.IsExcluded = 0
 group by
 		FloWrestler.ID
@@ -62,8 +54,7 @@ group by
 		, FloWrestler.gDeviation
 		, WrestlerTeams.Teams
 having	max(FloWrestler.ModifiedDate) > getdate() - 2
-		or max(FloMatch.ModifiedDate) > getdate() - 2
-		or max(LineageModified.LastModified) > getdate() - 7;
+		or max(FloMatch.ModifiedDate) > getdate() - 2;
 
 -- Get Track wrestlers that've changed in the past 2 days
 insert	#Wrestlers (
@@ -74,7 +65,6 @@ insert	#Wrestlers (
 		, gDeviation
 		, Teams
 		, LastModified
-		, IsLineageModified
 		)
 select	WrestlerID = FloWrestler.ID
 		, FloWrestler.FirstName
@@ -83,7 +73,6 @@ select	WrestlerID = FloWrestler.ID
 		, FloWrestler.gDeviation
 		, WrestlerTeams.Teams
 		, LastModified = case when max(TrackWrestler.ModifiedDate) > max(TrackMatch.ModifiedDate) then max(TrackWrestler.ModifiedDate) else max(TrackMatch.ModifiedDate) end
-		, IsLineageModified = 0
 from	FloWrestler
 join	TrackWrestler
 on		FloWrestler.FirstName + ' ' + FloWrestler.LastName = TrackWrestler.WrestlerName
