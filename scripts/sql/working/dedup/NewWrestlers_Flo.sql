@@ -49,11 +49,11 @@ cross apply (
 		where	DupWrestlerMatch.FloWrestlerID = LastMatch.FloWrestlerID
 		) LastMatch
 
-select	SaveID = ExistingWrestlerID
-		, DupID = NewWrestlerID
-		, NewWrestler
+select	ExistingID = ExistingWrestlerID
+		, NewID = NewWrestlerID
 		, ExistingWrestler
-		, NewWrestlerTeam = replace(NewWrestlerTeam, '|', '')
+		, NewWrestler
+		, Team = replace(NewWrestlerTeam, '|', '')
 		, LastEvent
 from	#PartialNameSameTeam
 order by
@@ -76,6 +76,8 @@ select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct FloWrestlerMatch.ID) from FloWrestlerMatch join #dedup dedup on FloWrestlerMatch.FloWrestlerID = dedup.DupID)
 		, TempMeets = (select count(distinct FloWrestlerMeet.ID) from FloWrestlerMeet join #dedup dedup on FloWrestlerMeet.FloWrestlerID = dedup.DupID)
 		, Predictions = (select count(distinct GlickoPrediction.ID) from GlickoPrediction join #dedup dedup on GlickoPrediction.Wrestler1FloID = dedup.DupID or GlickoPrediction.Wrestler2FloID = dedup.DupID)
+		, LineageInitial = (select count(0) from WrestlerLineage join #dedup dedup on WrestlerLineage.InitialFloID = dedup.DupID)
+		, LineageWrestler2 = (select count(0) from WrestlerLineage join #dedup dedup on WrestlerLineage.Wrestler2FloID = dedup.DupID)
 
 if @@trancount = 0
 	begin transaction
@@ -103,6 +105,18 @@ from	GlickoPrediction
 join	#dedup dedup
 on		GlickoPrediction.Wrestler1FloID = dedup.DupID
 		or GlickoPrediction.Wrestler2FloID = dedup.DupID
+
+update	WrestlerLineage
+set		InitialFloID = dedup.SaveID
+from	WrestlerLineage
+join	#dedup dedup
+on		WrestlerLineage.InitialFloID = dedup.DupID;
+
+update	WrestlerLineage
+set		InitialFloID = dedup.SaveID
+from	WrestlerLineage
+join	#dedup dedup
+on		WrestlerLineage.Wrestler2FloID = dedup.DupID;
 
 delete
 from	FloWrestler

@@ -24,6 +24,7 @@ select	distinct WrestlerID = FloWrestlerMatch.FloWrestlerID
 		, WrestlerName = FloWrestlerMatch.FirstName + ' ' + FloWrestlerMatch.LastName
 		, FloWrestlerMatch.Team
 from	FloWrestlerMatch
+where	FloWrestlerMatch.FloWrestlerID in (3042, 20702, 94594, 99702)
 )
 select	DupFlo.GroupID
 		, TrackWrestlerName = TrackWrestler.WrestlerName
@@ -42,6 +43,7 @@ from	(
 				and track.AllTeams like '%|' + flo.Team + '|%'
 		join	FloWrestler
 		on		flo.WrestlerID = FloWrestler.ID
+		where	track.WrestlerID = 985
 		group by
 				Track.WrestlerID
 				, flo.WrestlerID
@@ -62,6 +64,9 @@ group by
 		, FloWrestler.FirstName + ' ' + FloWrestler.LastName
 order by
 		DupFlo.GroupID
+
+select	*
+from	#FullDups
 
 return;
 
@@ -91,6 +96,8 @@ select	Dups = (select count(0) from #dedup)
 		, Matches = (select count(distinct FloWrestlerMatch.ID) from FloWrestlerMatch join #dedup dedup on FloWrestlerMatch.FloWrestlerID = dedup.DupID)
 		, TempMeets = (select count(distinct FloWrestlerMeet.ID) from FloWrestlerMeet join #dedup dedup on FloWrestlerMeet.FloWrestlerID = dedup.DupID)
 		, Predictions = (select count(distinct GlickoPrediction.ID) from GlickoPrediction join #dedup dedup on GlickoPrediction.Wrestler1FloID = dedup.DupID or GlickoPrediction.Wrestler2FloID = dedup.DupID)
+		, LineageInitial = (select count(0) from WrestlerLineage join #dedup dedup on WrestlerLineage.InitialFloID = dedup.DupID)
+		, LineageWrestler2 = (select count(0) from WrestlerLineage join #dedup dedup on WrestlerLineage.Wrestler2FloID = dedup.DupID)
 
 update	FloWrestlerMatch
 set		FloWrestlerID = dedup.SaveID
@@ -113,6 +120,18 @@ from	GlickoPrediction
 join	#dedup dedup
 on		GlickoPrediction.Wrestler1FloID = dedup.DupID
 		or GlickoPrediction.Wrestler2FloID = dedup.DupID
+
+update	WrestlerLineage
+set		InitialFloID = dedup.SaveID
+from	WrestlerLineage
+join	#dedup dedup
+on		WrestlerLineage.InitialFloID = dedup.DupID;
+
+update	WrestlerLineage
+set		InitialFloID = dedup.SaveID
+from	WrestlerLineage
+join	#dedup dedup
+on		WrestlerLineage.Wrestler2FloID = dedup.DupID;
 
 delete
 from	FloWrestler
