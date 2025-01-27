@@ -171,7 +171,7 @@ for lineageWrestler in lineageWrestlers:
 	
 	wrestlerLineage = json.loads(responseDB)
 	
-	response = requests.post(f"{ millDBURL }/api/externalwrestlerlineagesave", json={ "sqlid": lineageWrestler[1], "lineage": wrestlerLineage })
+	response = requests.post(f"{ millDBURL }/api/externalwrestlerlineagesave", json={ "sqlid": lineageWrestler[0], "lineage": wrestlerLineage })
 
 	if response.status_code >= 400:
 		errorCount += 1

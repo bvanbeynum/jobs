@@ -2,142 +2,250 @@
 if object_id('tempdb..#wrestlers') is not null
 	drop table #wrestlers
 
+
+if object_id('tempdb..#AllMatches') is not null
+	drop table #AllMatches
+
 if object_id('tempdb..#WrestlerMatches') is not null
 	drop table #WrestlerMatches
+
+if object_id('tempdb..#MatchWrestlers') is not null
+	drop table #MatchWrestlers
 
 if object_id('tempdb..#WrestlerLineage') is not null
 	drop table #WrestlerLineage
 
-select	WrestlerID = row_number() over (order by AllWrestlers.team, AllWrestlers.WrestlerName)
-		, AllWrestlers.WrestlerName
-		, AllWrestlers.team
-		, FloWrestlerID = min(WrestlerFlo.FloWrestlerID)
-		, TrackWrestlerID = min(WrestlerTrack.TrackWrestlerID)
+select	WrestlerID = row_number() over (order by max(team), max(WrestlerName))
+		, FloWrestlerID
+		, TrackWrestlerID = max(TrackWrestlerID)
+		, WrestlerName = max(WrestlerName)
+		, Team = max(team)
 into	#Wrestlers
 from	(
-		select	distinct WrestlerName = FloWrestlerMatch.FirstName + ' ' + FloWrestlerMatch.LastName
-				, FloWrestlerMatch.Team
-		from	TeamRank
-		join	FloWrestlerMatch
-		on		TeamRank.TeamName = FloWrestlerMatch.Team
-		join	FloMatch
-		on		FloWrestlerMatch.FloMatchID = FloMatch.ID
-		join	FloMeet
-		on		FloMatch.FloMeetID = FloMeet.ID
-		where	FloMeet.StartTime > getdate() - 720
-		union
-		select	distinct TrackWrestlerMatch.WrestlerName
-				, TrackWrestlerMatch.Team
-		from	TeamRank
-		join	TrackWrestlerMatch
-		on		TeamRank.TeamName = TrackWrestlerMatch.Team
-		join	TrackMatch
-		on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
-		join	TrackEvent
-		on		TrackMatch.TrackEventID = TrackEvent.ID
-		where	TrackEvent.EventDate > getdate() - 720
-				and len(TrackWrestlerMatch.WrestlerName) > 0
-				and TrackWrestlerMatch.Team is not null
-		) AllWrestlers
-outer apply (
-		select	distinct FloWrestlerMatch.FloWrestlerID
-		from	FloWrestlerMatch
-		where	AllWrestlers.WrestlerName = FloWrestlerMatch.FirstName + ' ' + FloWrestlerMatch.LastName
-				and AllWrestlers.Team = FloWrestlerMatch.Team
-		) WrestlerFlo
-outer apply (
-		select	distinct TrackWrestlerMatch.TrackWrestlerID
-		from	TrackWrestlerMatch
-		where	AllWrestlers.WrestlerName = TrackWrestlerMatch.WrestlerName
-				and AllWrestlers.Team = TrackWrestlerMatch.Team
-		) WrestlerTrack
+		select	FloWrestlerID = max(WrestlerFlo.FloWrestlerID)
+				, TrackWrestlerID = max(WrestlerTrack.TrackWrestlerID)
+				, AllWrestlers.WrestlerName
+				, AllWrestlers.team
+		from	(
+				select	distinct WrestlerName = FloWrestlerMatch.FirstName + ' ' + FloWrestlerMatch.LastName
+						, FloWrestlerMatch.Team
+				from	TeamRank
+				join	FloWrestlerMatch
+				on		TeamRank.TeamName = FloWrestlerMatch.Team
+				join	FloMatch
+				on		FloWrestlerMatch.FloMatchID = FloMatch.ID
+				join	FloMeet
+				on		FloMatch.FloMeetID = FloMeet.ID
+				where	FloMeet.StartTime > getdate() - 720
+				union
+				select	distinct TrackWrestlerMatch.WrestlerName
+						, TrackWrestlerMatch.Team
+				from	TeamRank
+				join	TrackWrestlerMatch
+				on		TeamRank.TeamName = TrackWrestlerMatch.Team
+				join	TrackMatch
+				on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
+				join	TrackEvent
+				on		TrackMatch.TrackEventID = TrackEvent.ID
+				where	TrackEvent.EventDate > getdate() - 720
+						and len(TrackWrestlerMatch.WrestlerName) > 0
+						and TrackWrestlerMatch.Team is not null
+				) AllWrestlers
+		outer apply (
+				select	distinct FloWrestlerMatch.FloWrestlerID
+				from	FloWrestlerMatch
+				where	AllWrestlers.WrestlerName = FloWrestlerMatch.FirstName + ' ' + FloWrestlerMatch.LastName
+						and AllWrestlers.Team = FloWrestlerMatch.Team
+				) WrestlerFlo
+		outer apply (
+				select	distinct TrackWrestlerMatch.TrackWrestlerID
+				from	TrackWrestlerMatch
+				where	AllWrestlers.WrestlerName = TrackWrestlerMatch.WrestlerName
+						and AllWrestlers.Team = TrackWrestlerMatch.Team
+				) WrestlerTrack
+		group by
+				AllWrestlers.WrestlerName
+				, AllWrestlers.team
+		) SystemGroup
 group by
-		AllWrestlers.WrestlerName
-		, AllWrestlers.team
-
+		FloWrestlerID
 
 -- All Matches
 
-select	EventSystem
+select	MatchID
 		, EventDate
-		, IsWinner
-		, MatchID
-		, WrestlerID
-		, WrestlerName
-		, Team
-into	#WrestlerMatches
+		, Sort
+		, Wrestler1
+		, Wrestler2
+		, EventSystem
+into	#AllMatches
 from	(
-		select	EventSystem = cast('Flo' as varchar(25))
+		select	MatchID = FloWrestlerMatch.FloMatchID
 				, EventDate = cast(FloMeet.StartTime as date)
-				, FloWrestlerMatch.IsWinner
-				, MatchID = FloWrestlerMatch.FloMatchID
-				, Wrestlers.WrestlerID
-				, Wrestlers.WrestlerName
-				, Wrestlers.Team
+				, FloMatch.Sort
+				, Wrestler1 = min(Wrestlers.WrestlerID)
+				, Wrestler2 = max(Wrestlers.WrestlerID)
+				, EventSystem = 'flo'
 		from	#Wrestlers Wrestlers
+		join	FloWrestlerMatch WrestlerMatch
+		on		Wrestlers.FloWrestlerID = WrestlerMatch.FloWrestlerID
 		join	FloWrestlerMatch
-		on		Wrestlers.FloWrestlerID = FloWrestlerMatch.FloWrestlerID
+		on		WrestlerMatch.FloMatchID = FloWrestlerMatch.FloMatchID
+				and WrestlerMatch.FloWrestlerID <> FloWrestlerMatch.FloWrestlerID
 		join	FloMatch
 		on		FloWrestlerMatch.FloMatchID = FloMatch.ID
 		join	FloMeet
 		on		FloMatch.FloMeetID = FloMeet.ID
 		where	FloMeet.StartTime > getdate() - 720
+		group by
+				FloWrestlerMatch.FloMatchID
+				, cast(FloMeet.StartTime as date)
+				, FloMatch.Sort
+		having	count(distinct Wrestlers.WrestlerID) > 1
 		union all
-		select	EventSystem = cast('Track' as varchar(25))
-				, EventDate = cast(TrackEvent.EventDate as date)
-				, TrackWrestlerMatch.IsWinner
-				, MatchID = TrackWrestlerMatch.TrackMatchID
-				, Wrestlers.WrestlerID
-				, Wrestlers.WrestlerName
-				, Wrestlers.Team
+		select	MatchID = TrackWrestlerMatch.TrackMatchID
+				, TrackEvent.EventDate
+				, TrackMatch.Sort
+				, Wrestler1 = min(Wrestlers.WrestlerID)
+				, Wrestler2 = max(Wrestlers.WrestlerID)
+				, EventSystem = 'track'
 		from	#Wrestlers Wrestlers
+		join	TrackWrestlerMatch WrestlerMatch
+		on		Wrestlers.TrackWrestlerID = WrestlerMatch.TrackWrestlerID
 		join	TrackWrestlerMatch
-		on		Wrestlers.TrackWrestlerID = TrackWrestlerMatch.TrackWrestlerID
+		on		WrestlerMatch.TrackMatchID = TrackWrestlerMatch.TrackMatchID
 		join	TrackMatch
 		on		TrackWrestlerMatch.TrackMatchID = TrackMatch.ID
 		join	TrackEvent
 		on		TrackMatch.TrackEventID = TrackEvent.ID
 		where	TrackEvent.EventDate > getdate() - 720
-				and len(TrackWrestlerMatch.WrestlerName) > 0
-				and TrackWrestlerMatch.Team is not null
-		) AllMatches
+		group by
+				TrackWrestlerMatch.TrackMatchID
+				, TrackEvent.EventDate
+				, TrackMatch.Sort
+		having	count(distinct Wrestlers.WrestlerID) > 1
+		) Matches;
+
+select	MatchID = row_number() over (order by EventDate, Wrestler1, Wrestler2)
+		, Wrestler1
+		, Wrestler2
+		, Wrestler1Win
+		, Wrestler2Win
+		, EventDate
+into	#WrestlerMatches
+from	(
+		select	Wrestler1
+				, Wrestler2
+				, Wrestler1Win = case when EventSystem = 'flo' then FloWinner1.IsWinner else TrackWinner1.IsWinner end
+				, Wrestler2Win = case when EventSystem = 'flo' then FloWinner2.IsWinner else TrackWinner2.IsWinner end
+				, EventDate
+				, MatchFilter = row_number() over (partition by Wrestler1, wrestler2 order by EventDate desc, Sort desc)
+		from	#AllMatches Matches
+		outer apply (
+				select	FloWrestlerMatch.IsWinner
+				from	FloWrestlerMatch
+				join	#Wrestlers wrestlers
+				on		FloWrestlerMatch.FloWrestlerID = wrestlers.FloWrestlerID
+				where	Matches.MatchID = FloWrestlerMatch.FloMatchID
+						and Matches.EventSystem = 'flo'
+						and Matches.Wrestler1 = wrestlers.WrestlerID
+				) FloWinner1
+		outer apply (
+				select	FloWrestlerMatch.IsWinner
+				from	FloWrestlerMatch
+				join	#Wrestlers wrestlers
+				on		FloWrestlerMatch.FloWrestlerID = wrestlers.FloWrestlerID
+				where	Matches.MatchID = FloWrestlerMatch.FloMatchID
+						and Matches.EventSystem = 'flo'
+						and Matches.Wrestler2 = wrestlers.WrestlerID
+				) FloWinner2
+		outer apply (
+				select	TrackWrestlerMatch.IsWinner
+				from	TrackWrestlerMatch
+				join	#Wrestlers wrestlers
+				on		TrackWrestlerMatch.TrackWrestlerID = wrestlers.TrackWrestlerID
+				where	Matches.MatchID = TrackWrestlerMatch.TrackMatchID
+						and Matches.EventSystem = 'track'
+						and Matches.Wrestler1 = wrestlers.WrestlerID
+				) TrackWinner1
+		outer apply (
+				select	TrackWrestlerMatch.IsWinner
+				from	TrackWrestlerMatch
+				join	#Wrestlers wrestlers
+				on		TrackWrestlerMatch.TrackWrestlerID = wrestlers.TrackWrestlerID
+				where	Matches.MatchID = TrackWrestlerMatch.TrackMatchID
+						and Matches.EventSystem = 'track'
+						and Matches.Wrestler2 = wrestlers.WrestlerID
+				) TrackWinner2
+		) LastMatch
+where	LastMatch.MatchFilter = 1
+
+-- Split out wrestlers for matches
+
+select	MatchWrestlerSplit.MatchID
+		, MatchWrestlerSplit.WrestlerID
+		, MatchWrestlerSplit.IsWinner
+		, MatchWrestlerSplit.EventDate
+		, Wrestlers.WrestlerName
+		, Wrestlers.Team
+		, wrestlers.FloWrestlerID
+into	#MatchWrestlers
+from	(
+		select	MatchID
+				, WrestlerID = Wrestler1
+				, IsWinner = Wrestler1Win
+				, EventDate
+		from	#WrestlerMatches
+		union all
+		select	MatchID
+				, WrestlerID = Wrestler2
+				, IsWinner = Wrestler2Win
+				, EventDate
+		from	#WrestlerMatches
+		) MatchWrestlerSplit
+join	#Wrestlers Wrestlers
+on		MatchWrestlerSplit.WrestlerID = Wrestlers.WrestlerID;
+
+create index idx_MatchWrestlers_WrestlerID on #MatchWrestlers (WrestlerID);
+create index idx_MatchWrestlers_MatchID on #MatchWrestlers (MatchID);
 
 -- Initial load
 
-select	InitialWrestlerID
-		, EventDate
+truncate table WrestlerLineage;
+
+insert	WrestlerLineage (
+		InitialWrestlerID
+		, InitialFloID
+		, Tier
 		, IsWinner
-		, Tier = 1
-		, Wrestler1ID
-		, Wrestler1Name
-		, Wrestler1Team
-		, Wrestler2ID
-		, Wrestler2Name
+		, Wrestler2FloID
 		, Wrestler2Team
-into	#WrestlerLineage
-from	(
-		select	InitialWrestlerID = Wrestlers.WrestlerID
-				, WrestlerMatches.EventSystem
-				, WrestlerMatches.EventDate
-				, WrestlerMatches.IsWinner
-				, WrestlerMatches.MatchID
-				, Wrestler1ID = WrestlerMatches.WrestlerID
-				, Wrestler1Name = WrestlerMatches.WrestlerName
-				, Wrestler1Team = WrestlerMatches.Team
-				, Wrestler2ID = OtherWrestler.WrestlerID
-				, Wrestler2Name = OtherWrestler.WrestlerName
-				, Wrestler2Team = OtherWrestler.Team
-				, MostRecent = row_number() over (partition by WrestlerMatches.WrestlerID, OtherWrestler.WrestlerID order by WrestlerMatches.EventDate desc, WrestlerMatches.MatchID desc)
-		from	#Wrestlers Wrestlers
-		join	#WrestlerMatches WrestlerMatches
-		on		Wrestlers.WrestlerID = WrestlerMatches.WrestlerID
-		join	#WrestlerMatches OtherWrestler
-		on		WrestlerMatches.MatchID = OtherWrestler.MatchID
-				and WrestlerMatches.EventSystem = OtherWrestler.EventSystem
-				and WrestlerMatches.WrestlerID <> OtherWrestler.WrestlerID
-		where	(WrestlerMatches.IsWinner = 1 or OtherWrestler.IsWinner = 1)
-		) Matches
-where	MostRecent = 1
+		, Packet
+		)
+select	InitialWrestlerID = WrestlerMatches.WrestlerID
+		, InitialFloID = WrestlerMatches.FloWrestlerID
+		, Tier = 1
+		, WrestlerMatches.IsWinner
+		, Wrestler2FloID = OtherWrestler.FloWrestlerID
+		, Wrestler2Team = OtherWrestler.Team
+		, Packet = cast(
+			'{' +
+			'"wrestler1SqlId": ' + coalesce(cast(WrestlerMatches.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler1Name": "' + WrestlerMatches.WrestlerName + '",' +
+			'"wrestler1Team": "' + WrestlerMatches.Team + '",' +
+			'"wrestler2SqlId": ' + coalesce(cast(OtherWrestler.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler2Name": "' + OtherWrestler.WrestlerName + '",' +
+			'"wrestler2Team": "' + OtherWrestler.Team + '",' +
+			'"isWinner": ' + case when WrestlerMatches.IsWinner = 1 then 'true' else 'false' end + ',' +
+			'"sort": 1,' +
+			'"eventDate": "' + replace(convert(varchar(max), WrestlerMatches.EventDate, 111), '/', '-') + '"' +
+			'}'
+			as varchar(max))
+from	#MatchWrestlers WrestlerMatches
+join	#MatchWrestlers OtherWrestler
+on		WrestlerMatches.MatchID = OtherWrestler.MatchID
+		and WrestlerMatches.WrestlerID <> OtherWrestler.WrestlerID
+
 
 -- Loop
 
@@ -147,152 +255,110 @@ set @Iteration = 1;
 while @Iteration < 6
 begin
 
-insert	#WrestlerLineage (
+insert	WrestlerLineage (
 		InitialWrestlerID
-		, EventDate
-		, IsWinner
+		, InitialFloID
 		, Tier
-		, Wrestler1ID
-		, Wrestler1Name
-		, Wrestler1Team
-		, Wrestler2ID
-		, Wrestler2Name
+		, IsWinner
+		, Wrestler2FloID
 		, Wrestler2Team
+		, Packet
 		)
-select	InitialWrestlerID
-		, EventDate
-		, IsWinner
-		, Tier
-		, Wrestler1ID
-		, Wrestler1Name
-		, Wrestler1Team
-		, Wrestler2ID
-		, Wrestler2Name
-		, Wrestler2Team
-from	(
-		select	StartingMatch.InitialWrestlerID
-				, WrestlerMatches.EventDate
-				, WrestlerMatches.IsWinner
-				, Tier = StartingMatch.Tier + 1
-				, Wrestler1ID = WrestlerMatches.WrestlerID
-				, Wrestler1Name = WrestlerMatches.WrestlerName
-				, Wrestler1Team = WrestlerMatches.Team
-				, Wrestler2ID = OtherWrestler.WrestlerID
-				, Wrestler2Name = OtherWrestler.WrestlerName
-				, Wrestler2Team = OtherWrestler.Team
-				, MostRecent = row_number() over (partition by WrestlerMatches.WrestlerID, OtherWrestler.WrestlerID order by WrestlerMatches.EventDate desc, WrestlerMatches.MatchID desc)
-		from	#WrestlerLineage StartingMatch
-		join	#WrestlerMatches WrestlerMatches
-		on		StartingMatch.Wrestler2ID = WrestlerMatches.WrestlerID
-				and StartingMatch.IsWinner = WrestlerMatches.IsWinner -- Only get matches that match the win type of the parent
-		join	#WrestlerMatches OtherWrestler
-		on		WrestlerMatches.MatchID = OtherWrestler.MatchID
-				and WrestlerMatches.EventSystem = OtherWrestler.EventSystem
-				and WrestlerMatches.WrestlerID <> OtherWrestler.WrestlerID
-		left join
-				#WrestlerLineage FilterOpponent
-		on		StartingMatch.InitialWrestlerID = FilterOpponent.InitialWrestlerID
-				and OtherWrestler.WrestlerID = FilterOpponent.Wrestler1ID
-		outer apply (
-				select	Matches = count(distinct FMTeam.WrestlerID)
-				from	#Wrestlers FMTeam
-				where	WrestlerMatches.WrestlerID = FMTeam.WrestlerID
-						and FMTeam.Team = 'fort mill'
-				) IsFortMill
-		where	FilterOpponent.Wrestler1ID is null
-				and IsFortMill.Matches = 0
-				and StartingMatch.Tier = @Iteration
-		) Matches
-where	MostRecent = 1
+select	WrestlerLineage.InitialWrestlerID
+		, WrestlerLineage.InitialFloID
+		, Tier = WrestlerLineage.Tier + 1
+		, WrestlerMatches.IsWinner
+		, Wrestler2ID = OtherWrestler.FloWrestlerID
+		, Wrestler2Team = OtherWrestler.Team
+		, Packet = WrestlerLineage.Packet +
+			',{' +
+			'"wrestler1SqlId": ' + coalesce(cast(WrestlerMatches.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler1Name": "' + WrestlerMatches.WrestlerName + '",' +
+			'"wrestler1Team": "' + WrestlerMatches.Team + '",' +
+			'"wrestler2SqlId": ' + coalesce(cast(OtherWrestler.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler2Name": "' + OtherWrestler.WrestlerName + '",' +
+			'"wrestler2Team": "' + OtherWrestler.Team + '",' +
+			'"isWinner": ' + case when WrestlerMatches.IsWinner = 1 then 'true' else 'false' end + ',' +
+			'"sort": ' + cast(WrestlerLineage.Tier + 1 as varchar(max)) + ',' +
+			'"eventDate": "' + replace(convert(varchar(max), WrestlerMatches.EventDate, 111), '/', '-') + '"' +
+			'}'
+from	WrestlerLineage
+join	#MatchWrestlers WrestlerMatches
+on		WrestlerLineage.Wrestler2FloID = WrestlerMatches.FloWrestlerID
+		and WrestlerLineage.IsWinner = WrestlerMatches.IsWinner
+join	#MatchWrestlers OtherWrestler
+on		WrestlerMatches.MatchID = OtherWrestler.MatchID
+		and WrestlerMatches.WrestlerID <> OtherWrestler.WrestlerID
+where	WrestlerLineage.Wrestler2Team <> 'fort mill'
 
 set @Iteration = @Iteration + 1
 
+raiserror('Iteration %i', 10, 1, @Iteration) with nowait;
+
 end
 
-if @@trancount = 0
-	begin transaction
-else
-	throw 50000, 'Existing transaction', 16
+select	InitialFloID
+		, Tier
+		, Wrestler2FloID
+		, FirstRecord = min(ID)
+into	#DupRecords
+from	WrestlerLineage
+group by
+		InitialFloID
+		, Tier
+		, Wrestler2FloID
+having	count(0) > 1
 
-if object_id('tempdb..#ModifiedLineage') is not null
-	drop table #ModifiedLineage
+select	WrestlerLineage.InitialFloID
+		, WrestlerLineage.Wrestler2FloID
+		, FirstTier = min(Tier)
+		, LastTier = max(Tier)
+into	#LineageTier
+from	WrestlerLineage
+where	WrestlerLineage.Wrestler2Team = 'fort mill'
+group by
+		WrestlerLineage.InitialFloID
+		, WrestlerLineage.Wrestler2FloID
 
-select	distinct WrestlerTemp.WrestlerID
-		, WrestlerTemp.FloWrestlerID
-		, WrestlerTemp.TrackWrestlerID
-into	#ModifiedLineage
-from	#Wrestlers WrestlerTemp
-join	#WrestlerLineage LineageTemp
-on		WrestlerTemp.WrestlerID = LineageTemp.InitialWrestlerID
-left join
-		WrestlerLineage
-on		coalesce(WrestlerTemp.FloWrestlerID, '') = coalesce(WrestlerLineage.FloWrestlerID, '')
-		and coalesce(WrestlerTemp.TrackWrestlerID, '') = coalesce(WrestlerLineage.TrackWrestlerID, '')
-		and LineageTemp.Wrestler1ID = WrestlerLineage.Wrestler1ID
-		and LineageTemp.Wrestler2ID = WrestlerLineage.Wrestler2ID
-where	WrestlerLineage.ID is null
+begin transaction
 
 delete
 from	WrestlerLineage
 from	WrestlerLineage
-join	#ModifiedLineage ModifiedLineage
-on		coalesce(WrestlerLineage.FloWrestlerID, '') = coalesce(ModifiedLineage.FloWrestlerID, '')
-		and coalesce(WrestlerLineage.TrackWrestlerID, '') = coalesce(ModifiedLineage.TrackWrestlerID, '')
+join	#LineageTier LineageTier
+on		WrestlerLineage.InitialFloID = LineageTier.InitialFloID
+		and WrestlerLineage.Wrestler2FloID = LineageTier.Wrestler2FloID
+		and WrestlerLineage.Tier > LineageTier.FirstTier
 
-insert	WrestlerLineage (
-		WrestlerID
-		, FloWrestlerID
-		, TrackWrestlerID
-		, Wrestler1ID
-		, Wrestler1Flo
-		, Wrestler1Track
-		, Wrestler1Name
-		, Wrestler1Team
-		, Wrestler2ID
-		, Wrestler2Flo
-		, Wrestler2Track
-		, Wrestler2Name
-		, Wrestler2Team
-		, Tier
-		, EventDate
-		, IsWinner
-		)
-select	WrestlerTemp.WrestlerID
-		, WrestlerTemp.FloWrestlerID
-		, WrestlerTemp.TrackWrestlerID
-		, LineageTemp.Wrestler1ID
-		, Wrestler1Flo = Wrestler1.FloWrestlerID
-		, Wrestler1Track = Wrestler1.TrackWrestlerID
-		, LineageTemp.Wrestler1Name
-		, LineageTemp.Wrestler1Team
-		, LineageTemp.Wrestler2ID
-		, Wrestler2Flo = Wrestler2.FloWrestlerID
-		, Wrestler2Track = Wrestler2.TrackWrestlerID
-		, LineageTemp.Wrestler2Name
-		, LineageTemp.Wrestler2Team
-		, LineageTemp.Tier
-		, LineageTemp.EventDate
-		, LineageTemp.IsWinner
-from	#ModifiedLineage WrestlerTemp
-join	#WrestlerLineage LineageTemp
-on		WrestlerTemp.WrestlerID = LineageTemp.InitialWrestlerID
-cross apply (
-		select	Wrestlers.FloWrestlerID
-				, wrestlers.TrackWrestlerID
-		from	#Wrestlers Wrestlers
-		where	LineageTemp.Wrestler1ID = Wrestlers.WrestlerID
-		) Wrestler1
-cross apply (
-		select	Wrestlers.FloWrestlerID
-				, wrestlers.TrackWrestlerID
-		from	#Wrestlers Wrestlers
-		where	LineageTemp.Wrestler2ID = Wrestlers.WrestlerID
-		) Wrestler2
+commit
 
-/*
+select	WrestlerLineage.InitialWrestlerID
+		, WrestlerLineage.InitialFloID
+		, Tier = WrestlerLineage.Tier + 1
+		, WrestlerMatches.IsWinner
+		, Wrestler2ID = OtherWrestler.FloWrestlerID
+		, Wrestler2Team = OtherWrestler.Team
+		, Packet = WrestlerLineage.Packet +
+			',{' +
+			'"wrestler1SqlId": ' + coalesce(cast(WrestlerMatches.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler1Name": "' + WrestlerMatches.WrestlerName + '",' +
+			'"wrestler1Team": "' + WrestlerMatches.Team + '",' +
+			'"wrestler2SqlId": ' + coalesce(cast(OtherWrestler.FloWrestlerID as varchar(max)), 'null') + ',' +
+			'"wrestler2Name": "' + OtherWrestler.WrestlerName + '",' +
+			'"wrestler2Team": "' + OtherWrestler.Team + '",' +
+			'"isWinner": ' + case when WrestlerMatches.IsWinner = 1 then 'true' else 'false' end + ',' +
+			'"sort": ' + cast(WrestlerLineage.Tier + 1 as varchar(max)) + ',' +
+			'"eventDate": "' + replace(convert(varchar(max), WrestlerMatches.EventDate, 111), '/', '-') + '"' +
+			'}'
+from	WrestlerLineage
+join	#MatchWrestlers WrestlerMatches
+on		WrestlerLineage.Wrestler2FloID = WrestlerMatches.FloWrestlerID
+		and WrestlerLineage.IsWinner = WrestlerMatches.IsWinner
+join	#MatchWrestlers OtherWrestler
+on		WrestlerMatches.MatchID = OtherWrestler.MatchID
+		and WrestlerMatches.WrestlerID <> OtherWrestler.WrestlerID
+where	WrestlerLineage.Wrestler2Team <> 'fort mill'
 
-commit;
-
-rollback;
-
-*/
+select	max(Tier)
+from	WrestlerLineage
+where	WrestlerLineage.wrestler2Team <> 'fort mill'

@@ -1,11 +1,9 @@
 set nocount on;
 
-select	distinct WrestlerLineage.WrestlerID
-		, WrestlerLineage.FloWrestlerID
-from	WrestlerLineage
-where	WrestlerLineage.FloWrestlerID is not null
-		and WrestlerLineage.ModifiedDate > getdate() - 7
+select	distinct WrestlerLineage.InitialFloID
+from	WrestlerLineage with (nolock)
+where	WrestlerLineage.ModifiedDate > getdate() - 7
 order by
-		WrestlerLineage.FloWrestlerID;
+		WrestlerLineage.InitialFloID;
 
 set nocount off;
