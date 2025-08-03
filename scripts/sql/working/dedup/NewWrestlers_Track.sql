@@ -8,7 +8,7 @@ if object_id('tempdb..#PartialNameSameTeam') is not null
 select	WrestlerID = TrackWrestler.ID
 into	#NewWrestlers
 from	TrackWrestler
-where	TrackWrestler.InsertDate > getdate() - 3
+where	TrackWrestler.InsertDate > getdate() - 7
 
 select	distinct NewWrestlerID = TrackWrestler.ID
 		, ExistingWrestlerID = DupWrestler.ID
