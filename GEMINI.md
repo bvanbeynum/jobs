@@ -98,13 +98,16 @@ Python Coding Guidelines:
 SQL Coding Guidelines:
 - Pascal case should be used for everything, including keywords, naming and aliases.
 - Keywords and functions should always prefer all lowercase.
-- Indent logical blocks to improve readability. Blocks should be indented to the same level, 2 tabs should be used to maintain common indentation.
+- Do not add a line break after keywords like select and from; use a tab instead.
+Use two tabs to indent lines that do not start with a keyword.
+- Do not indent join or on clauses. Use two tabs after the on clause.
+- For column aliases, use Alias = expression format
 - Use leading commas in select statements and other lists to improve readability.
 - For table names, use nouns and prefer the singular version of the noun.
 - Avoid prefixes like "tbl_" or "vw_".
+- ID should always be all caps.
 - Always include a primary key in all tables. The primary key should be named ID, and then all foreign keys should use the table name followed by ID without an underscore.
 - Always use foreign keys when creating references. Use the table name followed by ID without an underscore.
-- For column aliases, use Alias = expression format
 - Don't alias table names unless required to avoid conflicts.
 - Don't include Inner when doing an Inner Join since it is implied.
 - Avoid select *. Explicitly list the columns.
