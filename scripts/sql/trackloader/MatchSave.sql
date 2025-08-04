@@ -1,21 +1,21 @@
 set nocount on;
 
-declare @TrackEventID int;
+declare @EventID int;
 declare @Division varchar(255);
 declare @WeightClass varchar(255);
 declare @RoundName varchar(255);
 declare @WinType varchar(255);
 declare @Sort int;
 
-set @TrackEventID = ?;
+set @EventID = ?;
 set @Division = ?;
 set @WeightClass = ?;
 set @RoundName = ?;
 set @WinType = ?;
 set @Sort = ?;
 
-insert	TrackMatch (
-		TrackEventID
+insert	EventMatch (
+		EventID
 		, Division
 		, WeightClass
 		, RoundName
@@ -23,7 +23,7 @@ insert	TrackMatch (
 		, Sort
 		)
 values	(
-		@TrackEventID
+		@EventID
 		, @Division
 		, @WeightClass
 		, @RoundName

@@ -13,20 +13,20 @@ set @IsWinner = ?;
 set @Team = ?;
 set @WrestlerName = ?;
 
-select	@WrestlerMatchID = TrackWrestlerMatch.ID
-from	TrackWrestlerMatch
-where	TrackMatchID = @MatchID
-		and TrackWrestlerID = @WrestlerID;
+select	@WrestlerMatchID = EventWrestlerMatch.ID
+from	EventWrestlerMatch
+where	EventMatchID = @MatchID
+		and EventWrestlerID = @WrestlerID;
 
 if @WrestlerMatchID is null
 begin
 
-	insert	TrackWrestlerMatch (
-			TrackMatchID
-			, TrackWrestlerID
+	insert	EventWrestlerMatch (
+			EventMatchID
+			, EventWrestlerID
 			, IsWinner
 			, WrestlerName
-			, Team
+			, TeamName
 			)
 	values	(
 			@MatchID
@@ -41,10 +41,10 @@ end
 else
 begin
 
-	update	TrackWrestlerMatch
+	update	EventWrestlerMatch
 	set		IsWinner = @IsWinner
 			, WrestlerName = @WrestlerName
-			, Team = @Team
+			, TeamName = @Team
 			, ModifiedDate = getdate()
 	where	ID = @WrestlerMatchID;
 

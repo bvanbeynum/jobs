@@ -31,7 +31,7 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-sql = loadSQL("./scripts/sql/track")
+sql = loadSQL("./scripts/sql/trackloader")
 
 trackTIM = ""
 trackTWSessionId = ""
@@ -127,7 +127,6 @@ for state in states:
 						eventName,
 						eventDate,
 						endDate,
-						sourceDate,
 						address,
 						state["name"],
 						0
@@ -155,7 +154,6 @@ for state in states:
 						eventName,
 						eventDate,
 						endDate,
-						sourceDate,
 						address,
 						state["name"],
 						0
@@ -197,7 +195,6 @@ for state in states:
 							eventName,
 							eventDate,
 							endDate,
-							sourceDate,
 							address,
 							state["name"],
 							1
@@ -308,7 +305,6 @@ for state in states:
 						eventName,
 						eventDate,
 						endDate,
-						sourceDate,
 						address,
 						state["name"],
 						1
