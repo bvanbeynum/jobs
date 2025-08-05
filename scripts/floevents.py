@@ -203,7 +203,7 @@ for eventIndex, event in enumerate(events):
 				event["dateConverted"], # @EventDate
 				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 				(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-				location["state"][:2], # @LocationState
+				(location.get("state", "") or "")[:2], # @LocationState
 				None, # @IsComplete
 				None, # @IsExcluded
 				))
@@ -237,7 +237,7 @@ for eventIndex, event in enumerate(events):
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-			location["state"][:2], # @LocationState
+			(location.get("state", "") or "")[:2], # @LocationState
 			0, # @IsComplete
 			0, # @IsExcluded
 			))
@@ -267,7 +267,7 @@ for eventIndex, event in enumerate(events):
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-			location["state"][:2], # @LocationState
+			(location.get("state", "") or "")[:2], # @LocationState
 			0, # @IsComplete
 			1, # @IsExcluded
 			))
@@ -319,7 +319,7 @@ for eventIndex, event in enumerate(events):
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-			location["state"][:2], # @LocationState
+			(location.get("state", "") or "")[:2], # @LocationState
 			0, # @IsComplete
 			1, # @IsExcluded
 			))
@@ -333,7 +333,7 @@ for eventIndex, event in enumerate(events):
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-			location["state"][:2], # @LocationState
+			(location.get("state", "") or "")[:2], # @LocationState
 			0, # @IsComplete
 			0, # @IsExcluded
 			))
@@ -346,7 +346,7 @@ for eventIndex, event in enumerate(events):
 		event["dateConverted"], # @EventDate
 		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 		(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-		location["state"][:2], # @LocationState
+		(location.get("state", "") or "")[:2], # @LocationState
 		0, # @IsComplete
 		0, # @IsExcluded
 		))
@@ -360,7 +360,7 @@ for eventIndex, event in enumerate(events):
 		event["dateConverted"], # @EventDate
 		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
 		(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
-		location["state"][:2], # @LocationState
+		(location.get("state", "") or "")[:2], # @LocationState
 		1, # @IsComplete
 		0, # @IsExcluded
 		))
