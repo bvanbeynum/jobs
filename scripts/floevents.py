@@ -279,8 +279,7 @@ excluded = [ excluded.SystemID for excluded in cur.fetchall() ]
 
 print(f"{ currentTime() }: Get past events")
 
-response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&eventType=tournaments", headers=requestHeaders)
-# response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
+response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
 events = [ event for event in events if event["guid"] not in excluded ]
 
