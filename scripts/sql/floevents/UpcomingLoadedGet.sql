@@ -1,6 +1,7 @@
-select	FlowID
-		, MeetName
-		, StartTime
-		, LocationName
-from	FloMeet
-where	StartTime > getdate();
+select	SystemID
+		, EventName
+		, EventDate
+		, EventAddress
+from	Event
+where	EventSystem = 'Flo'
+		and EventDate > getdate();

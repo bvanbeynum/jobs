@@ -1,1 +1,0 @@
-update flomeet set lastupdate = getdate() where id = ?

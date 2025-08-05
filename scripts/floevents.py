@@ -34,7 +34,7 @@ def getEventDetails(eventGUID):
 		"state": location.get("state") if location and eventInfo["data"]["attributes"]["location"].get("state") else None,
 	}
 
-def loadEvent(eventGUID, meetId):
+def loadEvent(eventGUID, eventId):
 
 	output = {
 		"divisions": []
@@ -42,6 +42,7 @@ def loadEvent(eventGUID, meetId):
 
 	response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }", headers=requestHeaders)
 	divisions = json.loads(response.text)["response"]["divisions"]
+	time.sleep(2)
 
 	for divisionIndex, division in enumerate(divisions):
 		divisionSave = { "name": division["name"], "weightClasses": [] }
@@ -58,6 +59,7 @@ def loadEvent(eventGUID, meetId):
 			for poolIndex, pool in enumerate(weight["boutPools"]):
 				response = requests.get(f"https://arena.flowrestling.org/bracket/{ eventGUID }/bouts/{ weight['guid'] }/pool/{ pool['guid'] }", headers=requestHeaders)
 				matches = json.loads(response.text)["response"]
+				time.sleep(2)
 				poolSave = { "name": pool["name"], "matches": [] }
 
 				for matchIndex, match in enumerate(matches):
@@ -97,74 +99,48 @@ def loadEvent(eventGUID, meetId):
 					
 					if match["topWrestler"] is not None:
 						# Top wrestler
-						
 						cur.execute(sql["WrestlerSave"], (
-							match["topWrestler"]["guid"], # @FlowID
-							match["topWrestler"]["firstName"].title(), # @FirstName
-							match["topWrestler"]["lastName"].title(), # @LastName
+							match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(), # @WrestlerName
 							match["topWrestler"]["team"]["name"], # @TeamName
-							match["topWrestler"]["team"]["guid"], # @TeamFlowID
 						))
 						topWrestlerId = cur.fetchval()
 
 					if match["bottomWrestler"] is not None:
 						# Bottom wrestler
-
 						cur.execute(sql["WrestlerSave"], (
-							match["bottomWrestler"]["guid"], # @FlowID
-							match["bottomWrestler"]["firstName"].title(), # @FirstName
-							match["bottomWrestler"]["lastName"].title(), # @LastName
+							match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(), # @WrestlerName
 							match["bottomWrestler"]["team"]["name"], # @TeamName
-							match["bottomWrestler"]["team"]["guid"], # @TeamFlowID
 						))
 						bottomWrestlerId = cur.fetchval()
 
 					cur.execute(sql["MatchSave"], (
-							meetId, # @MeetID
-							match["guid"], # @FlowID
+							eventId, # @EventID
 							division["name"], # @Division
 							weight["name"], # @WeightClass
-							pool["name"], # @PoolName
 							match["roundName"]["displayName"], # @RoundName
 							match["winType"], # @WinType
-							match["boutVideoUrl"], # @VideoURL
 							sort, # @Sort
-							boutNumber, # @MatchNumber
-							match["mat"]["name"] if match["mat"] is not None else None, # @Mat
-							match["result"], # @Results
-							topWrestlerId if match["topWrestler"] is not None else None, # @TopFlowWrestlerID
-							bottomWrestlerId if match["bottomWrestler"] is not None else None, # @BottomFlowWrestlerID
-							match["winnerToBoutGuid"], # @WinnerMatchFlowID
-							match["winnerToTop"], # @WinnerToTop
-							match["loserToBoutGuid"], # @LoserMatchFlowID
-							match["loserToTop"], # @LoserToTop
-							topWrestlerId if match["topWrestler"] is not None and match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else bottomWrestlerId if match["bottomWrestler"] is not None and match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else None, # @WinnerWrestlerID
-							match["trueRound"], # @RoundNumber
-							match["roundSpot"], # @RoundSpot
 						))
-					
 					matchId = cur.fetchval()
 
 					if match["topWrestler"] is not None:
 						# Save wrestler match
 						cur.execute(sql["WrestlerMatchSave"], (
-							topWrestlerId, # @WrestlerID
 							matchId, # @MatchID
+							topWrestlerId, # @WrestlerID
 							1 if match["topWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
 							match["topWrestler"]["team"]["name"], # @TeamName
-							match["topWrestler"]["firstName"].title(), # @FirstName
-							match["topWrestler"]["lastName"].title(), # @LastName
+							match["topWrestler"]["firstName"].title() + " " + match["topWrestler"]["lastName"].title(), # @WrestlerName
 						))
 
 					if match["bottomWrestler"] is not None:
 						# Save wrestler match
 						cur.execute(sql["WrestlerMatchSave"], (
-							bottomWrestlerId, # @WrestlerID
 							matchId, # @MatchID
+							bottomWrestlerId, # @WrestlerID
 							1 if match["bottomWrestler"]["guid"] == match["winnerWrestlerGuid"] else 0, # @IsWinner
 							match["bottomWrestler"]["team"]["name"], # @TeamName
-							match["bottomWrestler"]["firstName"].title(), # @FirstName
-							match["bottomWrestler"]["lastName"].title(), # @LastName
+							match["bottomWrestler"]["firstName"].title() + " " + match["bottomWrestler"]["lastName"].title(), # @WrestlerName
 						))
 					
 					poolSave["matches"].append(matchSave)
@@ -175,7 +151,6 @@ def loadEvent(eventGUID, meetId):
 			divisionSave["weightClasses"].append(weightSave)
 		output["divisions"].append(divisionSave)
 		
-	cur.execute(sql["WrestlerUpdate"], (meetId,))
 	return output
 
 def loadMill(event):
@@ -203,7 +178,7 @@ cur = cn.cursor()
 print(f"{ currentTime() }: ----------- Upcoming Events")
 
 cur.execute(sql["UpcomingLoadedGet"])
-loaded = [ { "flowId": loaded.FlowID, "name": loaded.MeetName, "start": loaded.StartTime, "location": loaded.LocationName } for loaded in cur.fetchall() ]
+loaded = [ { "systemId": loaded.SystemID, "name": loaded.EventName, "eventDate": loaded.EventDate, "location": loaded.EventAddress } for loaded in cur.fetchall() ]
 
 response = requests.get(f"https://arena.flowrestling.org/events/upcoming?eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
@@ -211,73 +186,70 @@ events = json.loads(response.text)["response"]
 print(f"{ currentTime() }: { len(events) } upcoming events")
 
 for event in events:
-	event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+	event["dateConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
-events = sorted(events, key=lambda event: event["startConverted"])
+events = sorted(events, key=lambda event: event["dateConverted"])
 
 for eventIndex, event in enumerate(events):
-	eventDB = [ eventDB for eventDB in loaded if eventDB["flowId"] == event["guid"]]
+	eventDB = [ eventDB for eventDB in loaded if eventDB["systemId"] == event["guid"]]
 	if len(eventDB) > 0:
-		if event["name"] != eventDB[0]["name"] or event["startConverted"] != eventDB[0]["start"] or event["locationName"] != eventDB[0]["location"]:
+		if event["name"] != eventDB[0]["name"] or event["dateConverted"].date() != eventDB[0]["eventDate"]:
 			location = getEventDetails(event["guid"])
 
 			print(f"{ currentTime() }: Data Changed { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-			cur.execute(sql["MeetSave"], (
-				event["guid"], # @FlowID
-				event["name"], # @MeetName
-				None, # @IsExcluded
+			cur.execute(sql["EventSave"], (
+				event["guid"], # @SystemID
+				event["name"], # @EventName
+				event["dateConverted"], # @EventDate
+				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+				(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+				location["state"][:2], # @LocationState
 				None, # @IsComplete
-				event["locationName"], # @LocationName
-				location.get("city"), # @LocationCity
-				location["state"], # @LocationState
-				event["startConverted"], # @StartTime
-				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-				event["isPublishBrackets"], # @HasBrackets
+				None, # @IsExcluded
 				))
-			meetId = cur.fetchval()
+			eventId = cur.fetchval()
 			
-			eventDetails = {
-				"sqlId": meetId,
-				"floGUID": event["guid"],
-				"name": event["name"],
-				"location": event["locationName"],
-				"city": location.get("city"),
-				"state": location["state"],
-				"date": event["startDate"],
-				"endDate": event["endDate"],
-				"hasBrackets": event["isPublishBrackets"],
-				"divisions": []
-			}
-			loadMill(eventDetails)
+			if str.lower(location.get("state", "")) in ["sc", "nc", "ga", "tn"]:
+				eventDetails = {
+					"sqlId": eventId,
+					"floGUID": event["guid"],
+					"name": event["name"],
+					"location": event["locationName"],
+					"city": location.get("city"),
+					"state": location["state"],
+					"date": event["startDate"],
+					"endDate": event["endDate"],
+					"hasBrackets": event["isPublishBrackets"],
+					"divisions": []
+				}
+				loadMill(eventDetails)
 
 		continue
 
 	location = getEventDetails(event["guid"])
 
-	if location["state"] is not None and str.lower(location["state"]) in ["sc", "nc", "ga", "tn"]:	
+	if str.lower(location.get("state", "")) in ["sc", "nc", "ga", "tn"]:
 		# In state, save
 		print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-		cur.execute(sql["MeetSave"], (
-			event["guid"], # @FlowID
-			event["name"], # @MeetName
-			0, # @IsExcluded
+		cur.execute(sql["EventSave"], (
+			event["guid"], # @SystemID
+			event["name"], # @EventName
+			event["dateConverted"], # @EventDate
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+			location["state"][:2], # @LocationState
 			0, # @IsComplete
-			event["locationName"], # @LocationName
-			location.get("city"), # @LocationCity
-			location["state"], # @LocationState
-			event["startConverted"], # @StartTime
-			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-			event["isPublishBrackets"], # @HasBrackets
+			0, # @IsExcluded
 			))
-		meetId = cur.fetchval()
+		eventId = cur.fetchval()
 		
 		eventDetails = {
-			"sqlId": meetId,
+			"sqlId": eventId,
 			"floGUID": event["guid"],
 			"name": event["name"],
 			"location": event["locationName"],
 			"city": location.get("city"),
-			"state": location["state"],
+			"state": location["state"][:2],
 			"date": event["startDate"],
 			"endDate": event["endDate"],
 			"hasBrackets": event["isPublishBrackets"],
@@ -289,27 +261,26 @@ for eventIndex, event in enumerate(events):
 	else:
 		# Not in state
 		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-		cur.execute(sql["MeetSave"], (
-			event["guid"], # @FlowID
-			event["name"], # @MeetName
-			1, # @IsExcluded
+		cur.execute(sql["EventSave"], (
+			event["guid"], # @SystemID
+			event["name"], # @EventName
+			event["dateConverted"], # @EventDate
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+			location["state"][:2], # @LocationState
 			0, # @IsComplete
-			event["locationName"], # @LocationName
-			location.get("city"), # @LocationCity
-			location["state"], # @LocationState
-			event["startConverted"], # @StartTime
-			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-			event["isPublishBrackets"], # @HasBrackets
+			1, # @IsExcluded
 			))
 		
 	# End upcoming events
 
 cur.execute(sql["ExcludedGet"])
-excluded = [ excluded.FlowID for excluded in cur.fetchall() ]
+excluded = [ excluded.SystemID for excluded in cur.fetchall() ]
 
 print(f"{ currentTime() }: Get past events")
 
-response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
+response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&eventType=tournaments", headers=requestHeaders)
+# response = requests.get(f"https://arena.flowrestling.org/events/past?year={ datetime.datetime.now().year }&month={ datetime.datetime.now().month }&eventType=tournaments", headers=requestHeaders)
 events = json.loads(response.text)["response"]
 events = [ event for event in events if event["guid"] not in excluded ]
 
@@ -326,9 +297,9 @@ events = [ event for event in events if event["guid"] not in excluded ]
 # 	}]
 
 for event in events:
-	event["startConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
+	event["dateConverted"] = datetime.datetime.strptime(event["startDate"], "%Y-%m-%dT%H:%M:%S+%f")
 
-events = sorted(events, key=lambda event: event["startConverted"], reverse=True)
+events = sorted(events, key=lambda event: event["dateConverted"], reverse=True)
 
 print(f"{ currentTime() }: ----------- Load events: { str(len(events)) }")
 
@@ -338,73 +309,63 @@ for eventIndex, event in enumerate(events):
 
 	location = getEventDetails(event["guid"])
 
-	if location["state"] is None or str.lower(location["state"]) not in ["sc", "nc", "ga", "tn"]:
+	if str.lower(location.get("state", "") or "") not in ["sc", "nc", "ga", "tn"]:
 		
 		# Not in state
 		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
-		cur.execute(sql["MeetSave"], (
-			event["guid"], # @FlowID
-			event["name"], # @MeetName
-			1, # @IsExcluded
+		cur.execute(sql["EventSave"], (
+			event["guid"], # @SystemID
+			event["name"], # @EventName
+			event["dateConverted"], # @EventDate
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+			location["state"][:2], # @LocationState
 			0, # @IsComplete
-			event["locationName"], # @LocationName
-			location.get("city"), # @LocationCity
-			location["state"], # @LocationState
-			event["startConverted"], # @StartTime
-			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-			event["isPublishBrackets"], # @HasBrackets
+			1, # @IsExcluded
 			))
 		continue
 
 	if not event["isPublishBrackets"] or not event["hasBrackets"]:
 		# No data
-		cur.execute(sql["MeetSave"], (
-			event["guid"], # @FlowID
-			event["name"], # @MeetName
-			0, # @IsExcluded
+		cur.execute(sql["EventSave"], (
+			event["guid"], # @SystemID
+			event["name"], # @EventName
+			event["dateConverted"], # @EventDate
+			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+			(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+			location["state"][:2], # @LocationState
 			0, # @IsComplete
-			event["locationName"], # @LocationName
-			location.get("city"), # @LocationCity
-			location["state"], # @LocationState
-			event["startConverted"], # @StartTime
-			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-			event["isPublishBrackets"], # @HasBrackets
+			0, # @IsExcluded
 			))
 		continue
 
 	print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
-	cur.execute(sql["MeetSave"], (
-		event["guid"], # @FlowID
-		event["name"], # @MeetName
-		0, # @IsExcluded
+	cur.execute(sql["EventSave"], (
+		event["guid"], # @SystemID
+		event["name"], # @EventName
+		event["dateConverted"], # @EventDate
+		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+		(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+		location["state"][:2], # @LocationState
 		0, # @IsComplete
-		event["locationName"], # @LocationName
-		location.get("city"), # @LocationCity
-		location["state"], # @LocationState
-		event["startConverted"], # @StartTime
-		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-		event["isPublishBrackets"], # @HasBrackets
-		))
-	meetId = cur.fetchval()
-
-	loadEvent(event["guid"], meetId)
-	
-	cur.execute(sql["MeetSave"], (
-		event["guid"], # @FlowID
-		event["name"], # @MeetName
 		0, # @IsExcluded
+		))
+	eventId = cur.fetchval()
+
+	loadEvent(event["guid"], eventId)
+	
+	cur.execute(sql["EventSave"], (
+		event["guid"], # @SystemID
+		event["name"], # @EventName
+		event["dateConverted"], # @EventDate
+		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
+		(event.get("locationName", "") or "") + " " + (location.get("city", "") or "") + ", " + (location.get("state", "") or ""), # @EventAddress
+		location["state"][:2], # @LocationState
 		1, # @IsComplete
-		event["locationName"], # @LocationName
-		location.get("city"), # @LocationCity
-		location["state"], # @LocationState
-		event["startConverted"], # @StartTime
-		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndTime
-		event["isPublishBrackets"], # @HasBrackets
+		0, # @IsExcluded
 		))
 
 # End past events 
-
-cur.execute(sql["LastUpdateSet"])
 
 cur.close()
 cn.close()
