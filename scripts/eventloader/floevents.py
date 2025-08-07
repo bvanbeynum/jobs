@@ -14,7 +14,7 @@ def currentTime():
 
 def loadSQL():
 	sql = {}
-	sqlPath = "./scripts/sql/floevents"
+	sqlPath = "./scripts/eventloader/sql"
 
 	if os.path.exists(sqlPath):
 		for file in os.listdir(sqlPath):
@@ -198,7 +198,9 @@ for eventIndex, event in enumerate(events):
 
 			print(f"{ currentTime() }: Data Changed { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
 			cur.execute(sql["EventSave"], (
+				'flo', # @EventSystem
 				event["guid"], # @SystemID
+				None, # @EventType
 				event["name"], # @EventName
 				event["dateConverted"], # @EventDate
 				datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -232,7 +234,9 @@ for eventIndex, event in enumerate(events):
 		# In state, save
 		print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
 		cur.execute(sql["EventSave"], (
+			'flo', # @EventSystem
 			event["guid"], # @SystemID
+			None, # @EventType
 			event["name"], # @EventName
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -262,7 +266,9 @@ for eventIndex, event in enumerate(events):
 		# Not in state
 		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
 		cur.execute(sql["EventSave"], (
+			'flo', # @EventSystem
 			event["guid"], # @SystemID
+			None, # @EventType
 			event["name"], # @EventName
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -313,7 +319,9 @@ for eventIndex, event in enumerate(events):
 		# Not in state
 		print(f"{ currentTime() }: Exclude { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
 		cur.execute(sql["EventSave"], (
+			'flo', # @EventSystem
 			event["guid"], # @SystemID
+			None, # @EventType
 			event["name"], # @EventName
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -327,7 +335,9 @@ for eventIndex, event in enumerate(events):
 	if not event["isPublishBrackets"] or not event["hasBrackets"]:
 		# No data
 		cur.execute(sql["EventSave"], (
+			'flo', # @EventSystem
 			event["guid"], # @SystemID
+			None, # @EventType
 			event["name"], # @EventName
 			event["dateConverted"], # @EventDate
 			datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -340,7 +350,9 @@ for eventIndex, event in enumerate(events):
 
 	print(f"{ currentTime() }: Add { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] }")
 	cur.execute(sql["EventSave"], (
+		'flo', # @EventSystem
 		event["guid"], # @SystemID
+		None, # @EventType
 		event["name"], # @EventName
 		event["dateConverted"], # @EventDate
 		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate
@@ -354,7 +366,9 @@ for eventIndex, event in enumerate(events):
 	loadEvent(event["guid"], eventId)
 	
 	cur.execute(sql["EventSave"], (
+		'flo', # @EventSystem
 		event["guid"], # @SystemID
+		None, # @EventType
 		event["name"], # @EventName
 		event["dateConverted"], # @EventDate
 		datetime.datetime.strptime(event["endDate"], "%Y-%m-%dT%H:%M:%S+%f"), # @EndDate

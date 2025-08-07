@@ -31,7 +31,7 @@ print(f"{ currentTime() }: Load config")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-sql = loadSQL("./scripts/sql/trackloader")
+sql = loadSQL("./scripts/eventloader/sql")
 
 trackTIM = ""
 trackTWSessionId = ""
@@ -122,6 +122,7 @@ for state in states:
 
 				if trackId is None:
 					cur.execute(sql["EventSave"], (
+						'track',
 						eventId,
 						tournamentLink,
 						eventName,
@@ -129,6 +130,7 @@ for state in states:
 						endDate,
 						address,
 						state["name"],
+						0,
 						0
 						))
 
@@ -149,6 +151,7 @@ for state in states:
 				if eventDate >= datetime.datetime.today():
 					# Update the data in case they are making changes
 					cur.execute(sql["EventSave"], (
+						'track',
 						eventId,
 						tournamentLink,
 						eventName,
@@ -156,6 +159,7 @@ for state in states:
 						endDate,
 						address,
 						state["name"],
+						0,
 						0
 					))
 					continue
@@ -190,6 +194,7 @@ for state in states:
 					if eventDate < datetime.datetime.today():
 						# Event is in the past, so it's not valid
 						cur.execute(sql["EventSave"], (
+							'track',
 							eventId,
 							tournamentLink,
 							eventName,
@@ -197,7 +202,8 @@ for state in states:
 							endDate,
 							address,
 							state["name"],
-							1
+							1,
+							0
 						))
 
 					continue
@@ -300,6 +306,7 @@ for state in states:
 
 				if matchesLoaded:
 					cur.execute(sql["EventSave"], (
+						'track',
 						eventId,
 						tournamentLink,
 						eventName,
@@ -307,7 +314,8 @@ for state in states:
 						endDate,
 						address,
 						state["name"],
-						1
+						1,
+						0
 					))
 							
 	print(f"{ currentTime() }: Finished { state['name'] }")
