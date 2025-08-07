@@ -20,6 +20,7 @@ def ServiceLoop():
 		# Get list of jobs
 		response = requests.get(f"{ serverPath }/sys/api/getjobs")
 		jobs = json.loads(response.text)["jobs"]
+		jobs = [ job for job in jobs if job["status"] == "active" ]
 
 		# Fix dates
 		for job in jobs:
@@ -34,9 +35,7 @@ def ServiceLoop():
 		# Start jobs
 		runningIds = [ job["jobId"] for job in runningJobs ]
 		for job in jobs:
-			if job["status"] == "inactive":
-				continue
-			
+		
 			completeDates = [ run["completeTime"] for run in job["runs"] if run["completeTime"] is not None ] if len(job["runs"]) > 0 else None
 			lastRun = None
 			if completeDates is not None and len(completeDates) > 0:
