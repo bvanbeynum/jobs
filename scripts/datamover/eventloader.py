@@ -63,7 +63,7 @@ if len(events) > 0: # if the data hasn't been wiped out
 		if rowIndex > 1000:
 			print(f"{ currentTime() }: { rowIndex } events deleted")
 
-print(f"{ currentTime() }: { rowIndex } events deleted")
+	print(f"{ currentTime() }: { rowIndex } events deleted")
 
 print(f"{ currentTime() }: Load all events")
 cur.execute(sql["EventGet"], (100))
