@@ -15,4 +15,4 @@ from	Event
 where	Event.IsExcluded = 0
 		and Event.ModifiedDate > dateadd(day, @Days * -1, cast(getdate() as date))
 order by
-		Event.ID
+		Event.ModifiedDate desc
