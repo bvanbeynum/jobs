@@ -41,16 +41,19 @@ print(f"{ currentTime() }: Get wrestlers from Mill")
 response = requests.get(f"{ millDBURL }/data/wrestler?select=sqlId")
 mongoWrestlers = json.loads(response.text)["wrestlers"]
 
+# Create a lookup dictionary for mongoWrestlers by sqlId
+wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
+
 if len(mongoWrestlers) > 0:
 	cur.execute(sql["WrestlerMover_WrestlerStageCreate"])
-	cur.executemany("insert #WrestlerStage (WrestlerID) values (?);", [ (wrestler["sqlId"],) for wrestler in mongoWrestlers ])
+	cur.executemany("insert #WrestlerStage (WrestlerID, MongoID) values (?,?);", [ (wrestler["sqlId"],wrestler["id"]) for wrestler in mongoWrestlers ])
 	cur.execute(sql["WrestlerMover_WrestlersMissing"])
 
 	rowIndex = 0
 	errorCount = 0
 
 	for row in cur:
-		response = requests.delete(f"{ millDBURL }/data/wrestler?sqlid={ row.WrestlerID }")
+		response = requests.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
 
 		if response.status_code >= 400:
 			errorCount += 1
@@ -66,73 +69,89 @@ if len(mongoWrestlers) > 0:
 
 	print(f"{ currentTime() }: { rowIndex } wrestlers deleted")
 
-print(f"{ currentTime() }: Load all wrestlers")
-cur.execute(sql["WrestlerMover_WrestlersLoad"])
+print(f"{ currentTime() }: Load wrestlers")
 
-wrestlers = cur.fetchall()
+offset = 0
+batchSize = 5000  # Adjust batch size as needed
+wrestlersCompleted = 0
 
 rowIndex = 0
 errorCount = 0
 
-for wrestlerRow in wrestlers:
-	wrestler = {
-		"sqlId": wrestlerRow.WrestlerID,
-		"name": wrestlerRow.WrestlerName,
-		"rating": wrestlerRow.Rating,
-		"deviation": wrestlerRow.Deviation,
-		"events": [],
-		"lineage": []
-	}
+while True:
+	cur.execute(sql["WrestlerMover_WrestlersLoad"], (offset, batchSize))
+	wrestlers_batch = cur.fetchall()
 
-	cur.execute(sql["WrestlerMover_WrestlerMatchesLoad"], (wrestlerRow.WrestlerID,))
-	matches = cur.fetchall()
+	if not wrestlers_batch:
+		break  # No more wrestlers to fetch
 
-	events = {}
-	for matchRow in matches:
-		if matchRow.EventID not in events:
-			events[matchRow.EventID] = {
-				"sqlId": matchRow.EventID,
-				"name": matchRow.EventName,
-				"date": datetime.datetime.strftime(matchRow.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] if matchRow.EventDate is not None else None,
-				"team": matchRow.TeamName,
-				"locationState": matchRow.EventState,
-				"matches": []
-			}
-		
-		events[matchRow.EventID]["matches"].append({
-			"division": None,
-			"weightClass": matchRow.WeightClass,
-			"round": matchRow.MatchRound,
-			"vs": matchRow.OpponentName,
-			"vsTeam": matchRow.OpponentTeamName,
-			"vsSqlId": matchRow.OpponentID,
-			"isWinner": matchRow.IsWinner,
-			"winType": matchRow.WinType,
-			"sort": None
-		})
+	for wrestlerRow in wrestlers_batch:
+		wrestler = {
+			"sqlId": wrestlerRow.WrestlerID,
+			"name": wrestlerRow.WrestlerName,
+			"rating": float(wrestlerRow.Rating) if wrestlerRow.Rating is not None else None,
+			"deviation": float(wrestlerRow.Deviation) if wrestlerRow.Deviation is not None else None,
+			"events": [],
+			"lineage": []
+		}
 
-	wrestler["events"] = list(events.values())
+		# Add id if a match is found in wrestlerLookup
+		if wrestlerRow.WrestlerID in wrestlerLookup:
+			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
 
-	if wrestlerRow.LineagePacket:
-		wrestler["lineage"] = json.loads(wrestlerRow.LineagePacket)
-	else:
-		wrestler["lineage"] = []
-	
-	response = requests.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
+		cur.execute(sql["WrestlerMover_WrestlerMatchesLoad"], (wrestlerRow.WrestlerID,))
+		matches = cur.fetchall()
 
-	if response.status_code >= 400:
-		errorCount += 1
-		print(f"{ currentTime() }: Error saving wrestler: { response.status_code } - { response.text }")
+		events = {}
+		for matchRow in matches:
+			if matchRow.EventID not in events:
+				events[matchRow.EventID] = {
+					"sqlId": matchRow.EventID,
+					"name": matchRow.EventName,
+					"date": datetime.datetime.strftime(matchRow.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] if matchRow.EventDate is not None else None,
+					"team": matchRow.TeamName,
+					"locationState": matchRow.EventState,
+					"matches": []
+				}
 
-	if errorCount > 15:
-		print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+			events[matchRow.EventID]["matches"].append({
+				"division": matchRow.Division,
+				"weightClass": matchRow.WeightClass,
+				"round": matchRow.MatchRound,
+				"vs": matchRow.OpponentName,
+				"vsTeam": matchRow.OpponentTeamName,
+				"vsSqlId": matchRow.OpponentID,
+				"isWinner": matchRow.IsWinner,
+				"winType": matchRow.WinType,
+				"sort": matchRow.MatchSort
+			})
+
+		wrestler["events"] = list(events.values())
+
+		if wrestlerRow.LineagePacket:
+			wrestler["lineage"] = json.loads(wrestlerRow.LineagePacket)
+		else:
+			wrestler["lineage"] = []
+
+		response = requests.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
+
+		if response.status_code >= 400:
+			errorCount += 1
+			print(f"{ currentTime() }: Error saving wrestler: { response.status_code } - { response.text }")
+
+		if errorCount > 15:
+			print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+			break
+
+		wrestlersCompleted += 1
+		if wrestlersCompleted % 1000 == 0:
+			print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
+
+	offset += batchSize
+	if errorCount > 15: # Break outer loop if too many errors
 		break
-	
-	rowIndex += 1
-	if rowIndex % 1000 == 0:
-		print(f"{ currentTime() }: { rowIndex } wrestlers processed")
 
-print(f"{ currentTime() }: { rowIndex } wrestlers processed")
+print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
 
 cur.close()
 cn.close()

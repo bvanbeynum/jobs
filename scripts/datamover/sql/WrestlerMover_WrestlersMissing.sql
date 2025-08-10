@@ -1,6 +1,8 @@
-select	WrestlerID = Wrestler.ID
-from	Wrestler
-left join	#WrestlerStage
+select	WrestlerID = #WrestlerStage.WrestlerID
+		, MongoID = #WrestlerStage.MongoID
+from	#WrestlerStage
+left join
+		EventWrestler
 on
-		#WrestlerStage.WrestlerID = Wrestler.ID
-where	#WrestlerStage.WrestlerID is null
+		#WrestlerStage.WrestlerID = EventWrestler.ID
+where	EventWrestler.ID is null

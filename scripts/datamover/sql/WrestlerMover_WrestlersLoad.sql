@@ -15,3 +15,6 @@ group by	EventWrestler.ID
 	, EventWrestler.WrestlerName
 	, EventWrestler.GlickoRating
 	, EventWrestler.GlickoDeviation
+order by
+		max(EventWrestlerMatch.ModifiedDate) desc
+OFFSET ? ROWS FETCH NEXT ? ROWS ONLY;

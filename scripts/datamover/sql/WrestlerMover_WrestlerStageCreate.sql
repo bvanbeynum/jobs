@@ -3,4 +3,5 @@ if object_id('tempdb..#WrestlerStage') is not null
 
 create table #WrestlerStage (
 	WrestlerID int
+	, MongoID varchar(max)
 )

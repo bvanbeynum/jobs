@@ -1,41 +1,61 @@
-with MostCommonTeamPerEvent as (
-	select
-		EventID,
-		TeamID,
-		row_number() over (partition by EventID order by count(*) desc) as TeamRank
-	from
-		EventWrestlerMatch
-	where
-		WrestlerID = ?
-	group by
-		EventID,
-		TeamID
+with MostCommonTeam as (
+	select	EventWrestlerID
+			, TeamName
+			, TeamRank = row_number() over (partition by EventWrestlerID order by Events desc)
+	from	(
+			select
+				EventWrestlerMatch.EventWrestlerID
+				, EventWrestlerMatch.TeamName
+				, Events = count(distinct EventMatch.EventID)
+			from
+				EventWrestlerMatch
+			join
+				EventMatch
+			on	EventWrestlerMatch.EventMatchID = EventMatch.ID
+			group by
+				EventWrestlerMatch.EventWrestlerID
+				, EventWrestlerMatch.TeamName
+			) TeamEvents
 )
-select	EventID = EventWrestlerMatch.EventID
+select	EventID = event.ID
 	, EventName = Event.EventName
 	, EventDate = Event.EventDate
 	, TeamName = Team.TeamName
-	, EventState = Event.State
-	, WeightClass = EventWrestlerMatch.WeightClass
-	, MatchRound = EventWrestlerMatch.MatchRound
-	, OpponentName = EventWrestlerMatch.OpponentName
+	, EventState = Event.EventState
+	, Division = EventMatch.Division
+	, WeightClass = EventMatch.WeightClass
+	, MatchRound = EventMatch.RoundName
+	, MatchSort = EventMatch.Sort
+	, OpponentName = Opponent.WrestlerName
 	, OpponentTeamName = OpponentTeam.TeamName
-	, OpponentID = EventWrestlerMatch.OpponentID
+	, OpponentID = OpponentMatch.EventWrestlerID
 	, IsWinner = EventWrestlerMatch.IsWinner
-	, WinType = EventWrestlerMatch.WinType
+	, WinType = EventMatch.WinType
 from	EventWrestlerMatch
+join	EventMatch
+on		EventWrestlerMatch.EventMatchID = EventMatch.ID
 join	Event
 on
-		Event.ID = EventWrestlerMatch.EventID
-join	MostCommonTeamPerEvent
+		EventMatch.EventID = Event.ID
+left join
+		MostCommonTeam Team
 on
-		MostCommonTeamPerEvent.EventID = EventWrestlerMatch.EventID
-		and MostCommonTeamPerEvent.TeamRank = 1
-join	Team
+		EventWrestlerMatch.EventWrestlerID = Team.EventWrestlerID
+		and Team.TeamRank = 1
+left join
+		EventWrestlerMatch OpponentMatch
 on
-		Team.ID = MostCommonTeamPerEvent.TeamID
-join	Team as OpponentTeam
+		EventWrestlerMatch.EventMatchID = OpponentMatch.EventMatchID
+		and OpponentMatch.EventWrestlerID <> EventWrestlerMatch.EventWrestlerID
+left join
+		EventWrestler Opponent
+on		OpponentMatch.EventWrestlerID = Opponent.ID
+left join
+		MostCommonTeam OpponentTeam
 on
-		OpponentTeam.ID = EventWrestlerMatch.OpponentTeamID
-where	EventWrestlerMatch.WrestlerID = ?
-order by	Event.EventDate desc
+		OpponentMatch.EventWrestlerID = OpponentTeam.EventWrestlerID
+		and OpponentTeam.TeamRank = 1
+where	EventWrestlerMatch.EventWrestlerID = ?
+order by	
+		Event.EventDate desc
+		, MatchSort
