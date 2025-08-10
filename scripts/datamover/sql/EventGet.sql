@@ -12,6 +12,7 @@ select	EventID = Event.ID
 		, EventAddress = Event.EventAddress
 		, EventState = Event.EventState
 from	Event
-where	Event.ModifiedDate > dateadd(day, @Days * -1, cast(getdate() as date))
+where	Event.IsExcluded = 0
+		and Event.ModifiedDate > dateadd(day, @Days * -1, cast(getdate() as date))
 order by
 		Event.ID
