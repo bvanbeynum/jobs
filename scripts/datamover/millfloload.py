@@ -11,7 +11,7 @@ from dateutil import parser
 
 def loadSQL():
 	sql = {}
-	sqlPath = "./scripts/sql/millfloload"
+	sqlPath = "./scripts/datamover/sql"
 
 	if os.path.exists(sqlPath):
 		for file in os.listdir(sqlPath):
