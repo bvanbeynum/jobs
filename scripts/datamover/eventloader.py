@@ -60,7 +60,7 @@ if len(events) > 0: # if the data hasn't been wiped out
 				break
 		
 		rowIndex += 1
-		if rowIndex > 1000:
+		if rowIndex % 1000 == 0:
 			print(f"{ currentTime() }: { rowIndex } events deleted")
 
 	print(f"{ currentTime() }: { rowIndex } events deleted")
@@ -94,7 +94,7 @@ for row in cur:
 			break
 	
 	rowIndex += 1
-	if rowIndex >= 1000:
+	if rowIndex % 1000 == 0:
 		print(f"{ currentTime() }: { rowIndex } events processed")
 
 print(f"{ currentTime() }: { rowIndex } events processed")
