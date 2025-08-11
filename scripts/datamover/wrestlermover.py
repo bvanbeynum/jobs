@@ -81,9 +81,23 @@ errorCount = 0
 while True:
 	cur.execute(sql["WrestlerMover_WrestlersLoad"], (offset, batchSize))
 	wrestlers_batch = cur.fetchall()
+	print(f"{ currentTime() }: { batchSize } wrestlers loaded")
 
 	if not wrestlers_batch:
 		break  # No more wrestlers to fetch
+
+	# Batch load matches
+	cur.execute(sql["WrestlerMover_WrestlerBatchCreate"])
+	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlers_batch])
+	cur.execute(sql["WrestlerMover_WrestlerMatchesBatchLoad"])
+	matches_batch = cur.fetchall()
+	print(f"{ currentTime() }: { len(matches_batch) } matches loaded")
+
+	matches_by_wrestler = {}
+	for match in matches_batch:
+		if match.EventWrestlerID not in matches_by_wrestler:
+			matches_by_wrestler[match.EventWrestlerID] = []
+		matches_by_wrestler[match.EventWrestlerID].append(match)
 
 	for wrestlerRow in wrestlers_batch:
 		wrestler = {
@@ -99,8 +113,7 @@ while True:
 		if wrestlerRow.WrestlerID in wrestlerLookup:
 			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
 
-		cur.execute(sql["WrestlerMover_WrestlerMatchesLoad"], (wrestlerRow.WrestlerID,))
-		matches = cur.fetchall()
+		matches = matches_by_wrestler.get(wrestlerRow.WrestlerID, [])
 
 		events = {}
 		for matchRow in matches:

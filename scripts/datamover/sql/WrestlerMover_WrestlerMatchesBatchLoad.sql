@@ -1,3 +1,4 @@
+
 with MostCommonTeam as (
 	select	EventWrestlerID
 			, TeamName
@@ -17,7 +18,8 @@ with MostCommonTeam as (
 				, EventWrestlerMatch.TeamName
 			) TeamEvents
 )
-select	EventID = event.ID
+select	EventWrestlerID = EventWrestlerMatch.EventWrestlerID
+	, EventID = event.ID
 	, EventName = Event.EventName
 	, EventDate = Event.EventDate
 	, TeamName = Team.TeamName
@@ -32,6 +34,8 @@ select	EventID = event.ID
 	, IsWinner = EventWrestlerMatch.IsWinner
 	, WinType = EventMatch.WinType
 from	EventWrestlerMatch
+join	#WrestlerBatch Batch
+on		EventWrestlerMatch.EventWrestlerID = Batch.WrestlerID
 join	EventMatch
 on		EventWrestlerMatch.EventMatchID = EventMatch.ID
 join	Event
@@ -55,7 +59,6 @@ left join
 on
 		OpponentMatch.EventWrestlerID = OpponentTeam.EventWrestlerID
 		and OpponentTeam.TeamRank = 1
-where	EventWrestlerMatch.EventWrestlerID = ?
 order by	
 		Event.EventDate desc
 		, MatchSort
