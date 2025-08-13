@@ -93,11 +93,22 @@ while True:
 	matches_batch = cur.fetchall()
 	print(f"{ currentTime() }: { len(matches_batch) } matches loaded")
 
+	# Batch load ratings
+	cur.execute(sql["WrestlerMover_WrestlerRatingsBatchLoad"])
+	ratings_batch = cur.fetchall()
+	print(f"{ currentTime() }: { len(ratings_batch) } ratings loaded")
+
 	matches_by_wrestler = {}
 	for match in matches_batch:
 		if match.EventWrestlerID not in matches_by_wrestler:
 			matches_by_wrestler[match.EventWrestlerID] = []
 		matches_by_wrestler[match.EventWrestlerID].append(match)
+
+	ratings_by_wrestler = {}
+	for rating in ratings_batch:
+		if rating.EventWrestlerID not in ratings_by_wrestler:
+			ratings_by_wrestler[rating.EventWrestlerID] = []
+		ratings_by_wrestler[rating.EventWrestlerID].append(rating)
 
 	for wrestlerRow in wrestlers_batch:
 		wrestler = {
@@ -106,7 +117,8 @@ while True:
 			"rating": float(wrestlerRow.Rating) if wrestlerRow.Rating is not None else None,
 			"deviation": float(wrestlerRow.Deviation) if wrestlerRow.Deviation is not None else None,
 			"events": [],
-			"lineage": []
+			"lineage": [],
+			"ratingHistory": []
 		}
 
 		# Add id if a match is found in wrestlerLookup
@@ -114,6 +126,14 @@ while True:
 			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
 
 		matches = matches_by_wrestler.get(wrestlerRow.WrestlerID, [])
+		ratings = ratings_by_wrestler.get(wrestlerRow.WrestlerID, [])
+
+		for ratingRow in ratings:
+			wrestler["ratingHistory"].append({
+				"periodEndDate": datetime.datetime.strftime(ratingRow.PeriodEndDate, "%Y-%m-%d"),
+				"rating": float(ratingRow.Rating),
+				"deviation": float(ratingRow.Deviation)
+			})
 
 		events = {}
 		for matchRow in matches:
