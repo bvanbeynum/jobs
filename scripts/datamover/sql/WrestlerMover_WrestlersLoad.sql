@@ -11,6 +11,7 @@ left join	EventWrestlerLineage with (nolock)
 on
 		EventWrestlerLineage.InitialEventWrestlerID = EventWrestler.ID
 where	EventWrestlerMatch.ModifiedDate >= dateadd(day, -100, getdate())
+		or EventWrestler.ModifiedDate >= dateadd(day, -100, getdate())
 group by	EventWrestler.ID
 	, EventWrestler.WrestlerName
 	, EventWrestler.GlickoRating
