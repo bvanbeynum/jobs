@@ -211,7 +211,7 @@ for eventIndex, event in enumerate(events):
 				))
 			eventId = cur.fetchval()
 			
-			if str.lower(location.get("state", "")) in ["sc", "nc", "ga", "tn"]:
+			if str.lower(location.get("state", "") or "") in ["sc", "nc", "ga", "tn"]:
 				eventDetails = {
 					"sqlId": eventId,
 					"floGUID": event["guid"],
@@ -230,7 +230,7 @@ for eventIndex, event in enumerate(events):
 
 	location = getEventDetails(event["guid"])
 
-	if str.lower(location.get("state", "")) in ["sc", "nc", "ga", "tn"]:
+	if str.lower(location.get("state", "") or "") in ["sc", "nc", "ga", "tn"]:
 		# In state, save
 		print(f"{ currentTime() }: Adding { eventIndex + 1 } of { str(len(events)) } - { event['name'] }, state { location['state'] if location['state'] else '--' }")
 		cur.execute(sql["EventSave"], (
