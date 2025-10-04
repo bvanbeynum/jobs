@@ -24,13 +24,13 @@
     -   [x] 1.1 Create the file `/workspaces/jobs/scripts/eventloader/flowrestling_scraper.py`.
     -   [x] 1.2 Add basic script structure: imports (`requests`, `pyodbc`, `datetime`, `time`, `json`, `os`), timestamped logging, and placeholders for main logic.
     -   [x] 1.3 Run the script to ensure the basic structure is executable without errors.
--   [ ] 2.0 **Scraping Implementation: Upcoming Events**
-    -   [ ] 2.1 Store the API endpoint URLs as an array or dictionary within the Python script.
-    -   [ ] 2.2 Implement a loop to iterate through dates from two weeks in the past to two months in the future.
-    -   [ ] 2.3 Fetch the list of events for each date using the schedule API.
-    -   [ ] 2.4 For each upcoming event, extract the event's name, start/end dates, and location details.
-    -   [ ] 2.5 Add a `time.sleep(2)` between API calls.
-    -   [ ] 2.6 Run the script to test and print the scraped upcoming event data to the console.
+-   [x] 2.0 **Scraping Implementation: Upcoming Events**
+    -   [x] 2.1 Store the API endpoint URLs as an array or dictionary within the Python script.
+    -   [x] 2.2 Implement a loop to iterate through dates from two weeks in the past to two months in the future.
+    -   [x] 2.3 Fetch the list of events for each date using the schedule API.
+    -   [x] 2.4 For each upcoming event, extract the event's name, start/end dates, and location details.
+    -   [x] 2.5 Add a `time.sleep(2)` between API calls.
+    -   [x] 2.6 Run the script to test and print the scraped upcoming event data to the console.
 -   [ ] 3.0 **Scraping Implementation: Past Event Results**
     -   [ ] 3.1 For each past event, fetch its divisions using the divisions API endpoint.
     -   [ ] 3.2 For each division, fetch the weight classes using the weight classes API endpoint.
