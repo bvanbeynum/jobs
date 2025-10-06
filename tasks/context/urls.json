@@ -1,0 +1,22 @@
+[
+	{
+		"url": "https://api.flowrestling.org/api/experiences/web/schedule/tab/2025-10-04?version=1.33.2&site_id=2&limit=100&offset=0&tz=America/New_York&showFavoriteIcon=true&isNextGenEventHub=true&enableGeoBlock=true&enableMultiday=true",
+		"file": "schedule-future.json"
+	},
+	{
+		"url": "https://api.flowrestling.org/api/experiences/web/schedule/tab/2025-09-28?version=1.33.2&site_id=2&limit=100&offset=0&tz=America/New_York&showFavoriteIcon=true&isNextGenEventHub=true&enableGeoBlock=true&enableMultiday=true",
+		"file": "schedule-past.json"
+	},
+	{
+		"url": "https://nextgen.flowrestling.org/api/event-hub/12787618/results/filters/divisionName?limit=1000",
+		"file": "divisions.json"
+	},
+	{
+		"url": "https://nextgen.flowrestling.org/api/event-hub/12787618/results?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22High+School%22%7D]&offset=0&limit=1000",
+		"file": "weightclasses.json"
+	},
+	{
+		"url": "https://nextgen.flowrestling.org/api/event-hub/12787618/results/group?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22High+School%22%7D]&groupFilter=%7B%22id%22:%22weightClassName%22,%22type%22:%22string%22,%22value%22:%22139-152+lbs%22%7D",
+		"file": "results.json"
+	}
+]

@@ -1,0 +1,1161 @@
+{
+	"data": {
+		"results": [
+			{
+				"title": "Finals",
+				"items": [
+					{
+						"athlete1": {
+							"id": "4e88d2bc-ee82-4342-b053-d509251ffa6b",
+							"name": "Xavier Gonzalez",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 17,
+							"arenaWrestlerId": "4e88d2bc-ee82-4342-b053-d509251ffa6b"
+						},
+						"athlete2": {
+							"id": "026dbc83-aec3-42d0-9b25-dad13c2ce046",
+							"name": "Tebow Doria",
+							"team": {
+								"name": "Mighty Warriors WA",
+								"abbr": "MWW"
+							},
+							"isWinner": false,
+							"score": 2,
+							"arenaWrestlerId": "026dbc83-aec3-42d0-9b25-dad13c2ce046"
+						},
+						"boutId": "c36a234d-38a1-4e2f-8891-d37f36648a43",
+						"boutNumber": "1447",
+						"details": "1:31",
+						"id": "aS7eyVKy7uattNvR2Hon",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Semi-Finals",
+				"items": [
+					{
+						"athlete1": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"athlete2": {
+							"id": "4e88d2bc-ee82-4342-b053-d509251ffa6b",
+							"name": "Xavier Gonzalez",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 7,
+							"arenaWrestlerId": "4e88d2bc-ee82-4342-b053-d509251ffa6b"
+						},
+						"boutId": "d3969e67-e124-4464-91d4-091fdd99962d",
+						"boutNumber": "1415A",
+						"details": "1:58",
+						"id": "39e2jSuLsuLdIPxKjF5l",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Semi-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"athlete2": {
+							"id": "4e88d2bc-ee82-4342-b053-d509251ffa6b",
+							"name": "Xavier Gonzalez",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 7,
+							"arenaWrestlerId": "4e88d2bc-ee82-4342-b053-d509251ffa6b"
+						},
+						"boutId": "d3969e67-e124-4464-91d4-091fdd99962d",
+						"boutNumber": "1415A",
+						"details": "1:58",
+						"id": "NkIC5vKqSvwdwjInYrur",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Semi-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "dd316c61-e9c2-44f9-a59d-6878a5f01665",
+							"name": "James White",
+							"team": {
+								"name": "Northwestern",
+								"abbr": "NORT"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "dd316c61-e9c2-44f9-a59d-6878a5f01665"
+						},
+						"athlete2": {
+							"id": "026dbc83-aec3-42d0-9b25-dad13c2ce046",
+							"name": "Tebow Doria",
+							"team": {
+								"name": "Mighty Warriors WA",
+								"abbr": "MWW"
+							},
+							"isWinner": true,
+							"score": 1,
+							"arenaWrestlerId": "026dbc83-aec3-42d0-9b25-dad13c2ce046"
+						},
+						"boutId": "342971ce-ad77-47d8-82d5-1a0a28a3b1b6",
+						"boutNumber": "1416A",
+						"details": null,
+						"id": "PSZ6LZFGablnf2j8VElZ",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Semi-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Quarter-Finals",
+				"items": [
+					{
+						"athlete1": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": true,
+							"score": 18,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"athlete2": {
+							"id": "1574ac2c-91f5-4c6c-b895-22eb56b70815",
+							"name": "James Auer",
+							"team": {
+								"name": "Modern Warrior WC",
+								"abbr": "MWW"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "1574ac2c-91f5-4c6c-b895-22eb56b70815"
+						},
+						"boutId": "3bff42b3-5b21-4151-9ab1-67ab8ebe5a57",
+						"boutNumber": "1300A",
+						"details": "2:00",
+						"id": "6q45VhjnMcXhKsj31uxN",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Quarter-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					},
+					{
+						"athlete1": {
+							"id": "4e88d2bc-ee82-4342-b053-d509251ffa6b",
+							"name": "Xavier Gonzalez",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 16,
+							"arenaWrestlerId": "4e88d2bc-ee82-4342-b053-d509251ffa6b"
+						},
+						"athlete2": {
+							"id": "e3b355c2-6109-409b-9060-052c6f84e0fc",
+							"name": "Nehemiah Boyden",
+							"team": {
+								"name": "Backyard Bullies WC",
+								"abbr": "BBW"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "e3b355c2-6109-409b-9060-052c6f84e0fc"
+						},
+						"boutId": "c0474b2a-13e1-4ef3-acac-d0ed6905e49d",
+						"boutNumber": "1301A",
+						"details": "1:29",
+						"id": "epB2rie6OvGeR8KKcOL5",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Quarter-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					},
+					{
+						"athlete1": {
+							"id": "026dbc83-aec3-42d0-9b25-dad13c2ce046",
+							"name": "Tebow Doria",
+							"team": {
+								"name": "Mighty Warriors WA",
+								"abbr": "MWW"
+							},
+							"isWinner": true,
+							"score": 16,
+							"arenaWrestlerId": "026dbc83-aec3-42d0-9b25-dad13c2ce046"
+						},
+						"athlete2": {
+							"id": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc",
+							"name": "Jacob Higgins",
+							"team": {
+								"name": "Tech Fall WC",
+								"abbr": "TFW"
+							},
+							"isWinner": false,
+							"score": 1,
+							"arenaWrestlerId": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc"
+						},
+						"boutId": "0ca8ce75-465c-4c3e-8c33-14f162e44623",
+						"boutNumber": "1303A",
+						"details": "2:39",
+						"id": "mxrl9X9dC3Kwn4FQUQLb",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Quarter-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					},
+					{
+						"athlete1": {
+							"id": "dd316c61-e9c2-44f9-a59d-6878a5f01665",
+							"name": "James White",
+							"team": {
+								"name": "Northwestern",
+								"abbr": "NORT"
+							},
+							"isWinner": true,
+							"score": 9,
+							"arenaWrestlerId": "dd316c61-e9c2-44f9-a59d-6878a5f01665"
+						},
+						"athlete2": {
+							"id": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f",
+							"name": "Ian Lovitt",
+							"team": {
+								"name": "Myers Park",
+								"abbr": "MP"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f"
+						},
+						"boutId": "86400f23-7fb6-43ff-8d44-d44a7fb2f1d3",
+						"boutNumber": "1302A",
+						"details": null,
+						"id": "wYc4yJo463lXGjfwdy9U",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Quarter-Finals",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Round of 16",
+				"items": [
+					{
+						"athlete1": {
+							"id": "d69018c9-2700-4b21-b67d-325c0abbce01",
+							"name": "Jaiden Floyd",
+							"team": {
+								"name": "Core",
+								"abbr": "CORE"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "d69018c9-2700-4b21-b67d-325c0abbce01"
+						},
+						"athlete2": {
+							"id": "026dbc83-aec3-42d0-9b25-dad13c2ce046",
+							"name": "Tebow Doria",
+							"team": {
+								"name": "Mighty Warriors WA",
+								"abbr": "MWW"
+							},
+							"isWinner": true,
+							"score": 3,
+							"arenaWrestlerId": "026dbc83-aec3-42d0-9b25-dad13c2ce046"
+						},
+						"boutId": "b56eeb63-f553-4cc7-828e-497efb63d826",
+						"boutNumber": "1201",
+						"details": "0:39",
+						"id": "3iV17bJIMhMtOMI1Brv4",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "4e88d2bc-ee82-4342-b053-d509251ffa6b",
+							"name": "Xavier Gonzalez",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 17,
+							"arenaWrestlerId": "4e88d2bc-ee82-4342-b053-d509251ffa6b"
+						},
+						"athlete2": {
+							"id": "f2536624-d6a9-4262-bf02-c793ea15a288",
+							"name": "Connor Walley",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": false,
+							"score": 1,
+							"arenaWrestlerId": "f2536624-d6a9-4262-bf02-c793ea15a288"
+						},
+						"boutId": "d797fecc-ed6b-4bc9-9c07-da0969a1049d",
+						"boutNumber": "1197",
+						"details": "2:38",
+						"id": "SmihoT6yzfdos7kCGKjr",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					},
+					{
+						"athlete1": {
+							"id": "d449161f-1b3e-4079-9c6f-cf7c67cdc4ee",
+							"name": "Eli Strickland",
+							"team": {
+								"name": "Lincoln charter",
+								"abbr": "LC"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "d449161f-1b3e-4079-9c6f-cf7c67cdc4ee"
+						},
+						"athlete2": {
+							"id": "1574ac2c-91f5-4c6c-b895-22eb56b70815",
+							"name": "James Auer",
+							"team": {
+								"name": "Modern Warrior WC",
+								"abbr": "MWW"
+							},
+							"isWinner": true,
+							"score": 5,
+							"arenaWrestlerId": "1574ac2c-91f5-4c6c-b895-22eb56b70815"
+						},
+						"boutId": "3176049c-b7ba-4e0f-8e43-f9d2b584da8d",
+						"boutNumber": "1196",
+						"details": null,
+						"id": "TMxZMOMOkgEU6u23DPb1",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					},
+					{
+						"athlete1": {
+							"id": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f",
+							"name": "Ian Lovitt",
+							"team": {
+								"name": "Myers Park",
+								"abbr": "MP"
+							},
+							"isWinner": true,
+							"score": 9,
+							"arenaWrestlerId": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f"
+						},
+						"athlete2": {
+							"id": "a389f70b-4468-4f81-85e8-3fb3f6a88031",
+							"name": "Gunnar Strobl",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": false,
+							"score": 5,
+							"arenaWrestlerId": "a389f70b-4468-4f81-85e8-3fb3f6a88031"
+						},
+						"boutId": "4ad0a26e-69dd-41d3-a1b5-6e516b8bc408",
+						"boutNumber": "1200",
+						"details": null,
+						"id": "e7l6Z6ycDtPLJgjxgrTI",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					},
+					{
+						"athlete1": {
+							"id": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc",
+							"name": "Jacob Higgins",
+							"team": {
+								"name": "Tech Fall WC",
+								"abbr": "TFW"
+							},
+							"isWinner": true,
+							"score": 10,
+							"arenaWrestlerId": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc"
+						},
+						"athlete2": {
+							"id": "b9804ea5-bdee-49f2-97a9-0d3472bded45",
+							"name": "Noah Wilson",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "b9804ea5-bdee-49f2-97a9-0d3472bded45"
+						},
+						"boutId": "e46120ba-0e3b-482b-9929-fba428b266b3",
+						"boutNumber": "1202",
+						"details": "1:32",
+						"id": "gehvbbp6gaevLI3NpiF6",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c",
+							"name": "Maddox Cheek",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": false,
+							"score": 6,
+							"arenaWrestlerId": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c"
+						},
+						"athlete2": {
+							"id": "dd316c61-e9c2-44f9-a59d-6878a5f01665",
+							"name": "James White",
+							"team": {
+								"name": "Northwestern",
+								"abbr": "NORT"
+							},
+							"isWinner": true,
+							"score": 9,
+							"arenaWrestlerId": "dd316c61-e9c2-44f9-a59d-6878a5f01665"
+						},
+						"boutId": "4624e897-d198-457c-ad7e-7bb81f18c26d",
+						"boutNumber": "1199",
+						"details": null,
+						"id": "gkaFh5uA706N2R66cPug",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					},
+					{
+						"athlete1": {
+							"id": "a52b35af-bc05-46d9-b83a-e6c4539ffbfc",
+							"name": "Charlie Musgrave",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 1,
+							"arenaWrestlerId": "a52b35af-bc05-46d9-b83a-e6c4539ffbfc"
+						},
+						"athlete2": {
+							"id": "e3b355c2-6109-409b-9060-052c6f84e0fc",
+							"name": "Nehemiah Boyden",
+							"team": {
+								"name": "Backyard Bullies WC",
+								"abbr": "BBW"
+							},
+							"isWinner": true,
+							"score": 11,
+							"arenaWrestlerId": "e3b355c2-6109-409b-9060-052c6f84e0fc"
+						},
+						"boutId": "415e4297-e4a0-48ea-949a-bd74cd818c0a",
+						"boutNumber": "1198",
+						"details": "2:59",
+						"id": "nID7UK24IwZonH7RAWkj",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "8d1cf7cc-acea-48ee-bd70-08262e17956e",
+							"name": "Parker Marshall",
+							"team": {
+								"name": "Rock Hill",
+								"abbr": "RH"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "8d1cf7cc-acea-48ee-bd70-08262e17956e"
+						},
+						"athlete2": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": true,
+							"score": 12,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"boutId": "6298b387-9db7-4e4c-a380-be5cd9058a82",
+						"boutNumber": "1195",
+						"details": null,
+						"id": "x3AGG0uRmanvmmN3JfEc",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 16",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "MD"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Round of 32",
+				"items": [
+					{
+						"athlete1": {
+							"id": "35ecb568-a439-434f-a78a-bb8913d08843",
+							"name": "Max Grizzi",
+							"team": {
+								"name": "Lake Norman WC",
+								"abbr": "LNW"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "35ecb568-a439-434f-a78a-bb8913d08843"
+						},
+						"athlete2": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": true,
+							"score": 4,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"boutId": "9464dc3d-1c71-4596-b6fd-9188ebda0948",
+						"boutNumber": "1086",
+						"details": null,
+						"id": "WG2GJ3hCZMCKqCx1yzR7",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Round of 32",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "3rd Place",
+				"items": [
+					{
+						"athlete1": {
+							"id": "dd316c61-e9c2-44f9-a59d-6878a5f01665",
+							"name": "James White",
+							"team": {
+								"name": "Northwestern",
+								"abbr": "NORT"
+							},
+							"isWinner": true,
+							"score": 7,
+							"arenaWrestlerId": "dd316c61-e9c2-44f9-a59d-6878a5f01665"
+						},
+						"athlete2": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 1,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"boutId": "430434fa-399f-45b0-9007-af49bf678b82",
+						"boutNumber": "1446",
+						"details": null,
+						"id": "GfFPaxoekfyXjqpacUfS",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "3rd Place",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Consi-Semis",
+				"items": [
+					{
+						"athlete1": {
+							"id": "f2536624-d6a9-4262-bf02-c793ea15a288",
+							"name": "Connor Walley",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "f2536624-d6a9-4262-bf02-c793ea15a288"
+						},
+						"athlete2": {
+							"id": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359",
+							"name": "Cooper van Beynum",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": true,
+							"score": 5,
+							"arenaWrestlerId": "4267769f-0bfa-4ca1-a8d7-ebd1d3572359"
+						},
+						"boutId": "22421082-d56d-409c-abcb-326c2305e46f",
+						"boutNumber": "1431A",
+						"details": null,
+						"id": "9jN20regDB6Axyh6ycgj",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi-Semis",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					},
+					{
+						"athlete1": {
+							"id": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c",
+							"name": "Maddox Cheek",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c"
+						},
+						"athlete2": {
+							"id": "dd316c61-e9c2-44f9-a59d-6878a5f01665",
+							"name": "James White",
+							"team": {
+								"name": "Northwestern",
+								"abbr": "NORT"
+							},
+							"isWinner": true,
+							"score": 6,
+							"arenaWrestlerId": "dd316c61-e9c2-44f9-a59d-6878a5f01665"
+						},
+						"boutId": "f3be3682-f0d1-4cc9-8461-8e77987c9b13",
+						"boutNumber": "1430A",
+						"details": null,
+						"id": "OnmAFaH50YouHePMxvzX",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi-Semis",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Consi of 4",
+				"items": [
+					{
+						"athlete1": {
+							"id": "e3b355c2-6109-409b-9060-052c6f84e0fc",
+							"name": "Nehemiah Boyden",
+							"team": {
+								"name": "Backyard Bullies WC",
+								"abbr": "BBW"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "e3b355c2-6109-409b-9060-052c6f84e0fc"
+						},
+						"athlete2": {
+							"id": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c",
+							"name": "Maddox Cheek",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 6,
+							"arenaWrestlerId": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c"
+						},
+						"boutId": "51e86173-a3f1-4a3e-a565-5fd3b061cf63",
+						"boutNumber": "1417A",
+						"details": "1:38",
+						"id": "BnaUNcQ1k3yKNY2PE6dX",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 4",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "f2536624-d6a9-4262-bf02-c793ea15a288",
+							"name": "Connor Walley",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": true,
+							"score": 2,
+							"arenaWrestlerId": "f2536624-d6a9-4262-bf02-c793ea15a288"
+						},
+						"athlete2": {
+							"id": "8d1cf7cc-acea-48ee-bd70-08262e17956e",
+							"name": "Parker Marshall",
+							"team": {
+								"name": "Rock Hill",
+								"abbr": "RH"
+							},
+							"isWinner": false,
+							"score": 20,
+							"arenaWrestlerId": "8d1cf7cc-acea-48ee-bd70-08262e17956e"
+						},
+						"boutId": "9d547b7b-e929-4478-985d-ca885365bfe9",
+						"boutNumber": "1418A",
+						"details": "3:00",
+						"id": "lY47EuyhWY5YheSszXiI",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 4",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Consi of 8 #2",
+				"items": [
+					{
+						"athlete1": {
+							"id": "8d1cf7cc-acea-48ee-bd70-08262e17956e",
+							"name": "Parker Marshall",
+							"team": {
+								"name": "Rock Hill",
+								"abbr": "RH"
+							},
+							"isWinner": true,
+							"score": 17,
+							"arenaWrestlerId": "8d1cf7cc-acea-48ee-bd70-08262e17956e"
+						},
+						"athlete2": {
+							"id": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f",
+							"name": "Ian Lovitt",
+							"team": {
+								"name": "Myers Park",
+								"abbr": "MP"
+							},
+							"isWinner": false,
+							"score": 2,
+							"arenaWrestlerId": "02dbc9e7-1427-4e1c-9c12-367ee7f5284f"
+						},
+						"boutId": "24405855-bf47-40d5-8136-c69d0fc8ab1e",
+						"boutNumber": "1368A",
+						"details": "1:59",
+						"id": "6EeYN5U0YBkBtrSD6EFD",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #2",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "TF"
+					},
+					{
+						"athlete1": {
+							"id": "35ecb568-a439-434f-a78a-bb8913d08843",
+							"name": "Max Grizzi",
+							"team": {
+								"name": "Lake Norman WC",
+								"abbr": "LNW"
+							},
+							"isWinner": false,
+							"score": 3,
+							"arenaWrestlerId": "35ecb568-a439-434f-a78a-bb8913d08843"
+						},
+						"athlete2": {
+							"id": "e3b355c2-6109-409b-9060-052c6f84e0fc",
+							"name": "Nehemiah Boyden",
+							"team": {
+								"name": "Backyard Bullies WC",
+								"abbr": "BBW"
+							},
+							"isWinner": true,
+							"score": 3,
+							"arenaWrestlerId": "e3b355c2-6109-409b-9060-052c6f84e0fc"
+						},
+						"boutId": "9f38160f-79f0-4c5a-9971-74df556d57c4",
+						"boutNumber": "1365A",
+						"details": "2:32",
+						"id": "HBhh21lKydB9cbjHnSqx",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #2",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c",
+							"name": "Maddox Cheek",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 3,
+							"arenaWrestlerId": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c"
+						},
+						"athlete2": {
+							"id": "1574ac2c-91f5-4c6c-b895-22eb56b70815",
+							"name": "James Auer",
+							"team": {
+								"name": "Modern Warrior WC",
+								"abbr": "MWW"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "1574ac2c-91f5-4c6c-b895-22eb56b70815"
+						},
+						"boutId": "1ffdaf5c-ed2a-4ee1-9da1-6c8b37f26780",
+						"boutNumber": "1366A",
+						"details": "0:28",
+						"id": "Pzp9avFtTIFcZvqYXNyC",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #2",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "f2536624-d6a9-4262-bf02-c793ea15a288",
+							"name": "Connor Walley",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": true,
+							"score": 13,
+							"arenaWrestlerId": "f2536624-d6a9-4262-bf02-c793ea15a288"
+						},
+						"athlete2": {
+							"id": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc",
+							"name": "Jacob Higgins",
+							"team": {
+								"name": "Tech Fall WC",
+								"abbr": "TFW"
+							},
+							"isWinner": false,
+							"score": 1,
+							"arenaWrestlerId": "f465c6a9-446f-4f44-b7cd-f6c46f8b59cc"
+						},
+						"boutId": "cb1ff394-611b-419a-846b-3180d4e817d9",
+						"boutNumber": "1367A",
+						"details": null,
+						"id": "h9hOU9RODgvbLlmDlrbd",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #2",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "MD"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Consi of 8 #1",
+				"items": [
+					{
+						"athlete1": {
+							"id": "35ecb568-a439-434f-a78a-bb8913d08843",
+							"name": "Max Grizzi",
+							"team": {
+								"name": "Lake Norman WC",
+								"abbr": "LNW"
+							},
+							"isWinner": true,
+							"score": 6,
+							"arenaWrestlerId": "35ecb568-a439-434f-a78a-bb8913d08843"
+						},
+						"athlete2": {
+							"id": "d69018c9-2700-4b21-b67d-325c0abbce01",
+							"name": "Jaiden Floyd",
+							"team": {
+								"name": "Core",
+								"abbr": "CORE"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "d69018c9-2700-4b21-b67d-325c0abbce01"
+						},
+						"boutId": "d05cea1b-4f96-45d1-8384-4b17705d83a1",
+						"boutNumber": "1305A",
+						"details": "1:50",
+						"id": "35XJ3gA0eNKVAXL6Qz93",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #1",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "a389f70b-4468-4f81-85e8-3fb3f6a88031",
+							"name": "Gunnar Strobl",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "a389f70b-4468-4f81-85e8-3fb3f6a88031"
+						},
+						"athlete2": {
+							"id": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c",
+							"name": "Maddox Cheek",
+							"team": {
+								"name": "C2X Acad.",
+								"abbr": "CA"
+							},
+							"isWinner": true,
+							"score": 6,
+							"arenaWrestlerId": "6980e780-0f6e-4ee3-9dcf-e7f3a6548b4c"
+						},
+						"boutId": "9537e58a-accb-4a2c-9c8e-ffb30ec41609",
+						"boutNumber": "1306A",
+						"details": null,
+						"id": "S9WdJFgYyLnWpreAvxQT",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #1",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "DEC"
+					},
+					{
+						"athlete1": {
+							"id": "a52b35af-bc05-46d9-b83a-e6c4539ffbfc",
+							"name": "Charlie Musgrave",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 2,
+							"arenaWrestlerId": "a52b35af-bc05-46d9-b83a-e6c4539ffbfc"
+						},
+						"athlete2": {
+							"id": "f2536624-d6a9-4262-bf02-c793ea15a288",
+							"name": "Connor Walley",
+							"team": {
+								"name": "Darkhorse",
+								"abbr": "DARK"
+							},
+							"isWinner": true,
+							"score": 11,
+							"arenaWrestlerId": "f2536624-d6a9-4262-bf02-c793ea15a288"
+						},
+						"boutId": "a54e7919-7e16-45bf-9704-5f5c3ddb6c64",
+						"boutNumber": "1307A",
+						"details": "1:45",
+						"id": "g5S6TGX64GZvmtaO48mi",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #1",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					},
+					{
+						"athlete1": {
+							"id": "d449161f-1b3e-4079-9c6f-cf7c67cdc4ee",
+							"name": "Eli Strickland",
+							"team": {
+								"name": "Lincoln charter",
+								"abbr": "LC"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "d449161f-1b3e-4079-9c6f-cf7c67cdc4ee"
+						},
+						"athlete2": {
+							"id": "8d1cf7cc-acea-48ee-bd70-08262e17956e",
+							"name": "Parker Marshall",
+							"team": {
+								"name": "Rock Hill",
+								"abbr": "RH"
+							},
+							"isWinner": true,
+							"score": 3,
+							"arenaWrestlerId": "8d1cf7cc-acea-48ee-bd70-08262e17956e"
+						},
+						"boutId": "1a78da56-ab6c-410d-8697-f47c3a9a4be8",
+						"boutNumber": "1308A",
+						"details": "0:29",
+						"id": "jsPq9lkaFyqVT4FdJ0pT",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 8 #1",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					}
+				],
+				"isDual": false
+			},
+			{
+				"title": "Consi of 16 #2",
+				"items": [
+					{
+						"athlete1": {
+							"id": "35ecb568-a439-434f-a78a-bb8913d08843",
+							"name": "Max Grizzi",
+							"team": {
+								"name": "Lake Norman WC",
+								"abbr": "LNW"
+							},
+							"isWinner": true,
+							"score": 6,
+							"arenaWrestlerId": "35ecb568-a439-434f-a78a-bb8913d08843"
+						},
+						"athlete2": {
+							"id": "b9804ea5-bdee-49f2-97a9-0d3472bded45",
+							"name": "Noah Wilson",
+							"team": {
+								"name": "Fort Mill",
+								"abbr": "FM"
+							},
+							"isWinner": false,
+							"score": 0,
+							"arenaWrestlerId": "b9804ea5-bdee-49f2-97a9-0d3472bded45"
+						},
+						"boutId": "4248160a-57a1-4e55-b14c-ca4c4cb500c8",
+						"boutNumber": "1264A",
+						"details": "1:43",
+						"id": "zCPsf9GdMyr5hg6F9bZN",
+						"isDual": false,
+						"name": "Pins in the Park - Carowinds 2025",
+						"round": "Consi of 16 #2",
+						"url": null,
+						"eventId": "2dxi8qeXoYQpYGBg",
+						"weightClass": "139-152",
+						"winType": "F"
+					}
+				],
+				"isDual": false
+			}
+		]
+	},
+	"meta": {
+		"total": 11
+	},
+	"notifications": []
+}

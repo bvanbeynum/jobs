@@ -1,0 +1,37 @@
+{
+	"data": {
+		"id": "divisionName",
+		"selectionType": "string",
+		"options": [
+			{
+				"label": "6 & Under",
+				"value": "6 & Under"
+			},
+			{
+				"label": "7 & 8",
+				"value": "7 & 8"
+			},
+			{
+				"label": "9 & 10",
+				"value": "9 & 10"
+			},
+			{
+				"label": "Girls",
+				"value": "Girls"
+			},
+			{
+				"label": "11 & 12",
+				"value": "11 & 12"
+			},
+			{
+				"label": "Junior High",
+				"value": "Junior High"
+			},
+			{
+				"label": "High School",
+				"value": "High School"
+			}
+		]
+	},
+	"notifications": []
+}

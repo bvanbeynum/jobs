@@ -1,0 +1,68 @@
+{
+	"data": {
+		"results": [
+			{
+				"id": null,
+				"title": "106-116 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "117-125 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "122-132 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "128-139 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "134-146 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "139-152 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "152-166 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "168-178 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "180-196 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "206-225 lbs",
+				"items": []
+			},
+			{
+				"id": null,
+				"title": "250-265 lbs",
+				"items": []
+			}
+		],
+		"totalGroups": 11,
+		"activeTab": "weight",
+		"isEventCompleted": true
+	},
+	"meta": {
+		"total": 11
+	},
+	"notifications": []
+}

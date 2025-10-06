@@ -32,13 +32,12 @@
     -   [x] 2.5 Add a `time.sleep(2)` between API calls.
     -   [x] 2.6 Run the script to test and print the scraped upcoming event data to the console.
 -   [ ] 3.0 **Scraping Implementation: Past Event Results**
-    -   [ ] 3.1 For each past event, fetch its divisions using the divisions API endpoint.
-    -   [ ] 3.2 For each division, fetch the weight classes using the weight classes API endpoint.
-    -   [ ] 3.3 For each weight class, fetch the match results using the results API endpoint.
-    -   [ ] 3.4 Extract all relevant match data, including wrestler information.
-    -   [ ] 3.5 Run the script to test and print the scraped past event results (divisions, weight classes, matches) to the console.
+    -   [x] 3.1 For each past event, fetch its divisions using the divisions API endpoint.
+    -   [x] 3.2 For each division, fetch the weight classes using the weight classes API endpoint.
+    -   [x] 3.3 For each weight class, fetch the match results using the results API endpoint.
+    -   [x] 3.4 Extract all relevant match data, including wrestler information.
 -   [ ] 4.0 **Database Implementation**
-    -   [ ] 4.1 Implement logic to read database connection properties from `scripts/config.json`.
+    -   [x] 4.1 Implement logic to read database connection properties from `scripts/config.json`.
     -   [ ] 4.2 Implement a function to load all SQL files from the `/workspaces/jobs/scripts/eventloader/sql/` directory into a dictionary, using the file names as keys (similar to `loadSQL` in `flo.py`).
     -   [ ] 4.3 For each scraped event, use the `EventExistsGet` SQL query to check if it's already in the `Event` table.
     -   [ ] 4.4 If the event is new, insert it using the `EventSave` SQL query.
