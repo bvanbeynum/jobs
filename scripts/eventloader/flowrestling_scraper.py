@@ -8,6 +8,17 @@ import os
 def current_time():
     return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+def load_sql():
+	sql = {}
+	sql_path = "/workspaces/jobs/scripts/eventloader/sql/"
+
+	if os.path.exists(sql_path):
+		for file in os.listdir(sql_path):
+			with open(f"{ sql_path }/{ file }", "r") as file_reader:
+				sql[os.path.splitext(file)[0]] = file_reader.read()
+	
+	return sql
+
 print(f"{current_time()}: Starting FloWrestling scraper.")
 
 with open("/workspaces/jobs/scripts/config.json", "r") as reader:
@@ -15,6 +26,8 @@ with open("/workspaces/jobs/scripts/config.json", "r") as reader:
 
 cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
 cur = cn.cursor()
+
+sql = load_sql()
 
 api_urls = {
     "schedule": "https://api.flowrestling.org/api/experiences/web/schedule/tab/{date}?version=1.33.2&site_id=2&limit=100&offset=0&tz=America/New_York&showFavoriteIcon=true&isNextGenEventHub=true&enableGeoBlock=true&enableMultiday=true",

@@ -38,7 +38,7 @@
     -   [x] 3.4 Extract all relevant match data, including wrestler information.
 -   [ ] 4.0 **Database Implementation**
     -   [x] 4.1 Implement logic to read database connection properties from `scripts/config.json`.
-    -   [ ] 4.2 Implement a function to load all SQL files from the `/workspaces/jobs/scripts/eventloader/sql/` directory into a dictionary, using the file names as keys (similar to `loadSQL` in `flo.py`).
+    -   [x] 4.2 Implement a function to load all SQL files from the `/workspaces/jobs/scripts/eventloader/sql/` directory into a dictionary, using the file names as keys (similar to `loadSQL` in `flo.py`).
     -   [ ] 4.3 For each scraped event, use the `EventExistsGet` SQL query to check if it's already in the `Event` table.
     -   [ ] 4.4 If the event is new, insert it using the `EventSave` SQL query.
     -   [ ] 4.5 If the event exists and is not complete, update its details.
