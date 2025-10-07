@@ -19,6 +19,15 @@ def load_sql():
 	
 	return sql
 
+def get_state_from_location(location):
+    if location and ',' in location:
+        parts = location.split(',')
+        if len(parts) > 1:
+            state = parts[-1].strip()
+            if len(state) == 2:
+                return state
+    return None
+
 print(f"{current_time()}: Starting FloWrestling scraper.")
 
 with open("/workspaces/jobs/scripts/config.json", "r") as reader:
@@ -61,13 +70,32 @@ while current_date <= end_date:
                                         start_date_str = row["cells"][0]["data"]["textParts"]["startDateTime"]
                                         end_date_str = row["cells"][0]["data"]["textParts"]["endDateTime"]
                                         location = row["cells"][4]["data"]["text"]
+                                        event_id = row["action"]["url"].split("/")[-1]
+
+                                        cur.execute(sql['FloEventExistsGet'], (event_id))
+                                        existing_event = cur.fetchone()
+
+                                        state = get_state_from_location(location)
+                                        is_excluded = 1 if state not in ['SC', 'NC', 'GA', 'TN'] else 0
+
+                                        if not existing_event:
+                                            print(f"{current_time()}: New event found: {event_name} ({event_id}). Inserting into database.")
+                                            cur.execute(sql['EventSave'], (event_id, 'flo', event_name, start_date_str, end_date_str, location, 0, is_excluded, state, None, None))
+                                        elif existing_event and not existing_event[0]:
+                                            print(f"{current_time()}: Event {event_name} ({event_id}) already exists and is not complete. Updating.")
+                                            cur.execute(sql['EventSave'], (event_id, 'flo', event_name, start_date_str, end_date_str, location, 0, is_excluded, state, None, None))
+                                        
                                         if start_date_str.endswith('Z'):
                                             start_date_str = start_date_str.replace('Z', '+00:00')
                                         else:
                                             start_date_str = start_date_str[:-2] + ':' + start_date_str[-2:]
                                         start_date_obj = datetime.datetime.fromisoformat(start_date_str)
+                                        
                                         if start_date_obj.date() < today:
-                                            event_id = row["action"]["url"].split("/")[-1]
+                                            if existing_event and existing_event[0]:
+                                                print(f"{current_time()}: Event {event_name} ({event_id}) already exists and is complete. Skipping.")
+                                                continue
+
                                             print(f"Fetching divisions for past event: {event_name} ({event_id})")
                                             divisions_url = api_urls["divisions"].format(event_id=event_id)
                                             divisions_response = requests.get(divisions_url)
@@ -100,9 +128,9 @@ while current_date <= end_date:
                                                                     if results_response and results_response.status_code == 200:
                                                                         results_data = results_response.json()
                                                                         if results_data.get("data") and results_data["data"].get("results"):
-                                                                            for round in results_data["data"]["results"]:
-                                                                                print(f"      Round: {round['title']}")
-                                                                                for match in round["items"]:
+                                                                            for round_data in results_data["data"]["results"]:
+                                                                                print(f"      Round: {round_data['title']}")
+                                                                                for match in round_data["items"]:
                                                                                     athlete1_name = match['athlete1']['name']
                                                                                     athlete1_team = match['athlete1']['team']['name']
                                                                                     athlete1_winner = match['athlete1']['isWinner']
@@ -111,13 +139,25 @@ while current_date <= end_date:
                                                                                     athlete2_winner = match['athlete2']['isWinner']
                                                                                     win_type = match['winType']
                                                                                     match_round = match.get('round')
-                                                                                    print(f"        Match: {athlete1_name} ({athlete1_team}) vs {athlete2_name} ({athlete2_team}) - Round: {match_round} - Win Type: {win_type} - Winner: {athlete1_name if athlete1_winner else athlete2_name}")
+                                                                                    match_id = match['id']
+
+                                                                                    cur.execute(sql['WrestlerSave'], (athlete1_name, athlete1_team))
+                                                                                    wrestler1_id = cur.fetchone()[0]
+                                                                                    cur.execute(sql['WrestlerSave'], (athlete2_name, athlete2_team))
+                                                                                    wrestler2_id = cur.fetchone()[0]
+
+                                                                                    cur.execute(sql['MatchSave'], (event_id, division_name, weight_class_name, round_data['title'], win_type, match.get('sort')))
+                                                                                    match_db_id = cur.fetchone()[0]
+
+                                                                                    cur.execute(sql['WrestlerMatchSave'], (match_db_id, wrestler1_id, athlete1_winner, athlete1_team, athlete1_name))
+                                                                                    cur.execute(sql['WrestlerMatchSave'], (match_db_id, wrestler2_id, athlete2_winner, athlete2_team, athlete2_name))
                                                                     else:
                                                                         print(f"{current_time()}: Error fetching results for event {event_id}, division {division_name}, weight class {weight_class_name}. Status code: {results_response.status_code}")
                                                         else:
                                                             print(f"{current_time()}: Error fetching weight classes for event {event_id}, division {division_name}. Status code: {weightclasses_response.status_code}")
                                             else:
                                                 print(f"{current_time()}: Error fetching divisions for event {event_id}. Status code: {divisions_response.status_code}")
+                                            cur.execute(sql['EventSave'], (event_id, 'flo', event_name, start_date_str, end_date_str, location, 1, is_excluded, state, None, None))
     else:
         print(f"{current_time()}: Error fetching events for {date_str}. Status code: {response.status_code}")
 
