@@ -45,7 +45,7 @@ begin
 			on		EventWrestlerMatch.EventMatchID = EventMatch.ID
 			join	Event
 			on		EventMatch.EventID = Event.ID
-			where	EventWrestlerID = 102103
+			where	EventWrestlerID = @WrestlerID
 			group by
 					EventWrestlerMatch.WrestlerName
 			order by
