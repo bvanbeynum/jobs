@@ -48,11 +48,8 @@ apiUrls = {
 }
 
 today = datetime.date.today()
-# startDate = today - datetime.timedelta(weeks=2)
-# endDate = today + datetime.timedelta(weeks=8)
-
-startDate = today - datetime.timedelta(weeks=23)
-endDate = today - datetime.timedelta(weeks=1)
+startDate = today - datetime.timedelta(weeks=2)
+endDate = today + datetime.timedelta(weeks=8)
 
 currentDate = startDate
 while currentDate <= endDate:
