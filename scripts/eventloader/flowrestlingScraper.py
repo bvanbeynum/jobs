@@ -10,7 +10,7 @@ def currentTime():
 
 def loadSql():
 	sql = {}
-	sqlPath = "/workspaces/jobs/scripts/eventloader/sql/"
+	sqlPath = "./scripts/eventloader/sql/"
 
 	if os.path.exists(sqlPath):
 		for file in os.listdir(sqlPath):
