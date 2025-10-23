@@ -32,7 +32,7 @@ def getStateFromLocation(location):
 
 print(f"{currentTime()}: Starting FloWrestling scraper.")
 
-with open("/workspaces/jobs/scripts/config.json", "r") as reader:
+with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
 cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
