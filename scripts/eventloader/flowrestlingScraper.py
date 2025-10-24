@@ -174,27 +174,30 @@ while currentDate <= endDate:
 
 							for roundData in resultsData["data"]["results"]:
 								for matchIndex, match in enumerate(roundData["items"]):
-									athlete1Name = match['athlete1']['name']
-									athlete1Team = match['athlete1']['team']['name']
-									athlete1Winner = match['athlete1']['isWinner']
-									athlete2Name = match['athlete2']['name']
-									athlete2Team = match['athlete2']['team']['name']
-									athlete2Winner = match['athlete2']['isWinner']
-									winType = match['winType']
-									matchRound = match.get('round') if match.get('round') else None
-									matchId = match['id']
-									sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
-									cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
-									wrestler1Id = cur.fetchone()[0]
-									cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
-									wrestler2Id = cur.fetchone()[0]
+									if len(match['athlete1']['name']) > 0 and len(match['athlete2']['name']) > 0:
+										# No name, don't save
+										athlete1Name = match['athlete1']['name']
+										athlete1Team = match['athlete1']['team']['name']
+										athlete1Winner = match['athlete1']['isWinner']
+										athlete2Name = match['athlete2']['name']
+										athlete2Team = match['athlete2']['team']['name']
+										athlete2Winner = match['athlete2']['isWinner']
+										winType = match['winType']
+										matchRound = match.get('round') if match.get('round') else None
+										matchId = match['id']
+										sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
-									cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
-									matchDbId = cur.fetchone()[0]
+										cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
+										wrestler1Id = cur.fetchone()[0]
+										cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
+										wrestler2Id = cur.fetchone()[0]
 
-									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
+										cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
+										matchDbId = cur.fetchone()[0]
+
+										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
+										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
 
 					cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
 
