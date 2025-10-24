@@ -55,7 +55,7 @@ currentDate = startDate
 while currentDate <= endDate:
 	dateStr = currentDate.strftime("%Y-%m-%d")
 	url = apiUrls["schedule"].format(date=dateStr)
-	print(f"{currentTime()}: Fetching events for {dateStr} from {url}")
+	print(f"{currentTime()}: Fetching events for {dateStr}")
 	response = requests.get(url)
 	time.sleep(2)
 
@@ -106,8 +106,6 @@ while currentDate <= endDate:
 
 					eventId = None
 					if isExcluded:
-						print(f"{currentTime()}: Event {eventName} excluded. Skipping")
-
 						if not existingEvent:
 							cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
 
@@ -117,7 +115,6 @@ while currentDate <= endDate:
 						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
 						eventId = cur.fetchone()[0]
 					elif existingEvent and not existingEvent[0]:
-						print(f"{currentTime()}: Event {eventName} already exists and is not complete. Updating.")
 						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
 						eventId = cur.fetchone()[0]
 					
@@ -125,10 +122,9 @@ while currentDate <= endDate:
 						continue
 
 					if existingEvent and existingEvent[0]:
-						print(f"{currentTime()}: Event {eventName} already exists and is complete. Skipping.")
 						continue
 
-					print(f"Fetching divisions for past event: {eventName}")
+					print(f"{currentTime()}: Fetching details for {eventName} on {dateStr}")
 					divisionsUrl = apiUrls["divisions"].format(systemId=systemId)
 					divisionsResponse = requests.get(divisionsUrl)
 					time.sleep(2)
@@ -144,7 +140,6 @@ while currentDate <= endDate:
 
 					for division in divisionsData["data"]["options"]:
 						divisionName = division['label']
-						print(f"  Division: {divisionName}")
 						weightclassesUrl = apiUrls["weightclasses"].format(systemId=systemId, divisionName=divisionName)
 						weightclassesResponse = requests.get(weightclassesUrl)
 						time.sleep(2)
@@ -159,7 +154,6 @@ while currentDate <= endDate:
 
 						for weightClass in weightclassesData["data"]["results"]:
 							weightClassName = weightClass['title']
-							print(f"    Weight Class: {weightClassName}")
 							resultsUrl = apiUrls["results"].format(systemId=systemId, divisionName=divisionName, weightClassName=weightClassName)
 							resultsResponse = None
 							for i in range(3):
@@ -179,7 +173,6 @@ while currentDate <= endDate:
 								continue
 
 							for roundData in resultsData["data"]["results"]:
-								print(f"      Round: {roundData.get('title') if roundData.get('title') else 'N/A'}")
 								for matchIndex, match in enumerate(roundData["items"]):
 									athlete1Name = match['athlete1']['name']
 									athlete1Team = match['athlete1']['team']['name']

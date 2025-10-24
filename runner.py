@@ -59,7 +59,7 @@ def ServiceLoop():
 					"jobId": job["id"],
 					"jobName": job["name"],
 					"run": run,
-					"process": subprocess.Popen([sys.executable, f"./scripts/{ job['scriptName'] }"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+					"process": subprocess.Popen([sys.executable, f"./scripts/{ job['scriptName'] }"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
 					})
 
 		# Update running jobs
@@ -81,9 +81,15 @@ def ServiceLoop():
 				run = running["run"]
 				run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-				run["messages"].extend([ { "severity": 0, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stdout.readlines() ])
-				run["messages"].extend([ { "severity": 100, "message": str.strip(message.decode("utf-8")) } for message in running["process"].stderr.readlines() ])
+				# Are there messages
+				if running["process"].stdout:
+					for line in iter(running["process"].stdout.readline, ""):
+						run["messages"].append({ "severity": 0, "message": str.strip(line) })
 
+				if running["process"].stderr:
+					for line in iter(running["process"].stderr.readline, ""):
+						run["messages"].append({ "severity": 100, "message": str.strip(line) })
+				
 				# If there's a message to not log then don't load the messages
 				if len([ message for message in run["messages"] if message["message"] == "no log" ]) > 0:
 					run["messages"] = []
