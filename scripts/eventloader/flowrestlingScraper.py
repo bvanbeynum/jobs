@@ -4,6 +4,7 @@ import datetime
 import time
 import json
 import os
+import re
 
 def currentTime():
 	return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -188,16 +189,18 @@ while currentDate <= endDate:
 										matchId = match['id']
 										sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
-										cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
-										wrestler1Id = cur.fetchone()[0]
-										cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
-										wrestler2Id = cur.fetchone()[0]
+										if not re.search("bye", winType, re.I):
 
-										cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
-										matchDbId = cur.fetchone()[0]
+											cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
+											wrestler1Id = cur.fetchone()[0]
+											cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
+											wrestler2Id = cur.fetchone()[0]
 
-										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
+											cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
+											matchDbId = cur.fetchone()[0]
+
+											cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
+											cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
 
 					cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
 
