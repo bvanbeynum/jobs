@@ -1,6 +1,7 @@
 beautifulsoup4==4.11.1
 certifi==2023.7.22
 charset-normalizer==2.1.1
+google-api-python-client==2.186.0
 glicko2==2.0.0
 idna==3.4
 lxml==4.9.3
@@ -12,3 +13,4 @@ soupsieve==2.4.1
 urllib3==1.26.16
 selenium==4.15.2
 webdriver-manager==4.0.0
+markdown2==2.4.10

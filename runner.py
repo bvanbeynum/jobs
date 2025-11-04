@@ -19,6 +19,12 @@ def ServiceLoop():
 
 		# Get list of jobs
 		response = requests.get(f"{ serverPath }/sys/api/getjobs")
+
+		if response.status_code != 200:
+			print(f"{ currentTime() }: Error getting jobs. Status code: { response.status_code }. Response: { response.text }")
+			time.sleep(sleepTime)
+			continue
+
 		jobs = json.loads(response.text)["jobs"]
 		jobs = [ job for job in jobs if job["status"] == "active" ]
 
