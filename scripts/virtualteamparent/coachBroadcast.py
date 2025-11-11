@@ -356,7 +356,7 @@ try:
 			totalDraftsCreated += 1
 			logMessage(f"Created draft for batch {i//40 + 1}")
 
-		imap.store(msg_id, '+FLAGS', '\Seen')
+		imap.store(msg_id, '+FLAGS', '\\Seen')
 		logMessage(f"Marked email with subject '{subject}' as read.")
 
 	imap.close()
