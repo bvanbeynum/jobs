@@ -80,25 +80,25 @@ for state in states:
 
 			for section in tournamentLI.find_all("div"):
 				if len(section.find_all("span")) > 1:
-					linkData = re.findall("eventSelected\(([\d]+),'([^']+)',([\d]),", section.select("a[href^=\"javascript:eventSelected\"]")[0]["href"], re.DOTALL)[0]
+					linkData = re.findall(r"eventSelected\(([\d]+),'([^']+)',([\d]),", section.select("a[href^=\"javascript:eventSelected\"]")[0]["href"], re.DOTALL)[0]
 
 					if len(linkData) == 3:
 						eventId = linkData[0]
 						eventName = linkData[1]
 						eventType = int(linkData[2])
 					
-					sourceDate = [ date.text.strip() for date in section.find_all("span") if re.search("[\d]+/[\d]+/[\d]+", date.text.strip())][0]
-					if re.search("^[\d]{2}\/[\d]{2}\/[\d]{4}", sourceDate) is not None:
+					sourceDate = [ date.text.strip() for date in section.find_all("span") if re.search(r"[\d]+/[\d]+/[\d]+", date.text.strip())][0]
+					if re.search(r"^[\d]{2}\/[\d]{2}\/[\d]{4}", sourceDate) is not None:
 						eventDate = datetime.datetime.strptime(sourceDate, "%m/%d/%Y")
 
-					elif re.search("^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate) is not None:
-						eventDate = datetime.datetime.strptime("/".join(re.findall("^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate)[0]), "%m/%d/%Y")
-						endDate = datetime.datetime.strptime(re.findall("^[\d]{2}\/[\d]{2} - ([\d]{2}\/[\d]{2}\/[\d]{4})$", sourceDate)[0], "%m/%d/%Y")
+					elif re.search(r"^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate) is not None:
+						eventDate = datetime.datetime.strptime("/".join(re.findall(r"^([\d]{2}\/[\d]{2}) - [\d]{2}\/[\d]{2}\/([\d]{4})$", sourceDate)[0]), "%m/%d/%Y")
+						endDate = datetime.datetime.strptime(re.findall(r"^[\d]{2}\/[\d]{2} - ([\d]{2}\/[\d]{2}\/[\d]{4})$", sourceDate)[0], "%m/%d/%Y")
 				
-				elif len(section.select("a[href^=https\:\/\/www\.google\.com\/maps]")) > 0:
+				elif len(section.select("a[href^='https://www.google.com/maps']")) > 0:
 					address = section.get_text(separator="\n").strip()
 			
-			if eventId is not None and eventDate is not None and eventType is not None and re.search("[\s]test[\s,.]", address, re.I | re.DOTALL | re.MULTILINE) is None:
+			if eventId is not None and eventDate is not None and eventType is not None and re.search(r"[\s]test[\s,.]", address, re.I | re.DOTALL | re.MULTILINE) is None:
 
 				trackId = None
 				isComplete = None
@@ -177,8 +177,8 @@ for state in states:
 				response = session.get(f"https://www.trackwrestling.com/tw/{ tournamentLink }/VerifyPassword.jsp?tournamentId={ eventId }", headers=requestHeaders)
 				time.sleep(2)
 				
-				trackTIM = re.search("TIM=([\d]+)", response.text)[1]
-				trackTWSessionId = re.search("name=\"twSessionId\" value=\"([^\"]+)\"", response.text)
+				trackTIM = re.search(r"TIM=([\d]+)", response.text)[1]
+				trackTWSessionId = re.search(r"name=\"twSessionId\" value=\"([^\"]+)\"", response.text)
 				if trackTWSessionId is not None and trackTWSessionId.lastindex > 0:
 					trackTWSessionId = trackTWSessionId[1]
 				else:
@@ -189,7 +189,7 @@ for state in states:
 
 				response = session.get(f"https://www.trackwrestling.com/{ tournamentLink }/RoundResults.jsp?TIM={ trackTIM }&twSessionId={ trackTWSessionId }", headers=requestHeaders)
 
-				if response.status_code == 404 or re.search("This information is not being released to the public yet", response.text, re.I) is not None:
+				if response.status_code == 404 or re.search(r"This information is not being released to the public yet", response.text, re.I) is not None:
 
 					if eventDate < datetime.datetime.today():
 						# Event is in the past, so it's not valid
@@ -240,18 +240,18 @@ for state in states:
 						matches = []
 						for section in soup.find_all("section", class_="tw-list"):
 							for match in section.find_all("li"):
-								if re.search(" bye", match.string, re.I) is None \
-									and re.search(" forfeit", match.string, re.I) is None \
-									and re.search("[\(]?(dff|ddq)", match.string, re.I) is None \
-									and re.search("\(\)", match.string, re.I) is None:
+								if re.search(r" bye", match.string, re.I) is None \
+									and re.search(r" forfeit", match.string, re.I) is None \
+									and re.search(r"[\(]?(dff|ddq)", match.string, re.I) is None \
+									and re.search(r"\(\)", match.string, re.I) is None:
 
 									matches.append({
-										"roundName": re.search("^([^-]+)", match.string, re.I)[1].strip(),
-										"winType": re.search(" over[^)]+[\)]+[ ]+([^$]+)$", match.string, re.I)[1].strip(),
-										"winnerWrestler": re.search(" - ([^(]+)\(", match.string, re.I)[1].strip(),
-										"winnerTeam": re.search(" - [^(]+\(([^)]+)\)", match.string, re.I)[1].strip(),
-										"loserWrestler": re.search(" over[ ]+([^(]+)\(", match.string, re.I)[1].strip(),
-										"loserTeam": re.search(" over[ ]+[^(]+\(([^)]+)\)", match.string, re.I)[1].strip()
+										"roundName": re.search(r"^([^-]+)", match.string, re.I)[1].strip(),
+										"winType": re.search(r" over[^)]+[\)]+[ ]+([^$]+)$", match.string, re.I)[1].strip(),
+										"winnerWrestler": re.search(r" - ([^(]+)\(", match.string, re.I)[1].strip(),
+										"winnerTeam": re.search(r" - [^(]+\(([^)]+)\)", match.string, re.I)[1].strip(),
+										"loserWrestler": re.search(r" over[ ]+([^(]+)\(", match.string, re.I)[1].strip(),
+										"loserTeam": re.search(r" over[ ]+[^(]+\(([^)]+)\)", match.string, re.I)[1].strip()
 									})
 
 						weightSort = 0

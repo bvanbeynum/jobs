@@ -308,17 +308,17 @@ def scrape_match_results(driver, event_type, tim, twSessionId):
 					continue
 				
 				for li in match_list.find_all('li'):
-					if re.search(" bye", li.string, re.I) is None \
-						and re.search(" forfeit", li.string, re.I) is None \
-						and re.search("[\(]?(dff|ddq)", li.string, re.I) is None \
-						and re.search("\(\)", li.string, re.I) is None:
+					if re.search(r" bye", li.string, re.I) is None \
+						and re.search(r" forfeit", li.string, re.I) is None \
+						and re.search(r"[\(]?(dff|ddq)", li.string, re.I) is None \
+						and re.search(r"\(\)", li.string, re.I) is None:
 
-						sub_round = re.search("^([^-]+)", li.string, re.I)[1].strip()
-						wrestler1_name = re.search(" - ([^(]+)\( " , li.string, re.I)[1].strip()
-						wrestler1_team = re.search(" - [^(]+\(([^)]+)\)", li.string, re.I)[1].strip()
-						win_type = re.search(" over[^)]+[\)]+[ ]+([^$]+)$", li.string, re.I)[1].strip()
-						wrestler2_name = re.search(" over[ ]+([^(]+)\( " , li.string, re.I)[1].strip()
-						wrestler2_team = re.search(" over[ ]+[^(]+\(([^)]+)\)", li.string, re.I)[1].strip()
+						sub_round = re.search(r"^([^-]+)", li.string, re.I)[1].strip()
+						wrestler1_name = re.search(r" - ([^(]+)\( " , li.string, re.I)[1].strip()
+						wrestler1_team = re.search(r" - [^(]+\(([^)]+)\)", li.string, re.I)[1].strip()
+						win_type = re.search(r" over[^)]+[\)]+[ ]+([^$]+)$", li.string, re.I)[1].strip()
+						wrestler2_name = re.search(r" over[ ]+([^(]+)\( " , li.string, re.I)[1].strip()
+						wrestler2_team = re.search(r" over[ ]+[^(]+\(([^)]+)\)", li.string, re.I)[1].strip()
 						winner_name = wrestler1_name
 
 						matches.append({
