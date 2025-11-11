@@ -9,4 +9,5 @@ pids
 *.pid.lock
 
 config.json
+credentials.json
 .vscode

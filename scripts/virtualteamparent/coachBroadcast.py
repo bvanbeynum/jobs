@@ -1,4 +1,3 @@
-
 import markdown2
 import os
 import sys
@@ -7,7 +6,7 @@ import base64
 import datetime
 import requests
 from io import BytesIO
-from google.oauth2.credentials import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaIoBaseUpload
@@ -15,6 +14,11 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+import imaplib
+import smtplib
+import email
+from email.header import decode_header
+import time
 
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
@@ -22,15 +26,45 @@ with open("./scripts/config.json", "r") as reader:
 def logMessage(message):
 	print(f"{datetime.datetime.now().isoformat()} - {message}")
 
-def getTextFromAttachment(driveService, gmailService, messageId, attachmentId, filename, mimeType):
+def errorLogging(errorMessage):
+	logMessage(errorMessage)
+	try:
+		logPayload = {
+			"log": {
+				"logTime": datetime.datetime.now().isoformat(),
+				"lotTypeId": "69133a239adfdad032f57c70",
+				"message": errorMessage
+			}
+		}
+		requests.post(f"{ config['apiServer'] }/sys/api/addlog", json=logPayload)
+	except Exception as apiError:
+		logMessage(f"Failed to log error to API: {apiError}")
+
+	try:
+		if not config.get("googleAppPassword"):
+			raise Exception("Missing 'googleAppPassword' in config.json, cannot send error email.")
+
+		msg = MIMEMultipart()
+		msg["From"] = user["googleEmail"]
+		msg["To"] = config.get("notificationEmail")
+		msg["Subject"] = "Coach Broadcast: Script Error"
+		body = f"The coach broadcast script encountered an error.\n\nError: {errorMessage}"
+		msg.attach(MIMEText(body, "plain"))
+		
+		with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+			smtp.login(user["googleEmail"], config["googleAppPassword"])
+			smtp.send_message(msg)
+		logMessage("Sent error email to test@nomail.com")
+	except Exception as emailError:
+		logMessage(f"Failed to send error email: {emailError}")
+
+def getTextFromAttachment(driveService, fileData, filename, mimeType):
 	uploadedFileId = None
 	convertedDocId = None
 	extractedText = ''
 
 	try:
 		logMessage(f"Processing attachment: {filename}")
-		attachment = gmailService.users().messages().attachments().get(userId='me', messageId=messageId, id=attachmentId).execute()
-		fileData = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8'))
 		
 		# Upload to Drive
 		media = MediaIoBaseUpload(BytesIO(fileData), mimetype=mimeType)
@@ -67,7 +101,8 @@ def getTextFromAttachment(driveService, gmailService, messageId, attachmentId, f
 		extractedText = exportedDoc.decode('utf-8')
 
 	except HttpError as error:
-		logMessage(f"An error occurred: {error}")
+		errorMessage = f"An error occurred: {error}"
+		errorLogging(errorMessage)
 		return f"[Error: Could not process attachment: {filename}]"
 	finally:
 		# Clean up
@@ -77,17 +112,6 @@ def getTextFromAttachment(driveService, gmailService, messageId, attachmentId, f
 			driveService.files().delete(fileId=convertedDocId).execute()
 	
 	return extractedText
-
-def convertAttachments(driveService, gmailService, message, emailDetails):
-	attachmentText = ""
-	if 'parts' in emailDetails['payload']:
-		for part in emailDetails['payload']['parts']:
-			if part.get('filename') and part.get('body') and part['body'].get('attachmentId'):
-				if part['mimeType'] == "application/pdf" or part['mimeType'].startswith("image/"):
-					extractedText = getTextFromAttachment(driveService, gmailService, message['id'], part['body']['attachmentId'], part['filename'], part['mimeType'])
-					if extractedText and extractedText.strip():
-						attachmentText += f"\n----\nAttachment: {part['filename']}\n\n{extractedText}\n\n----\n"
-	return attachmentText
 
 def loadDriveData(driveService, sheetsService):
 	logMessage("Loading data from Google Sheet 'Team Email'")
@@ -185,34 +209,29 @@ Body:
 		raise Exception(f"Error calling Gemini API. Status: {response.status_code}. Response: {response.text}")
 
 totalDraftsCreated = 0
-user = None
+user = {
+	"googleName": "Fortmill Wrestling",
+	"googleEmail": "wrestlingfortmill@gmail.com"
+}
 
 try:
-	logMessage(f"Getting user data for vtpUserID: { config['vtpUserEmail'] }")
-	clientResponse = requests.get(f"{ config['apiServer'] }/vtp/data/vtpuser?email={ config['vtpUserEmail'] }")
-	clientResponse.raise_for_status()
-	user = clientResponse.json()['vtpUsers'][0]
+	creds = service_account.Credentials.from_service_account_file(
+		'./scripts/credentials.json',
+		scopes=[
+			'https://www.googleapis.com/auth/drive',
+			'https://www.googleapis.com/auth/gmail.modify',
+			'https://www.googleapis.com/auth/gmail.send',
+			'https://www.googleapis.com/auth/spreadsheets.readonly'
+		]
+	)
 except Exception as error:
-	logMessage(f"Error getting user data: {error}")
+	errorMessage = f"Error loading service account credentials: {error}"
+	errorLogging(errorMessage)
 	sys.exit(1)
 
 userConfig = {}
-creds = None
 
 try:
-	if not user.get('refreshToken') or not user.get('refreshExpireDate'):
-		raise Exception("User refresh token or expiry date not found. Please re-authenticate with Google.")
-
-	if datetime.datetime.fromisoformat(user['refreshExpireDate'].replace('Z', '+00:00')) < datetime.datetime.now(datetime.timezone.utc):
-		raise Exception("Google refresh token expired. Please re-authenticate with Google.")
-
-	creds = Credentials.from_authorized_user_info({
-		"refresh_token": user["refreshToken"],
-		"client_id": config["google"]["client_id"],
-		"client_secret": config["google"]["client_secret"],
-		"token_uri": "https://oauth2.googleapis.com/token"
-	})
-
 	driveService = build('drive', 'v3', credentials=creds)
 	sheetsService = build('sheets', 'v4', credentials=creds)
 	
@@ -220,74 +239,115 @@ try:
 	userConfig.update(driveOutput)
 
 except Exception as error:
-	logMessage(f"Error loading configuration: {error}")
+	errorMessage = f"Error loading configuration: {error}"
+	errorLogging(errorMessage)
 	sys.exit(1)
 
 try:
-	gmailService = build('gmail', 'v1', credentials=creds)
-	searchQuery = f"is:unread ({' OR '.join([f'from:{email}' for email in userConfig['coachEmails']])})"
-	logMessage(f"Searching for unread emails with query: {searchQuery}")
-	
-	gmailResponse = gmailService.users().messages().list(userId='me', q=searchQuery).execute()
+	if not config.get("googleAppPassword"):
+		raise Exception("Missing 'googleAppPassword' in config.json")
 
-	if 'messages' not in gmailResponse or not gmailResponse['messages']:
+	imap = imaplib.IMAP4_SSL("imap.gmail.com")
+	imap.login(user['googleEmail'], config['googleAppPassword'])
+	imap.select("INBOX")
+
+	logMessage(f"Searching for unread emails from: {userConfig['coachEmails']}")
+	all_message_ids = set()
+	for email_address in userConfig['coachEmails']:
+		search_query = f'(UNSEEN FROM "{email_address}")'
+		logMessage(f"Executing IMAP search with query: {search_query}")
+		status, messages = imap.search(None, search_query)
+		if status == "OK":
+			found_ids = messages[0].split()
+			logMessage(f"Found {len(found_ids)} messages for query.")
+			for msg_id in found_ids:
+				all_message_ids.add(msg_id)
+		else:
+			logMessage(f"IMAP search failed for query: {search_query} with status: {status}")
+	
+	all_message_ids = list(all_message_ids)
+
+	if not all_message_ids:
 		logMessage("No new coach emails to process.")
 		sys.exit(0)
 
-	logMessage(f"Found {len(gmailResponse['messages'])} new emails.")
+	logMessage(f"Found {len(all_message_ids)} new emails.")
 
-	for message in gmailResponse['messages']:
-		emailDetails = gmailService.users().messages().get(userId='me', id=message['id'], format='full').execute()
+	for msg_id in all_message_ids:
+		status, msg_data = imap.fetch(msg_id, "(RFC822)")
+		if status != 'OK':
+			logMessage(f"Failed to fetch email with id {msg_id}")
+			continue
 		
-		headers = emailDetails['payload']['headers']
-		subject = next(header['value'] for header in headers if header['name'] == 'Subject')
-		
-		body = ''
-		if 'parts' in emailDetails['payload']:
-			part = next((p for p in emailDetails['payload']['parts'] if p['mimeType'] == 'text/plain'), None)
-			if part and 'data' in part['body']:
-				body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
-		elif 'data' in emailDetails['payload']['body']:
-			body = base64.urlsafe_b64decode(emailDetails['payload']['body']['data']).decode('utf-8')
+		email_message = email.message_from_bytes(msg_data[0][1])
 
-		if not body:
-			body = emailDetails.get('snippet', '')
+		subject, encoding = decode_header(email_message["Subject"])[0]
+		if isinstance(subject, bytes):
+			subject = subject.decode(encoding if encoding else "utf-8")
 
-		attachmentText = convertAttachments(driveService, gmailService, message, emailDetails)
+		body = ""
+		attachments = []
+		if email_message.is_multipart():
+			for part in email_message.walk():
+				content_type = part.get_content_type()
+				content_disposition = str(part.get("Content-Disposition"))
+				if "attachment" not in content_disposition:
+					if content_type == "text/plain":
+						try:
+							body = part.get_payload(decode=True).decode()
+						except Exception as error:
+							errorLogging(f"Error decoding email body part: {error}")
+							pass
+				else:
+					filename = part.get_filename()
+					if filename:
+						attachments.append({
+							"filename": filename,
+							"data": part.get_payload(decode=True),
+							"mimeType": content_type
+						})
+		else:
+			try:
+				body = email_message.get_payload(decode=True).decode()
+			except Exception as error:
+				errorLogging(f"Error decoding email body: {error}")
+				pass
+
+		attachmentText = ""
+		for attachment in attachments:
+			if attachment['mimeType'] == "application/pdf" or attachment['mimeType'].startswith("image/"):
+				extractedText = getTextFromAttachment(driveService, attachment['data'], attachment['filename'], attachment['mimeType'])
+				if extractedText and extractedText.strip():
+					attachmentText += f"\n----\nAttachment: {attachment['filename']}\n\n{extractedText}\n\n----\n"
+
 		rewrittenEmailText = rewriteWithGemini(body, attachmentText, userConfig['coachName'], userConfig['teamName'])
-		
 		htmlEmailBody = markdown2.markdown(rewrittenEmailText)
 
 		for i in range(0, len(userConfig['parentEmails']), 40):
 			emailBatch = userConfig['parentEmails'][i:i+40]
 			
 			mimeMessage = MIMEMultipart()
-			mimeMessage['To'] = f'"{user["googleName"]} " <{user["googleEmail"]}>'
+			mimeMessage['To'] = f'"{user["googleName"]}" <{user["googleEmail"]}>'
 			mimeMessage['Bcc'] = ','.join(emailBatch)
 			mimeMessage['Subject'] = subject
 			mimeMessage.attach(MIMEText(htmlEmailBody, 'html'))
 
-			if 'parts' in emailDetails['payload']:
-				for part in emailDetails['payload']['parts']:
-					if part.get('filename') and part.get('body') and part['body'].get('attachmentId'):
-						attachment = gmailService.users().messages().attachments().get(userId='me', messageId=message['id'], id=part['body']['attachmentId']).execute()
-						fileData = base64.urlsafe_b64decode(attachment['data'].encode('UTF-8'))
-						
-						mimePart = MIMEBase(part['mimeType'].split('/')[0], part['mimeType'].split('/')[1])
-						mimePart.set_payload(fileData)
-						encoders.encode_base64(mimePart)
-						mimePart.add_header('Content-Disposition', 'attachment', filename=part['filename'])
-						mimeMessage.attach(mimePart)
+			for attachment in attachments:
+				mimePart = MIMEBase(attachment['mimeType'].split('/')[0], attachment['mimeType'].split('/')[1])
+				mimePart.set_payload(attachment['data'])
+				encoders.encode_base64(mimePart)
+				mimePart.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
+				mimeMessage.attach(mimePart)
 
-			encodedMessage = base64.urlsafe_b64encode(mimeMessage.as_bytes()).decode()
-			createDraftRequest = {'message': {'raw': encodedMessage}}
-			
-			gmailService.users().drafts().create(userId='me', body=createDraftRequest).execute()
+			imap.append('[Gmail]/Drafts', '', imaplib.Time2Internaldate(time.time()), mimeMessage.as_bytes())
 			totalDraftsCreated += 1
 			logMessage(f"Created draft for batch {i//40 + 1}")
 
-		gmailService.users().messages().modify(userId='me', id=message['id'], body={'removeLabelIds': ['UNREAD']}).execute()
+		imap.store(msg_id, '+FLAGS', '\Seen')
 		logMessage(f"Marked email with subject '{subject}' as read.")
+
+	imap.close()
+	imap.logout()
 
 	if totalDraftsCreated > 0 and userConfig.get('notifyEmail'):
 		try:
@@ -306,22 +366,19 @@ try:
 			
 			notificationMessage.attach(MIMEText(emailBody, 'html'))
 			
-			encodedMessage = base64.urlsafe_b64encode(notificationMessage.as_bytes()).decode()
-			sendMessageRequest = {'raw': encodedMessage}
-			
-			gmailService.users().messages().send(userId='me', body=sendMessageRequest).execute()
+			with smtplib.SMTP_SSL('smtp.gmail.com', 465) as smtp:
+				smtp.login(user['googleEmail'], config['googleAppPassword'])
+				smtp.send_message(notificationMessage)
+
 			logMessage("Notification email sent successfully.")
-			
-		except HttpError as error:
-			logMessage(f"An error occurred sending the notification email: {error}")
+		
 		except Exception as error:
-			logMessage(f"An unexpected error occurred while sending notification: {error}")
+			errorMessage = f"An unexpected error occurred while sending notification: {error}"
+			errorLogging(errorMessage)
 
 	logMessage(f"Successfully created {totalDraftsCreated} drafts.")
 
-except HttpError as error:
-	logMessage(f"An error occurred with the Gmail API: {error}")
-	sys.exit(1)
 except Exception as error:
-	logMessage(f"An unexpected error occurred: {error}")
+	errorMessage = f"An unexpected error occurred: {error}"
+	errorLogging(errorMessage)
 	sys.exit(1)
