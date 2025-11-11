@@ -1,5 +1,5 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM arm64v8/python:3.10
+FROM arm64v8/python:3.14
 
 RUN ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 
