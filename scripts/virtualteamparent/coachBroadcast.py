@@ -5,6 +5,7 @@ import json
 import base64
 import datetime
 import requests
+import re
 from io import BytesIO
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -113,19 +114,31 @@ def getTextFromAttachment(driveService, fileData, filename, mimeType):
 	
 	return extractedText
 
-def loadDriveData(driveService, sheetsService):
+def loadDriveData(sheetsService):
 	logMessage("Loading data from Google Sheet 'Team Email'")
-	searchResult = driveService.files().list(
-		q="name='Team Email' and mimeType='application/vnd.google-apps.spreadsheet'",
-		fields="files(id, name)"
-	).execute()
 
-	teamEmailSheet = searchResult.get('files', [])[0] if searchResult.get('files') else None
+	vtpUserResponse = requests.get(f"{ config['apiServer'] }/vtp/data/vtpuser?id={ config['vtpId'] }")
+	vtpUsers = vtpUserResponse.json()["vtpUsers"]
+	indexSheetId = vtpUsers[0]["indexSheetId"]
 
-	if not teamEmailSheet:
-		raise Exception("Google Sheet 'Team Email' not found in your Google Drive.")
+	indexSheetResponse = sheetsService.spreadsheets().values().get(spreadsheetId=indexSheetId, range="A:B").execute()
+	indexSheetData = indexSheetResponse.get('values', [])
+	
+	teamEmailSheetUrl = None
+	for row in indexSheetData:
+		if row and row[0] == "Team Email":
+			teamEmailSheetUrl = row[1]
+			break
+	
+	if not teamEmailSheetUrl:
+		raise Exception("Google Sheet 'Team Email' not found in your index sheet.")
 
-	spreadsheetId = teamEmailSheet['id']
+	matches = re.search(r"/spreadsheets/d/([a-zA-Z0-9-_]+)", teamEmailSheetUrl)
+	if not matches:
+		raise Exception("Could not parse spreadsheet ID from URL.")
+	
+	spreadsheetId = matches.group(1)
+
 	sheetDetails = sheetsService.spreadsheets().get(spreadsheetId=spreadsheetId).execute()
 
 	parentEmailsSheet = next((s for s in sheetDetails['sheets'] if s['properties']['title'] == "Parent Emails"), None)
@@ -235,7 +248,7 @@ try:
 	driveService = build('drive', 'v3', credentials=creds)
 	sheetsService = build('sheets', 'v4', credentials=creds)
 	
-	driveOutput = loadDriveData(driveService, sheetsService)
+	driveOutput = loadDriveData(sheetsService)
 	userConfig.update(driveOutput)
 
 except Exception as error:
