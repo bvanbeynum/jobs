@@ -2,7 +2,6 @@ import markdown2
 import os
 import sys
 import json
-import base64
 import datetime
 import requests
 import re
@@ -25,7 +24,8 @@ with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
 def logMessage(message):
-	print(f"{datetime.datetime.now().isoformat()} - {message}")
+	logTime = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
+	print(f"{logTime} - {message}")
 
 def errorLogging(errorMessage):
 	logMessage(errorMessage)
@@ -232,8 +232,6 @@ try:
 		'./scripts/credentials.json',
 		scopes=[
 			'https://www.googleapis.com/auth/drive',
-			'https://www.googleapis.com/auth/gmail.modify',
-			'https://www.googleapis.com/auth/gmail.send',
 			'https://www.googleapis.com/auth/spreadsheets.readonly'
 		]
 	)
