@@ -5,9 +5,27 @@ import time
 import json
 import os
 import re
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import smtplib
 
-def currentTime():
-	return datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def logMessage(message):
+	logTime = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
+	print(f"{logTime} - {message}")
+
+def errorLogging(errorMessage):
+	logMessage(errorMessage)
+	try:
+		logPayload = {
+			"log": {
+				"logTime": datetime.datetime.now().isoformat(),
+				"lotTypeId": "691e351ab7de6ab54ed121ae",
+				"message": errorMessage
+			}
+		}
+		requests.post(f"{ config['apiServer'] }/sys/api/addlog", json=logPayload)
+	except Exception as apiError:
+		logMessage(f"Failed to log error to API: {apiError}")
 
 def loadSql():
 	sql = {}
@@ -31,7 +49,7 @@ def getStateFromLocation(location):
 		return None
 	return state
 
-print(f"{currentTime()}: Starting FloWrestling scraper.")
+logMessage(f"Starting FloWrestling scraper.")
 
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
@@ -56,15 +74,13 @@ currentDate = startDate
 while currentDate <= endDate:
 	dateStr = currentDate.strftime("%Y-%m-%d")
 	url = apiUrls["schedule"].format(date=dateStr)
-	print(f"{currentTime()}: Fetching events for {dateStr}")
 	response = requests.get(url)
 	time.sleep(2)
 
 	if response.status_code != 200:
-		print(f"{currentTime()}: Error fetching events for {dateStr}. Status code: {response.status_code}")
+		errorLogging(f"Error fetching events for {dateStr}. Status code: {response.status_code}")
 		currentDate += datetime.timedelta(days=1)
 		continue
-
 
 	eventsData = response.json()
 	if not eventsData.get("tabs"):
@@ -112,7 +128,7 @@ while currentDate <= endDate:
 
 						continue
 					elif not existingEvent:
-						print(f"{currentTime()}: New event found: {eventName}. Inserting into database.")
+						logMessage(f"New event found: {eventName}. Inserting into database.")
 						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
 						eventId = cur.fetchone()[0]
 					elif existingEvent and not existingEvent[0]:
@@ -125,13 +141,13 @@ while currentDate <= endDate:
 					if existingEvent and existingEvent[0]:
 						continue
 
-					print(f"{currentTime()}: Fetching details for {eventName} on {dateStr}")
+					logMessage(f"Fetching details for {eventName} on {dateStr}")
 					divisionsUrl = apiUrls["divisions"].format(systemId=systemId)
 					divisionsResponse = requests.get(divisionsUrl)
 					time.sleep(2)
 
 					if divisionsResponse.status_code != 200:
-						print(f"{currentTime()}: Error fetching divisions for event {eventId}. Status code: {divisionsResponse.status_code}")
+						errorLogging(f"Error fetching divisions for event {eventId}. Status code: {divisionsResponse.status_code}")
 						continue
 					
 					divisionsData = divisionsResponse.json()
@@ -146,7 +162,7 @@ while currentDate <= endDate:
 						time.sleep(2)
 
 						if weightclassesResponse.status_code != 200:
-							print(f"{currentTime()}: Error fetching weight classes for event {eventId}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
+							errorLogging(f"Error fetching weight classes for event {eventId}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
 							continue
 
 						weightclassesData = weightclassesResponse.json()
@@ -162,11 +178,11 @@ while currentDate <= endDate:
 									resultsResponse = requests.get(resultsUrl)
 									break
 								except requests.exceptions.ConnectionError as e:
-									print(f"{currentTime()}: Connection error fetching results for event {eventId}, division {divisionName}, weight class {weightClassName}. Retrying in {i*2+2} seconds. Error: {e}")
+									errorLogging(f"Connection error: event {eventId}, division {divisionName}, weight class {weightClassName}. Retrying in {i*2+2} seconds. Error: {e}")
 									time.sleep(i*2+2)
 							
 							if not resultsResponse or resultsResponse.status_code != 200:
-								print(f"{currentTime()}: Error fetching results for event {eventId}, division {divisionName}, weight class {weightClassName}. Status code: {resultsResponse.status_code if resultsResponse else 'N/A'}")
+								errorLogging(f"Error fetching event {eventId}, division {divisionName}, weight class {weightClassName}. Status code: {resultsResponse.status_code if resultsResponse else 'N/A'}")
 								continue
 
 							resultsData = resultsResponse.json()
@@ -207,4 +223,52 @@ while currentDate <= endDate:
 
 	currentDate += datetime.timedelta(days=1)
 
-print(f"{currentTime()}: FloWrestling scraper finished.")
+logMessage(f"---------- FloWrestling scraper finished.")
+
+logMessage(f"Email new wrestlers.")
+
+cur.execute(sql["GetNewWrestlers"])
+newWrestlers = cur.fetchall()
+
+if len(newWrestlers) > 0:
+
+	with open("./scripts/eventloader/newwrestlertemplate.html", "r") as reader:
+		htmlTemplate = reader.read()
+
+	rows = ""
+	lastMatchGroupId = -1
+	for wrestler in newWrestlers:
+		isNewGroup = lastMatchGroupId != wrestler.MatchGroupID
+		lastMatchGroupId = wrestler.MatchGroupID
+		
+		rowClass = "group-divider" if isNewGroup else ""
+
+		rows += f"""<tr class="{rowClass}">
+			<td>{wrestler.MatchGroupID}</td>
+			<td class="new-record">{wrestler.NewWrestler}<br><small>ID: {wrestler.NewID}</small></td>
+			<td class="existing-record">{wrestler.ExistingWrestler}<br><small>ID: {wrestler.ExistingID}</small></td>
+			<td class="teams-col">{wrestler.MatchedTeams}</td>
+			<td>{wrestler.LastEvent}</td>
+		</tr>"""
+
+	htmlBody = htmlTemplate.replace("<NewEmailData>", rows)
+
+	msg = MIMEMultipart()
+	msg["From"] = "wrestlingfortmill@gmail.com"
+	msg["To"] = "maildrop444@gmail.com"
+	msg["Subject"] = "New Wrestler Report"
+	msg.attach(MIMEText(htmlBody, 'html'))
+
+	try:
+		with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+			smtp.login("wrestlingfortmill@gmail.com", config["googleAppPassword"])
+			smtp.send_message(msg)
+
+		logMessage(f"Email sent successfully.")
+	except Exception as e:
+		errorLogging(f"Failed to send email. Error: {e}")
+
+else:
+	logMessage(f"No new wrestlers found.")
+
+logMessage(f"---------- Complete.")
