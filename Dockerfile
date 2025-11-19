@@ -24,7 +24,9 @@ RUN apt-get update && \
     chromium-driver \
     build-essential \
     libxml2-dev \
-    libxslt1-dev && \
+    libxslt1-dev \
+    xsel && \
+    apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip
