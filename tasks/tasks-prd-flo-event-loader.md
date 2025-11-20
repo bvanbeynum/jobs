@@ -27,16 +27,16 @@
   - [x] 1.4 Implement a function to load configurations from `scripts/config.json`.
   - [x] 1.5 Establish a `pyodbc` database connection using the loaded credentials.
   - [x] 1.6 Implement a `loadSql` function to read all `.sql` files from `scripts/eventloader/sql/` into a dictionary.
-- [ ] 2.0 Pre-fetch Excluded Events
-  - [ ] 2.1 Define the date range for fetching events: from two weeks in the past to eight weeks in the future.
-  - [ ] 2.2 Execute `ExcludedGet.sql` with the start and end dates of the range to get all excluded or completed events.
-  - [ ] 2.3 Store the resulting `SystemID`s in a Python list for quick lookups.
-- [ ] 3.0 Fetch Events from FloWrestling API
-  - [ ] 3.1 Implement robust error handling for the API request, including status code checks and connection error retries.
-  - [ ] 3.2 Create a loop to iterate through each of the states (SC, NC, GA, TN).
-  - [ ] 3.3 Create a loop to iterate through each date in the defined range.
-  - [ ] 3.4 For each state/date, construct and execute a POST request to the new API endpoint: `https://prod-web-api.flowrestling.org/api/schedule/events`.
-  - [ ] 3.5 Create the request payload to filter events by state (SC, NC, GA, TN) and date using the following format.
+- [x] 2.0 Pre-fetch Excluded Events
+  - [x] 2.1 Define the date range for fetching events: from two weeks in the past to eight weeks in the future.
+  - [x] 2.2 Execute `ExcludedGet.sql` with the start and end dates of the range to get all excluded or completed events.
+  - [x] 2.3 Store the resulting `SystemID`s in a Python list for quick lookups.
+- [x] 3.0 Fetch Events from FloWrestling API
+  - [x] 3.1 Implement robust error handling for the API request, including status code checks and connection error retries.
+  - [x] 3.2 Create a loop to iterate through each of the states (SC, NC, GA, TN).
+  - [x] 3.3 Create a loop to iterate through each date in the defined range.
+  - [x] 3.4 For each state/date, construct and execute a POST request to the new API endpoint: `https://prod-web-api.flowrestling.org/api/schedule/events`.
+  - [x] 3.5 Create the request payload to filter events by state (SC, NC, GA, TN) and date using the following format.
 
     ```
     {
@@ -55,14 +55,14 @@
     }
     ```
 
-- [ ] 4.0 Process and Filter Events
-  - [ ] 4.1 Parse the JSON response to extract event details: `url`, `name`, `location.venueName`, `location.city`, `location.region` and `status.isCompleted`.
-  - [ ] 4.2 Parse the `url` to extract the event's id (e.g. `https://www.flowrestling.org/nextgen/events/{eventId}/information`).
-  - [ ] 4.3 For each event, check if its `id` is in the pre-fetched list of excluded system IDs. If it is, skip the event.
-  - [ ] 4.4 Extract the state from the event's `location.region` field.
-  - [ ] 4.5 If the state is not one of the target states (SC, NC, GA, TN), insert the event into the database with `IsExcluded` set to `True` using `EventSave.sql` and skip further processing.
-- [ ] 5.0 Handle Future Events
-  - [ ] 5.1 If an event is in the future and within a target state, use `EventSave.sql` to insert it if it's new or update the existing record's `date`, `name`, and `location`.
+- [x] 4.0 Process and Filter Events
+  - [x] 4.1 Parse the JSON response to extract event details: `url`, `name`, `location.venueName`, `location.city`, `location.region` and `status.isCompleted`.
+  - [x] 4.2 Parse the `url` to extract the event's id (e.g. `https://www.flowrestling.org/nextgen/events/{eventId}/information`).
+  - [x] 4.3 For each event, check if its `id` is in the pre-fetched list of excluded system IDs. If it is, skip the event.
+  - [x] 4.4 Extract the state from the event's `location.region` field.
+  - [x] 4.5 If the state is not one of the target states (SC, NC, GA, TN), insert the event into the database with `IsExcluded` set to `True` using `EventSave.sql` and skip further processing.
+- [x] 5.0 Handle Future Events
+  - [x] 5.1 If an event is in the future and within a target state, use `EventSave.sql` to insert it if it's new or update the existing record's `date`, `name`, and `location`.
 - [ ] 6.0 Process Past Events
   - [ ] 6.1 If an event is in the past, check if `status.isCompleted` is `True`. If not, skip it.
   - [ ] 6.2 Construct the URL for the CSV report: `https://prod-web-api.flowrestling.org/api/event-hub/{eventId}/results/csv-report`.
