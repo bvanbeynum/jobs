@@ -118,12 +118,17 @@ while currentDate <= endDate:
 					cur.execute(sql['FloEventExistsGet'], (systemId))
 					existingEvent = cur.fetchone()
 
+					if existingEvent and existingEvent[0]:
+						# Event is excluded in the database
+						continue
+
 					state = getStateFromLocation(location)
 					isExcluded = 1 if state not in ['SC', 'NC', 'GA', 'TN'] else 0
 
 					eventId = None
 					if isExcluded:
 						if not existingEvent:
+							# State is in the excluded list
 							cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
 
 						continue
@@ -132,6 +137,7 @@ while currentDate <= endDate:
 						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
 						eventId = cur.fetchone()[0]
 					elif existingEvent and not existingEvent[0]:
+						# Not completed
 						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
 						eventId = cur.fetchone()[0]
 					
@@ -139,6 +145,7 @@ while currentDate <= endDate:
 						continue
 
 					if existingEvent and existingEvent[0]:
+						# Event is completed
 						continue
 
 					logMessage(f"Fetching details for {eventName} on {dateStr}")

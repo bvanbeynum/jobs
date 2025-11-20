@@ -1,6 +1,7 @@
 SELECT
-    IsComplete
+	IsComplete
+	, IsExcluded
 FROM
-    Event
+	Event
 WHERE
-    EventSystem = 'flo' AND SystemID = ?;
+	EventSystem = 'flo' AND SystemID = ?;
