@@ -58,9 +58,9 @@ except Exception as e:
 
 logMessage("Fetching events from FloWrestling API")
 states = ["SC", "NC", "GA", "TN"]
-currentDate = startDate
 
 for state in states:
+	currentDate = startDate
 	while currentDate <= endDate:
 
 		logMessage(f"Fetching events for {state} on {currentDate.strftime('%Y-%m-%d')}")
@@ -94,6 +94,7 @@ for state in states:
 
 					eventName = event['name']
 					eventDate = event['date']
+					eventDateObj = datetime.datetime.fromisoformat(eventDate.replace('Z', '+00:00'))
 					eventAddress = f"{event['location']['venueName']}, {event['location']['city']}, {event['location']['region']}"
 					eventState = event['location']['region']
 					isCompleted = event['status']['isCompleted']
@@ -102,10 +103,74 @@ for state in states:
 						cur.execute(sql['EventSave'], (eventId, eventName, eventDate, None, eventAddress, eventState, 0, 1))
 						continue
 					
-					if not isCompleted:
+					if eventDateObj.date() >= datetime.date.today():
 						cur.execute(sql['EventSave'], (eventId, eventName, eventDate, None, eventAddress, eventState, 0, 0))
 					else:
-						# TODO: Handle past events
+						if not isCompleted:
+							logMessage(f"Skipping past event that is not completed: {eventName}")
+							continue
+
+						logMessage(f"Processing past event: {eventName}")
+						csvUrl = f"https://prod-web-api.flowrestling.org/api/event-hub/{eventId}/results/csv-report"
+						try:
+							csvResponse = requests.get(csvUrl)
+							csvResponse.raise_for_status()
+							csvData = csvResponse.content.decode('utf-8').splitlines()
+							csvReader = csv.reader(csvData)
+							next(csvReader) # Skip header row
+
+							csvData = csvResponse.content.decode('utf-8').splitlines()
+							csvReader = csv.reader(csvData)
+							next(csvReader) # Skip header row
+							
+							rows = list(csvReader)
+							logMessage(f"Processing {len(rows)} matches for event {eventId}")
+
+							for row in rows:
+								try:
+									# CSV row structure
+									# 0: Date, 1: Weight, 2: Round, 3: Winning Wrestler, 4: Winning Team, 
+									# 5: Result, 6: Win Type, 7: Losing Wrestler, 8: Losing Team,
+									# 9: City, 10: State, 11: Event
+									
+									eventDateStr = row[0]
+									weight = row[1]
+									roundName = row[2]
+									winningWrestlerName = row[3]
+									winningTeamName = row[4]
+									result = row[5]
+									winType = row[6]
+									losingWrestlerName = row[7]
+									losingTeamName = row[8]
+
+									# Save winning wrestler
+									cur.execute(sql['WrestlerSave'], (winningWrestlerName, winningTeamName))
+									winningWrestlerId = cur.fetchone()[0]
+
+									# Save losing wrestler
+									cur.execute(sql['WrestlerSave'], (losingWrestlerName, losingTeamName))
+									losingWrestlerId = cur.fetchone()[0]
+
+									# Save match
+									# MatchSave params: EventID, Division, WeightClass, RoundName, WinType, Sort
+									cur.execute(sql['MatchSave'], (eventId, None, weight, roundName, winType, 0))
+									matchId = cur.fetchone()[0]
+
+									# Save wrestler-match info
+									# WrestlerMatchSave params: MatchId, WrestlerId, IsWinner
+									cur.execute(sql['WrestlerMatchSave'], (matchId, winningWrestlerId, 1))
+									cur.execute(sql['WrestlerMatchSave'], (matchId, losingWrestlerId, 0))
+
+								except Exception as e:
+									errorLogging(f"Error processing row for event {eventId}: {row} - {e}")
+
+						except requests.exceptions.RequestException as e:
+							if e.response.status_code == 404:
+								logMessage(f"No CSV report found for event {eventId}")
+							else:
+								errorLogging(f"Error downloading CSV for event {eventId}: {e}")
+						except Exception as e:
+							errorLogging(f"Error processing CSV for event {eventId}: {e}")
 
 
 				except Exception as e:
@@ -114,4 +179,4 @@ for state in states:
 		except requests.exceptions.RequestException as e:
 			errorLogging(f"Error fetching events for {state} on {currentDate.strftime('%Y-%m-%d')}: {e}")
 			
-	currentDate += datetime.timedelta(days=1)
+		currentDate += datetime.timedelta(days=1)

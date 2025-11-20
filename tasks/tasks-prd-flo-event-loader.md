@@ -63,10 +63,10 @@
   - [x] 4.5 If the state is not one of the target states (SC, NC, GA, TN), insert the event into the database with `IsExcluded` set to `True` using `EventSave.sql` and skip further processing.
 - [x] 5.0 Handle Future Events
   - [x] 5.1 If an event is in the future and within a target state, use `EventSave.sql` to insert it if it's new or update the existing record's `date`, `name`, and `location`.
-- [ ] 6.0 Process Past Events
-  - [ ] 6.1 If an event is in the past, check if `status.isCompleted` is `True`. If not, skip it.
-  - [ ] 6.2 Construct the URL for the CSV report: `https://prod-web-api.flowrestling.org/api/event-hub/{eventId}/results/csv-report`.
-  - [ ] 6.3 Download the CSV file and parse it using the `csv` module.
+- [x] 6.0 Process Past Events
+  - [x] 6.1 If an event is in the past, check if `status.isCompleted` is `True`. If not, skip it.
+  - [x] 6.2 Construct the URL for the CSV report: `https://prod-web-api.flowrestling.org/api/event-hub/{eventId}/results/csv-report`.
+  - [x] 6.3 Download the CSV file and parse it using the `csv` module.
 - [ ] 7.0 Load Data into Database
   - [ ] 7.1 Iterate through each row of the parsed CSV file.
   - [ ] 7.2 For each match, use `WrestlerSave.sql` to save the winning and losing wrestlers and get their database IDs.
