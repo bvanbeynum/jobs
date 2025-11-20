@@ -60,7 +60,7 @@ cur = cn.cursor()
 sql = loadSql()
 
 apiUrls = {
-	"schedule": "https://api.flowrestling.org/api/experiences/web/schedule/tab/{date}?version=1.33.2&site_id=2&limit=100&offset=0&tz=America/New_York&showFavoriteIcon=true&isNextGenEventHub=true&enableGeoBlock=true&enableMultiday=true",
+	"schedule": "https://prod-web-api.flowrestling.org/api/schedule/events",
 	"divisions": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results/filters/divisionName?limit=1000",
 	"weightclasses": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]&offset=0&limit=1000",
 	"results": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results/group?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]&groupFilter=%7B%22id%22:%22weightClassName%22,%22type%22:%22string%22,%22value%22:%22{weightClassName}%22%7D"
@@ -70,165 +70,146 @@ today = datetime.date.today()
 startDate = today - datetime.timedelta(weeks=2)
 endDate = today + datetime.timedelta(weeks=8)
 
-currentDate = startDate
-while currentDate <= endDate:
-	dateStr = currentDate.strftime("%Y-%m-%d")
-	url = apiUrls["schedule"].format(date=dateStr)
-	response = requests.get(url)
-	time.sleep(2)
+states = ["GA", "SC", "NC", "TN"]
 
-	if response.status_code != 200:
-		errorLogging(f"Error fetching events for {dateStr}. Status code: {response.status_code}")
-		currentDate += datetime.timedelta(days=1)
-		continue
+# startDate = datetime.datetime.strptime("2025-11-14", "%Y-%m-%d").date()
 
-	eventsData = response.json()
-	if not eventsData.get("tabs"):
-		currentDate += datetime.timedelta(days=1)
-		continue
+cur.execute(sql['ExcludedGet'], (startDate, endDate))
+excludedEvents = [row.SystemID for row in cur.fetchall()]
 
-	for tab in eventsData["tabs"]:
-		if not (tab.get("content") and tab["content"].get("data")):
+for state in states:
+	currentDate = startDate
+	while currentDate <= endDate:
+		logMessage(f"Fetching events for {state} on {currentDate.strftime('%Y-%m-%d')}")
+		dateStr = currentDate.strftime("%Y-%m-%d")
+		
+		payload = {
+			"date": dateStr,
+			"query": None,
+			"filters": [
+				{
+					"id": "event-location",
+					"type": "string-lazy",
+					"value": f"29US{state}00000000000"
+				}
+			],
+			"tz": "America/New_York",
+			"offset": "0",
+			"limit": "100"
+		}
+		
+		response = requests.post(apiUrls["schedule"], json=payload)
+		time.sleep(2)
+
+		if response.status_code != 200:
+			errorLogging(f"Error fetching events for {dateStr}. Status code: {response.status_code}")
+			currentDate += datetime.timedelta(days=1)
 			continue
-		for item in tab["content"]["data"]:
-			if not item.get("items"):
+
+		eventsData = response.json()
+		events = eventsData["data"]["events"]
+		
+		for event in events:
+			systemId = event["url"].split('/')[5]
+			if systemId in excludedEvents:
+				# Excluded or completed event
 				continue
-			for eventItem in item["items"]:
-				if not eventItem.get("rows"):
+
+			eventName = event['name']
+			eventAddress = f"{event['location']['venueName']}, {event['location']['city']}, {event['location']['region']}"
+			eventState = event['location']['region']
+			isCompleted = event['status']['isCompleted']
+
+			# Update the event details
+			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 0, 0))
+			eventId = cur.fetchone()[0]
+
+			if currentDate >= datetime.date.today() or not isCompleted:
+				# In the future, or Flo says it's not completed
+				continue
+			
+			logMessage(f"Fetching details for {eventName} on {dateStr}")
+			divisionsUrl = apiUrls["divisions"].format(systemId=systemId)
+			divisionsResponse = requests.get(divisionsUrl)
+			time.sleep(2)
+
+			if divisionsResponse.status_code != 200:
+				errorLogging(f"Error fetching divisions for {eventName}. Status code: {divisionsResponse.status_code}")
+				continue
+			
+			divisionsData = divisionsResponse.json()
+			if not (divisionsData.get("data") and divisionsData["data"].get("options")):
+				# Flo says complete and no divisions, mark it complete
+				cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
+				continue
+
+			for division in divisionsData["data"]["options"]:
+				divisionName = division['label']
+				weightclassesUrl = apiUrls["weightclasses"].format(systemId=systemId, divisionName=divisionName)
+				weightclassesResponse = requests.get(weightclassesUrl)
+				time.sleep(2)
+
+				if weightclassesResponse.status_code != 200:
+					errorLogging(f"Error fetching weight classes for {eventName}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
 					continue
-				for row in eventItem["rows"]:
-					eventName = row["cells"][3]["data"]["text"]
-					startDateStr = row["cells"][0]["data"]["textParts"]["startDateTime"]
-					endDateStr = row["cells"][0]["data"]["textParts"]["endDateTime"]
-					location = row["cells"][4]["data"]["text"]
-					systemId = row["action"]["url"].split("/")[-1]
 
-					if startDateStr.endswith('Z'):
-						startDateStr_parsed = startDateStr.replace('Z', '+00:00')
-					else:
-						startDateStr_parsed = startDateStr[:-2] + ':' + startDateStr[-2:]
-					startDateObj = datetime.datetime.fromisoformat(startDateStr_parsed).date()
+				weightclassesData = weightclassesResponse.json()
+				if not (weightclassesData.get("data") and weightclassesData["data"].get("results")):
+					continue
+
+				for weightClass in weightclassesData["data"]["results"]:
+					weightClassName = weightClass['title']
+					resultsUrl = apiUrls["results"].format(systemId=systemId, divisionName=divisionName, weightClassName=weightClassName)
+					resultsResponse = None
+					for i in range(3):
+						try:
+							resultsResponse = requests.get(resultsUrl)
+							break
+						except requests.exceptions.ConnectionError as e:
+							errorLogging(f"Connection error: event {eventName}, division {divisionName}, weight class {weightClassName}. Retrying in {i*2+2} seconds. Error: {e}")
+							time.sleep(i*2+2)
 					
-					if endDateStr.endswith('Z'):
-						endDateStr_parsed = endDateStr.replace('Z', '+00:00')
-					else:
-						endDateStr_parsed = endDateStr[:-2] + ':' + endDateStr[-2:]
-					endDateObj = datetime.datetime.fromisoformat(endDateStr_parsed).date()
-
-					cur.execute(sql['FloEventExistsGet'], (systemId))
-					existingEvent = cur.fetchone()
-
-					if existingEvent and existingEvent[0]:
-						# Event is excluded in the database
+					if not resultsResponse or resultsResponse.status_code != 200:
+						errorLogging(f"Error fetching event {eventName}, division {divisionName}, weight class {weightClassName}. Status code: {resultsResponse.status_code if resultsResponse else 'N/A'}")
 						continue
 
-					state = getStateFromLocation(location)
-					isExcluded = 1 if state not in ['SC', 'NC', 'GA', 'TN'] else 0
-
-					eventId = None
-					if isExcluded:
-						if not existingEvent:
-							# State is in the excluded list
-							cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
-
-						continue
-					elif not existingEvent:
-						logMessage(f"New event found: {eventName}. Inserting into database.")
-						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
-						eventId = cur.fetchone()[0]
-					elif existingEvent and not existingEvent[0]:
-						# Not completed
-						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 0, isExcluded))
-						eventId = cur.fetchone()[0]
-					
-					if startDateObj >= today:
+					resultsData = resultsResponse.json()
+					if not (resultsData.get("data") and resultsData["data"].get("results")):
 						continue
 
-					if existingEvent and existingEvent[0]:
-						# Event is completed
-						continue
+					for roundData in resultsData["data"]["results"]:
+						for matchIndex, match in enumerate(roundData["items"]):
 
-					logMessage(f"Fetching details for {eventName} on {dateStr}")
-					divisionsUrl = apiUrls["divisions"].format(systemId=systemId)
-					divisionsResponse = requests.get(divisionsUrl)
-					time.sleep(2)
+							if len(match['athlete1']['name']) > 0 and len(match['athlete2']['name']) > 0:
+								# No name, don't save
+								athlete1Name = match['athlete1']['name']
+								athlete1Team = match['athlete1']['team']['name']
+								athlete1Winner = match['athlete1']['isWinner']
+								athlete2Name = match['athlete2']['name']
+								athlete2Team = match['athlete2']['team']['name']
+								athlete2Winner = match['athlete2']['isWinner']
+								winType = match['winType']
+								matchRound = match.get('round') if match.get('round') else None
+								matchId = match['id']
+								sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
-					if divisionsResponse.status_code != 200:
-						errorLogging(f"Error fetching divisions for event {eventId}. Status code: {divisionsResponse.status_code}")
-						continue
-					
-					divisionsData = divisionsResponse.json()
-					if not (divisionsData.get("data") and divisionsData["data"].get("options")):
-						cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
-						continue
+								if not re.search("bye", winType, re.I):
 
-					for division in divisionsData["data"]["options"]:
-						divisionName = division['label']
-						weightclassesUrl = apiUrls["weightclasses"].format(systemId=systemId, divisionName=divisionName)
-						weightclassesResponse = requests.get(weightclassesUrl)
-						time.sleep(2)
+									cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
+									wrestler1Id = cur.fetchone()[0]
+									cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
+									wrestler2Id = cur.fetchone()[0]
 
-						if weightclassesResponse.status_code != 200:
-							errorLogging(f"Error fetching weight classes for event {eventId}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
-							continue
+									cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
+									matchDbId = cur.fetchone()[0]
 
-						weightclassesData = weightclassesResponse.json()
-						if not (weightclassesData.get("data") and weightclassesData["data"].get("results")):
-							continue
+									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
+									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
 
-						for weightClass in weightclassesData["data"]["results"]:
-							weightClassName = weightClass['title']
-							resultsUrl = apiUrls["results"].format(systemId=systemId, divisionName=divisionName, weightClassName=weightClassName)
-							resultsResponse = None
-							for i in range(3):
-								try:
-									resultsResponse = requests.get(resultsUrl)
-									break
-								except requests.exceptions.ConnectionError as e:
-									errorLogging(f"Connection error: event {eventId}, division {divisionName}, weight class {weightClassName}. Retrying in {i*2+2} seconds. Error: {e}")
-									time.sleep(i*2+2)
-							
-							if not resultsResponse or resultsResponse.status_code != 200:
-								errorLogging(f"Error fetching event {eventId}, division {divisionName}, weight class {weightClassName}. Status code: {resultsResponse.status_code if resultsResponse else 'N/A'}")
-								continue
-
-							resultsData = resultsResponse.json()
-							if not (resultsData.get("data") and resultsData["data"].get("results")):
-								continue
-
-							for roundData in resultsData["data"]["results"]:
-								for matchIndex, match in enumerate(roundData["items"]):
-
-									if len(match['athlete1']['name']) > 0 and len(match['athlete2']['name']) > 0:
-										# No name, don't save
-										athlete1Name = match['athlete1']['name']
-										athlete1Team = match['athlete1']['team']['name']
-										athlete1Winner = match['athlete1']['isWinner']
-										athlete2Name = match['athlete2']['name']
-										athlete2Team = match['athlete2']['team']['name']
-										athlete2Winner = match['athlete2']['isWinner']
-										winType = match['winType']
-										matchRound = match.get('round') if match.get('round') else None
-										matchId = match['id']
-										sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
-
-										if not re.search("bye", winType, re.I):
-
-											cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
-											wrestler1Id = cur.fetchone()[0]
-											cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
-											wrestler2Id = cur.fetchone()[0]
-
-											cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
-											matchDbId = cur.fetchone()[0]
-
-											cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-											cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
-
-					cur.execute(sql['EventSave'], ('flo', systemId, None, eventName, startDateObj, endDateObj, location, state, 1, isExcluded))
+			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
 
 
-	currentDate += datetime.timedelta(days=1)
+		currentDate += datetime.timedelta(days=1)
 
 logMessage(f"---------- FloWrestling scraper finished.")
 
