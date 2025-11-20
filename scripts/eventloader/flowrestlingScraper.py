@@ -256,7 +256,8 @@ if len(newWrestlers) > 0:
 	msg = MIMEMultipart()
 	msg["From"] = "wrestlingfortmill@gmail.com"
 	msg["To"] = "maildrop444@gmail.com"
-	msg["Subject"] = "New Wrestler Report"
+	msg["Subject"] = "New Wrestler Report - " + datetime.datetime.now().strftime("%Y-%m-%d")
+
 	msg.attach(MIMEText(htmlBody, 'html'))
 
 	try:
