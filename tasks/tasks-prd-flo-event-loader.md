@@ -67,12 +67,12 @@
   - [x] 6.1 If an event is in the past, check if `status.isCompleted` is `True`. If not, skip it.
   - [x] 6.2 Construct the URL for the CSV report: `https://prod-web-api.flowrestling.org/api/event-hub/{eventId}/results/csv-report`.
   - [x] 6.3 Download the CSV file and parse it using the `csv` module.
-- [ ] 7.0 Load Data into Database
-  - [ ] 7.1 Iterate through each row of the parsed CSV file.
-  - [ ] 7.2 For each match, use `WrestlerSave.sql` to save the winning and losing wrestlers and get their database IDs.
-  - [ ] 7.3 Use `MatchSave.sql` to save the match details (division, weight, round, win type) and get the match ID.
-  - [ ] 7.4 Use `WrestlerMatchSave.sql` twice to link both wrestlers to the newly created match record.
-  - [ ] 7.5 After processing all matches for an event, update the event's record in the database to mark it as completed using `EventSave.sql`.
+- [x] 7.0 Load Data into Database
+  - [x] 7.1 Iterate through each row of the parsed CSV file.
+  - [x] 7.2 For each match, use `WrestlerSave.sql` to save the winning and losing wrestlers and get their database IDs.
+  - [x] 7.3 Use `MatchSave.sql` to save the match details (division, weight, round, win type) and get the match ID.
+  - [x] 7.4 Use `WrestlerMatchSave.sql` twice to link both wrestlers to the newly created match record.
+  - [x] 7.5 After processing all matches for an event, update the event's record in the database to mark it as completed using `EventSave.sql`.
 - [ ] 8.0 Email New Wrestlers Report
   - [ ] 8.1 After the main processing loop is complete, execute `GetNewWrestlers.sql` to identify any new wrestlers added during the run.
   - [ ] 8.2 If new wrestlers are found, read the `newwrestlertemplate.html` file.

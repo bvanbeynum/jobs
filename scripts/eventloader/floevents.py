@@ -115,10 +115,12 @@ for state in states:
 						try:
 							csvResponse = requests.get(csvUrl)
 							csvResponse.raise_for_status()
-							csvData = csvResponse.content.decode('utf-8').splitlines()
-							csvReader = csv.reader(csvData)
-							next(csvReader) # Skip header row
 
+							if not csvResponse.content:
+								logMessage(f"CSV report for event {eventId} is empty. Marking as complete.")
+								cur.execute(sql['EventSave'], (eventId, eventName, eventDate, None, eventAddress, eventState, 1, 0))
+								continue
+								
 							csvData = csvResponse.content.decode('utf-8').splitlines()
 							csvReader = csv.reader(csvData)
 							next(csvReader) # Skip header row
@@ -133,40 +135,48 @@ for state in states:
 									# 5: Result, 6: Win Type, 7: Losing Wrestler, 8: Losing Team,
 									# 9: City, 10: State, 11: Event
 									
-									eventDateStr = row[0]
-									weight = row[1]
-									roundName = row[2]
-									winningWrestlerName = row[3]
-									winningTeamName = row[4]
-									result = row[5]
+									matchDate = row[0]
+									weightClass = row[1]
+									matchRound = row[2]
+									winnerName = row[3]
+									winnerTeam = row[4]
+									matchResult = row[5]
 									winType = row[6]
-									losingWrestlerName = row[7]
-									losingTeamName = row[8]
+									loserName = row[7]
+									loserTeam = row[8]
+									city = row[9]
+									state = row[10]
+									eventNameCsv = row[11]
 
 									# Save winning wrestler
-									cur.execute(sql['WrestlerSave'], (winningWrestlerName, winningTeamName))
-									winningWrestlerId = cur.fetchone()[0]
+									cur.execute(sql['WrestlerSave'], (winnerName, winnerTeam))
+									winnerId = cur.fetchone()[0]
 
 									# Save losing wrestler
-									cur.execute(sql['WrestlerSave'], (losingWrestlerName, losingTeamName))
-									losingWrestlerId = cur.fetchone()[0]
+									cur.execute(sql['WrestlerSave'], (loserName, loserTeam))
+									loserId = cur.fetchone()[0]
 
 									# Save match
 									# MatchSave params: EventID, Division, WeightClass, RoundName, WinType, Sort
-									cur.execute(sql['MatchSave'], (eventId, None, weight, roundName, winType, 0))
+									cur.execute(sql['MatchSave'], (eventId, None, weightClass, matchRound, winType, 0))
 									matchId = cur.fetchone()[0]
 
 									# Save wrestler-match info
 									# WrestlerMatchSave params: MatchId, WrestlerId, IsWinner
-									cur.execute(sql['WrestlerMatchSave'], (matchId, winningWrestlerId, 1))
-									cur.execute(sql['WrestlerMatchSave'], (matchId, losingWrestlerId, 0))
+									cur.execute(sql['WrestlerMatchSave'], (matchId, winnerId, 1))
+									cur.execute(sql['WrestlerMatchSave'], (matchId, loserId, 0))
 
 								except Exception as e:
 									errorLogging(f"Error processing row for event {eventId}: {row} - {e}")
+							
+							# Mark event as completed
+							cur.execute(sql['EventSave'], (eventId, eventName, eventDate, None, eventAddress, eventState, 1, 0))
+							logMessage(f"Finished processing event {eventId}")
 
 						except requests.exceptions.RequestException as e:
-							if e.response.status_code == 404:
-								logMessage(f"No CSV report found for event {eventId}")
+							if e.response and e.response.status_code == 404:
+								logMessage(f"No CSV report found for event {eventId}. Marking as complete.")
+								cur.execute(sql['EventSave'], (eventId, eventName, eventDate, None, eventAddress, eventState, 1, 0))
 							else:
 								errorLogging(f"Error downloading CSV for event {eventId}: {e}")
 						except Exception as e:
