@@ -1,9 +1,7 @@
 set nocount on;
 
 declare @EventID int
-declare @EventSystem varchar(255);
 declare @SystemID varchar(255);
-declare @EventType varchar(255);
 declare @EventName varchar(255);
 declare @EventDate date;
 declare @EndDate date;
@@ -12,9 +10,7 @@ declare @EventState varchar(255);
 declare @IsComplete bit;
 declare @IsExcluded bit;
 
-set @EventSystem = ?;
 set @SystemID = ?;
-set @EventType = ?;
 set @EventName = ?;
 set @EventDate = ?;
 set @EndDate = ?;
@@ -45,9 +41,9 @@ begin
 			, ModifiedDate
 			)
 	values	(
-			@EventSystem
+			'Flo'
 			, @SystemID
-			, @EventType
+			, null
 			, @EventName
 			, @EventDate
 			, @EndDate
@@ -65,7 +61,7 @@ else
 begin
 
 	update	Event
-	set		EventType = coalesce(@EventType, EventType)
+	set		EventType = null
 			, EventName = coalesce(@EventName, EventName)
 			, EventDate = coalesce(@EventDate, EventDate)
 			, EndDate = coalesce(@EndDate, EndDate)
