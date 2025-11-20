@@ -70,7 +70,7 @@ today = datetime.date.today()
 startDate = today - datetime.timedelta(weeks=2)
 endDate = today + datetime.timedelta(weeks=8)
 
-states = ["GA", "SC", "NC", "TN"]
+states = ["SC", "NC", "GA", "TN"]
 
 # startDate = datetime.datetime.strptime("2025-11-14", "%Y-%m-%d").date()
 
@@ -80,7 +80,6 @@ excludedEvents = [row.SystemID for row in cur.fetchall()]
 for state in states:
 	currentDate = startDate
 	while currentDate <= endDate:
-		logMessage(f"Fetching events for {state} on {currentDate.strftime('%Y-%m-%d')}")
 		dateStr = currentDate.strftime("%Y-%m-%d")
 		
 		payload = {
