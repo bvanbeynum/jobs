@@ -110,7 +110,7 @@ cross apply (
 		on		EventWrestlerMatch.TeamName = TeamGroup.TeamName
 		where	EventWrestlerMatch.EventWrestlerID = EventWrestler.ID
 		) TeamGroup
-where	EventWrestler.InsertDate > getdate() - 7
+where	EventWrestler.InsertDate > getdate() - 3 -- Since it runs daily, only get wrestlers in the last 3 days
 		and len(trim(EventWrestler.WrestlerName)) > 0;
 
 -- Get the dataset of all the existing wrestlers
