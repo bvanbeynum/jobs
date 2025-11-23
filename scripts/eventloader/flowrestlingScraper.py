@@ -60,10 +60,13 @@ cur = cn.cursor()
 sql = loadSql()
 
 apiUrls = {
-	"schedule": "https://prod-web-api.flowrestling.org/api/schedule/events",
-	"divisions": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results/filters/divisionName?limit=1000",
-	"weightclasses": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]&offset=0&limit=1000",
-	"results": "https://nextgen.flowrestling.org/api/event-hub/{systemId}/results/group?tab=weight&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]&groupFilter=%7B%22id%22:%22weightClassName%22,%22type%22:%22string%22,%22value%22:%22{weightClassName}%22%7D"
+	"base": "https://prod-web-api.flowrestling.org/api/",
+	"schedule": "schedule/events",
+	"event": "event-hub/{systemId}/results",
+	"divisions": "/filters/divisionName?limit=1000",
+	"divisionFilter": "&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]",
+	"weightclasses": "?tab=weight{divisionFilter}&offset=0&limit=1000",
+	"results": "/group?tab=weight{divisionFilter}&groupFilter=%7B%22id%22:%22weightClassName%22,%22type%22:%22string%22,%22value%22:%22{weightClassName}%22%7D"
 }
 
 today = datetime.date.today()
@@ -97,7 +100,7 @@ for state in states:
 			"limit": "100"
 		}
 		
-		response = requests.post(apiUrls["schedule"], json=payload)
+		response = requests.post(apiUrls["base"] + apiUrls["schedule"], json=payload)
 		time.sleep(2)
 
 		if response.status_code != 200:
@@ -128,7 +131,7 @@ for state in states:
 				continue
 			
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
-			divisionsUrl = apiUrls["divisions"].format(systemId=systemId)
+			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisions"]
 			divisionsResponse = requests.get(divisionsUrl)
 			time.sleep(2)
 
@@ -138,13 +141,21 @@ for state in states:
 			
 			divisionsData = divisionsResponse.json()
 			if not (divisionsData.get("data") and divisionsData["data"].get("options")):
-				# Flo says complete and no divisions, mark it complete
-				cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
-				continue
+				# If there are no divisions returned, load everything as one division
+				divisions = [{"label": ""}]
+			else:
+				divisions = divisionsData["data"]["options"]
 
-			for division in divisionsData["data"]["options"]:
-				divisionName = division['label']
-				weightclassesUrl = apiUrls["weightclasses"].format(systemId=systemId, divisionName=divisionName)
+			for division in divisions:
+				divisionName = division["label"]
+
+				if len(divisionName) > 0:
+					divisionFilter = apiUrls["divisionFilter"].format(divisionName=divisionName)
+				else:
+					# Don't invlude division filter if no division name
+					divisionFilter = ""
+
+				weightclassesUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["weightclasses"].format(divisionFilter=divisionFilter)
 				weightclassesResponse = requests.get(weightclassesUrl)
 				time.sleep(2)
 
@@ -158,7 +169,8 @@ for state in states:
 
 				for weightClass in weightclassesData["data"]["results"]:
 					weightClassName = weightClass['title']
-					resultsUrl = apiUrls["results"].format(systemId=systemId, divisionName=divisionName, weightClassName=weightClassName)
+
+					resultsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["results"].format(divisionFilter=divisionFilter, weightClassName=weightClassName)
 					resultsResponse = None
 					for i in range(3):
 						try:
