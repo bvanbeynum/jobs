@@ -120,13 +120,12 @@ for state in states:
 			eventName = event['name']
 			eventAddress = f"{event['location']['venueName']}, {event['location']['city']}, {event['location']['region']}"
 			eventState = event['location']['region']
-			isCompleted = event['status']['isCompleted']
 
 			# Update the event details
 			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 0, 0))
 			eventId = cur.fetchone()[0]
 
-			if currentDate >= datetime.date.today() or not isCompleted:
+			if currentDate >= datetime.date.today():
 				# In the future, or Flo says it's not completed
 				continue
 			
