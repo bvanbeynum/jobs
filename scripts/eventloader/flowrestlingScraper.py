@@ -101,7 +101,7 @@ for state in states:
 		}
 		
 		response = requests.post(apiUrls["base"] + apiUrls["schedule"], json=payload)
-		time.sleep(2)
+		time.sleep(1)
 
 		if response.status_code != 200:
 			errorLogging(f"Error fetching events for {dateStr}. Status code: {response.status_code}")
@@ -133,7 +133,7 @@ for state in states:
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
 			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisions"]
 			divisionsResponse = requests.get(divisionsUrl)
-			time.sleep(2)
+			time.sleep(1)
 
 			if divisionsResponse.status_code != 200:
 				errorLogging(f"Error fetching divisions for {eventName}. Status code: {divisionsResponse.status_code}")
@@ -157,7 +157,7 @@ for state in states:
 
 				weightclassesUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["weightclasses"].format(divisionFilter=divisionFilter)
 				weightclassesResponse = requests.get(weightclassesUrl)
-				time.sleep(2)
+				time.sleep(1)
 
 				if weightclassesResponse.status_code != 200:
 					errorLogging(f"Error fetching weight classes for {eventName}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
