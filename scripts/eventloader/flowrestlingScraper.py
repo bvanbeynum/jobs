@@ -210,11 +210,16 @@ for state in states:
 									cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
 									wrestler2Id = cur.fetchone()[0]
 
-									cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
-									matchDbId = cur.fetchone()[0]
+									cur.execute(sql['ExistingMatch'], (eventId, divisionName, weightClassName, matchRound, winType, wrestler1Id, wrestler2Id))
+									existingMatches = cur.fetchone()[0]
 
-									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-									cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
+									if existingMatches == 0:
+										# If the match is duplicated in Flo don't add it
+										cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
+										matchDbId = cur.fetchone()[0]
+
+										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
+										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
 
 			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
 
