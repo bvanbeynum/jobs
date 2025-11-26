@@ -23,7 +23,7 @@ def errorLogging(errorMessage):
 				"message": errorMessage
 			}
 		}
-		requests.post(f"{ config['apiServer'] }/sys/api/addlog", json=logPayload)
+		requests.post(f"{ config["apiServer"] }/sys/api/addlog", json=logPayload)
 	except Exception as apiError:
 		logMessage(f"Failed to log error to API: {apiError}")
 
@@ -54,7 +54,7 @@ logMessage(f"Starting FloWrestling scraper.")
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
-cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
+cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config["database"]["server"] };DATABASE={ config["database"]["database"] };ENCRYPT=no;UID={ config["database"]["user"] };PWD={ config["database"]["password"] }", autocommit=True)
 cur = cn.cursor()
 
 sql = loadSql()
@@ -77,12 +77,12 @@ states = ["SC", "NC", "GA", "TN"]
 
 # startDate = datetime.datetime.strptime("2025-11-14", "%Y-%m-%d").date()
 
-cur.execute(sql['ExcludedGet'], (startDate, endDate))
+cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
-for state in states:
-	currentDate = startDate
-	while currentDate <= endDate:
+currentDate = startDate
+while currentDate <= endDate:
+	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
 		
 		payload = {
@@ -117,12 +117,12 @@ for state in states:
 				# Excluded or completed event
 				continue
 
-			eventName = event['name']
-			eventAddress = f"{event['location']['venueName']}, {event['location']['city']}, {event['location']['region']}"
-			eventState = event['location']['region']
+			eventName = event["name"]
+			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
+			eventState = event["location"]["region"]
 
 			# Update the event details
-			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 0, 0))
+			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, eventState, 0, 0))
 			eventId = cur.fetchone()[0]
 
 			if currentDate >= datetime.date.today():
@@ -167,7 +167,7 @@ for state in states:
 					continue
 
 				for weightClass in weightclassesData["data"]["results"]:
-					weightClassName = weightClass['title']
+					weightClassName = weightClass["title"]
 
 					resultsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["results"].format(divisionFilter=divisionFilter, weightClassName=weightClassName)
 					resultsResponse = None
@@ -190,41 +190,43 @@ for state in states:
 					for roundData in resultsData["data"]["results"]:
 						for matchIndex, match in enumerate(roundData["items"]):
 
-							if len(match['athlete1']['name']) > 0 and len(match['athlete2']['name']) > 0:
+							if len(match["athlete1"]["name"]) > 0 and len(match["athlete2"]["name"]) > 0:
 								# No name, don't save
-								athlete1Name = match['athlete1']['name']
-								athlete1Team = match['athlete1']['team']['name']
-								athlete1Winner = match['athlete1']['isWinner']
-								athlete2Name = match['athlete2']['name']
-								athlete2Team = match['athlete2']['team']['name']
-								athlete2Winner = match['athlete2']['isWinner']
-								winType = match['winType']
+								athlete1Name = match["athlete1"]["name"]
+								athlete1Team = match["athlete1"]["team"]["name"]
+								athlete1Winner = match["athlete1"]["isWinner"]
+								athlete2Name = match["athlete2"]["name"]
+								athlete2Team = match["athlete2"]["team"]["name"]
+								athlete2Winner = match["athlete2"]["isWinner"]
+								winType = match["winType"]
 								matchRound = match.get('round') if match.get('round') else None
-								matchId = match['id']
+								matchId = match["id"]
 								sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
 								if not re.search("bye", winType, re.I):
 
-									cur.execute(sql['WrestlerSave'], (athlete1Name, athlete1Team))
+									cur.execute(sql["WrestlerSave"], (athlete1Name, athlete1Team))
 									wrestler1Id = cur.fetchone()[0]
-									cur.execute(sql['WrestlerSave'], (athlete2Name, athlete2Team))
+									cur.execute(sql["WrestlerSave"], (athlete2Name, athlete2Team))
 									wrestler2Id = cur.fetchone()[0]
 
-									cur.execute(sql['ExistingMatch'], (eventId, divisionName, weightClassName, matchRound, winType, wrestler1Id, wrestler2Id))
+									cur.execute(sql["ExistingMatch"], (eventId, divisionName, weightClassName, matchRound, winType, wrestler1Id, wrestler2Id))
 									existingMatches = cur.fetchone()[0]
 
 									if existingMatches == 0:
 										# If the match is duplicated in Flo don't add it
-										cur.execute(sql['MatchSave'], (eventId, divisionName, weightClassName, matchRound, winType, sort))
+										cur.execute(sql["MatchSave"], (eventId, divisionName, weightClassName, matchRound, winType, sort))
 										matchDbId = cur.fetchone()[0]
 
-										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-										cur.execute(sql['WrestlerMatchSave'], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
+										cur.execute(sql["WrestlerMatchSave"], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
+										cur.execute(sql["WrestlerMatchSave"], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
 
-			cur.execute(sql['EventSave'], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
+			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
 
+		# Next state
 
-		currentDate += datetime.timedelta(days=1)
+	# Next date
+	currentDate += datetime.timedelta(days=1)
 
 logMessage(f"---------- FloWrestling scraper finished.")
 
