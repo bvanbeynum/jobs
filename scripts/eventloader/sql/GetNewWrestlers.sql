@@ -202,9 +202,14 @@ from	(
 				and DupWrestlers.Groups like '%|' + cast(NewWrestlers.GroupID as varchar(max)) + '|%'
 		) PotentialMatches
 cross apply (
-		select	Teams = string_agg(TeamGroup.TeamName, ', ') within group (order by TeamGroup.TeamName)
+		select	Teams = string_agg(AllTeams.TeamName, ', ') within group (order by AllTeams.TeamName)
+		from	(
+				select	TeamGroup.TeamName
+						, TeamNumber = row_number() over (order by TeamGroup.TeamName)
 		from	#TeamGroup TeamGroup
 		where	TeamGroup.GroupID = PotentialMatches.GroupID
+				) AllTeams
+		where	AllTeams.TeamNumber <= 5
 		) TeamLink
 order by
 		Teams

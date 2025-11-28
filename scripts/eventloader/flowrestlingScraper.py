@@ -8,6 +8,7 @@ import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import smtplib
+from difflib import SequenceMatcher
 
 def logMessage(message):
 	logTime = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
@@ -48,6 +49,36 @@ def getStateFromLocation(location):
 	if len(state) != 2:
 		return None
 	return state
+
+def getNameDiffHtml(string1, string2):
+	string1 = string1.lower()
+	string2 = string2.lower()
+	
+	matcher = SequenceMatcher(None, string1, string2)
+	
+	output1 = []
+	output2 = []
+	
+	for tag, i1, i2, j1, j2 in matcher.get_opcodes():
+		if tag == 'replace':
+			output1.append(f'<span class="diff">{string1[i1:i2]}</span>')
+			output2.append(f'<span class="diff">{string2[j1:j2]}</span>')
+		elif tag == 'delete':
+			output1.append(f'<span class="diff">{string1[i1:i2]}</span>')
+		elif tag == 'insert':
+			output2.append(f'<span class="diff">{string2[j1:j2]}</span>')
+		elif tag == 'equal':
+			output1.append(string1[i1:i2])
+			output2.append(string2[j1:j2])
+			
+	return ''.join(output1), ''.join(output2)
+
+
+
+
+
+# *************************** Script Start ***************************
+
 
 logMessage(f"Starting FloWrestling scraper.")
 
@@ -240,23 +271,56 @@ if len(newWrestlers) > 0:
 	with open("./scripts/eventloader/newwrestlertemplate.html", "r") as reader:
 		htmlTemplate = reader.read()
 
-	rows = ""
-	lastMatchGroupId = -1
+	rows = []
+	wrestler_groups = {}
 	for wrestler in newWrestlers:
-		isNewGroup = lastMatchGroupId != wrestler.MatchGroupID
-		lastMatchGroupId = wrestler.MatchGroupID
+		if wrestler.MatchGroupID not in wrestler_groups:
+			wrestler_groups[wrestler.MatchGroupID] = []
+		wrestler_groups[wrestler.MatchGroupID].append(wrestler)
+
+	last_match_group_id = None
+	group_counter = 0
+	for index, wrestler in enumerate(newWrestlers):
 		
-		rowClass = "group-divider" if isNewGroup else ""
+		if wrestler.MatchGroupID != last_match_group_id:
+			group_counter += 1
+			last_match_group_id = wrestler.MatchGroupID
 
-		rows += f"""<tr class="{rowClass}">
-			<td>{wrestler.MatchGroupID}</td>
-			<td class="new-record">{wrestler.NewWrestler}<br><small>ID: {wrestler.NewID}</small></td>
-			<td class="existing-record">{wrestler.ExistingWrestler}<br><small>ID: {wrestler.ExistingID}</small></td>
-			<td class="teams-col">{wrestler.MatchedTeams}</td>
-			<td>{wrestler.LastEvent}</td>
-		</tr>"""
+		row_class = []
+		if group_counter % 2 != 0:
+			row_class.append("odd-group")
+		
+		# Check if the group has more than one wrestler
+		if len(wrestler_groups[wrestler.MatchGroupID]) > 1:
+			row_class.append("group-row")
+			
+		# Check if it's the last wrestler in the group
+		is_last_in_group = (index == len(newWrestlers) - 1) or (newWrestlers[index+1].MatchGroupID != wrestler.MatchGroupID)
+		if is_last_in_group:
+			row_class.append("group-end")
 
-	htmlBody = htmlTemplate.replace("<NewEmailData>", rows)
+		class_string = f'class="{" ".join(row_class)}"' if row_class else ""
+
+		existing_wrestler_html, new_wrestler_html = getNameDiffHtml(wrestler.ExistingWrestler, wrestler.NewWrestler)
+		
+		last_event_date = wrestler.LastEvent.strftime("%Y-%m-%d") if wrestler.LastEvent else ""
+
+		script = f"insert into #dedup (saveid, dupid) values({wrestler.ExistingID},{wrestler.NewID});"
+
+		row = f"""
+		<tr {class_string}>
+			<td>{wrestler.ExistingID}</td>
+			<td>{wrestler.NewID}</td>
+			<td>{existing_wrestler_html}</td>
+			<td>{new_wrestler_html}</td>
+			<td class="team-col">{wrestler.MatchedTeams}</td>
+			<td>{last_event_date}</td>
+			<td>{script}</td>
+		</tr>
+		"""
+		rows.append(row)
+
+	htmlBody = htmlTemplate.replace("<NewEmailData>", "\n".join(rows))
 
 	msg = MIMEMultipart()
 	msg["From"] = "wrestlingfortmill@gmail.com"
