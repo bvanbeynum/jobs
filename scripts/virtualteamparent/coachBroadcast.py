@@ -13,6 +13,7 @@ from googleapiclient.http import MediaIoBaseUpload
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
+from email.mime.application import MIMEApplication
 from email import encoders
 import imaplib
 import smtplib
@@ -344,9 +345,13 @@ try:
 			mimeMessage.attach(MIMEText(htmlEmailBody, 'html'))
 
 			for attachment in attachments:
-				mimePart = MIMEBase(attachment['mimeType'].split('/')[0], attachment['mimeType'].split('/')[1])
-				mimePart.set_payload(attachment['data'])
-				encoders.encode_base64(mimePart)
+				ctype, subtype = attachment['mimeType'].split('/', 1)
+				if ctype == 'application':
+					mimePart = MIMEApplication(attachment['data'], _subtype=subtype)
+				else:
+					mimePart = MIMEBase(ctype, subtype)
+					mimePart.set_payload(attachment['data'])
+					encoders.encode_base64(mimePart)
 				mimePart.add_header('Content-Disposition', 'attachment', filename=attachment['filename'])
 				mimeMessage.attach(mimePart)
 
