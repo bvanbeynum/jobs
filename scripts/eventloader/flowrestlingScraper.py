@@ -7,6 +7,7 @@ import os
 import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
 import smtplib
 from difflib import SequenceMatcher
 
@@ -113,11 +114,17 @@ cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
 currentDate = startDate
+dataModified = True
 while currentDate <= endDate:
 	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
-		# logMessage(f"Fetching details for { dateStr } in { state }")
+		logMessage(f"Fetching details for { dateStr } in { state }")
 		
+		if dataModified and currentDate <= datetime.date.today():
+			# Update Wrestler Name Lookup
+			cur.execute(sql["WrestlerLookupCreate"])
+			dataModified = False
+
 		payload = {
 			"date": dateStr,
 			"query": None,
@@ -181,7 +188,7 @@ while currentDate <= endDate:
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
 			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisions"]
 			divisionsResponse = requests.get(divisionsUrl)
-			# time.sleep(1)
+			time.sleep(1)
 
 			if divisionsResponse.status_code != 200:
 				errorLogging(f"Error fetching divisions for {eventName}. Status code: {divisionsResponse.status_code}")
@@ -194,6 +201,7 @@ while currentDate <= endDate:
 			else:
 				divisions = divisionsData["data"]["options"]
 
+			batchLoad = []
 			for division in divisions:
 				divisionName = division["label"]
 				
@@ -207,7 +215,6 @@ while currentDate <= endDate:
 
 				weightclassesUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["weightclasses"].format(divisionFilter=divisionFilter)
 				weightclassesResponse = requests.get(weightclassesUrl)
-				time.sleep(1)
 
 				if weightclassesResponse.status_code != 200:
 					errorLogging(f"Error fetching weight classes for {eventName}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
@@ -237,41 +244,42 @@ while currentDate <= endDate:
 					resultsData = resultsResponse.json()
 					if not (resultsData.get("data") and resultsData["data"].get("results")):
 						continue
-
+					
 					for roundData in resultsData["data"]["results"]:
 						for matchIndex, match in enumerate(roundData["items"]):
 
 							if len(match["athlete1"]["name"]) > 0 and len(match["athlete2"]["name"]) > 0:
 								# No name, don't save
+								athlete1Id = match["athlete1"]["id"]
 								athlete1Name = match["athlete1"]["name"]
 								athlete1Team = match["athlete1"]["team"]["name"]
-								athlete1Winner = match["athlete1"]["isWinner"]
+								athlete1Winner = 1 if match["athlete1"]["isWinner"] else 0
+
+								athlete2Id = match["athlete2"]["id"]
 								athlete2Name = match["athlete2"]["name"]
 								athlete2Team = match["athlete2"]["team"]["name"]
-								athlete2Winner = match["athlete2"]["isWinner"]
+								athlete2Winner = 1 if match["athlete2"]["isWinner"] else 0
+
 								winType = match["winType"]
 								matchRound = match.get('round') if match.get('round') else None
 								matchId = match["id"]
 								sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
 
 								if not re.search("bye", winType, re.I):
+									batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, { sort })")
 
-									cur.execute(sql["WrestlerSave"], (athlete1Name, athlete1Team))
-									wrestler1Id = cur.fetchone()[0]
-									cur.execute(sql["WrestlerSave"], (athlete2Name, athlete2Team))
-									wrestler2Id = cur.fetchone()[0]
+			# Create the batch load
+			if len(batchLoad) > 0:
+				logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
+				cur.execute(sql["LoadBatchCreate"])
 
-									cur.execute(sql["ExistingMatch"], (eventId, divisionName, weightClassName, matchRound, winType, wrestler1Id, wrestler2Id))
-									existingMatches = cur.fetchone()[0]
+				insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batchLoad)
+				cur.execute(insertSql)
 
-									if existingMatches == 0:
-										# If the match is duplicated in Flo don't add it
-										cur.execute(sql["MatchSave"], (eventId, divisionName, weightClassName, matchRound, winType, sort))
-										matchDbId = cur.fetchone()[0]
-
-										cur.execute(sql["WrestlerMatchSave"], (matchDbId, wrestler1Id, athlete1Winner, athlete1Team, athlete1Name))
-										cur.execute(sql["WrestlerMatchSave"], (matchDbId, wrestler2Id, athlete2Winner, athlete2Team, athlete2Name))
-
+				# Process all the updates
+				cur.execute(sql["LoadBatchProcess"])
+				dataModified = True
+				
 			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
 
 		# Next state
@@ -280,6 +288,12 @@ while currentDate <= endDate:
 	currentDate += datetime.timedelta(days=1)
 
 logMessage(f"---------- FloWrestling scraper finished.")
+
+logMessage(f"Process Team Duplicates.")
+cur.execute(sql["ProcessTeamDups"])
+
+logMessage(f"Process Name Updates.")
+cur.execute(sql["ProcessWrestlerNames"])
 
 logMessage(f"Email new wrestlers.")
 
@@ -347,7 +361,11 @@ if len(newWrestlers) > 0:
 	msg["To"] = "maildrop444@gmail.com"
 	msg["Subject"] = "New Wrestler Report - " + datetime.datetime.now().strftime("%Y-%m-%d")
 
-	msg.attach(MIMEText(htmlBody, 'html'))
+	msg.attach(MIMEText("New wrestler report is attached.", "plain"))
+
+	attachment = MIMEApplication(htmlBody, _subtype="html")
+	attachment.add_header("Content-Disposition", "attachment", filename="newWrestlerReport.html")
+	msg.attach(attachment)
 
 	try:
 		with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
