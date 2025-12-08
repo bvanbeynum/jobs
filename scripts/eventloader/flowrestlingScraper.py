@@ -94,6 +94,7 @@ apiUrls = {
 	"base": "https://prod-web-api.flowrestling.org/api/",
 	"schedule": "schedule/events",
 	"event": "event-hub/{systemId}/results",
+	"information": "event-hub/{systemId}/information",
 	"divisions": "/filters/divisionName?limit=1000",
 	"divisionFilter": "&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]",
 	"weightclasses": "?tab=weight{divisionFilter}&offset=0&limit=1000",
@@ -106,7 +107,7 @@ endDate = today + datetime.timedelta(weeks=8)
 
 states = ["SC", "NC", "GA", "TN"]
 
-# startDate = datetime.datetime.strptime("2025-11-14", "%Y-%m-%d").date()
+# startDate = datetime.datetime.strptime("2025-12-06", "%Y-%m-%d").date()
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
@@ -115,6 +116,7 @@ currentDate = startDate
 while currentDate <= endDate:
 	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
+		# logMessage(f"Fetching details for { dateStr } in { state }")
 		
 		payload = {
 			"date": dateStr,
@@ -152,18 +154,34 @@ while currentDate <= endDate:
 			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
 			eventState = event["location"]["region"]
 
-			# Update the event details
-			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, eventState, 0, 0))
-			eventId = cur.fetchone()[0]
+			informationUrl = apiUrls["base"] + apiUrls["information"].format(systemId=systemId)
+			informationResponse = requests.get(informationUrl)
+			
+			if informationResponse.status_code != 200:
+				errorLogging(f"Error fetching information for {eventName}. Status code: {divisionsResponse.status_code}")
+				continue
 
-			if currentDate >= datetime.date.today():
-				# In the future, or Flo says it's not completed
+			informationData = informationResponse.json()
+			if informationData.get("data") and informationData["data"].get("startDate"):
+				eventStartDate = datetime.datetime.strptime(informationData["data"]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date()
+				eventEndDate = datetime.datetime.strptime(informationData["data"]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date() if informationData["data"].get("endDate") else eventStartDate
+				endDateStr = eventEndDate.strftime("%Y-%m-%d")
+			else:
+				eventStartDate = currentDate
+				eventEndDate = currentDate
+
+			# Update the event details
+			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, endDateStr, eventAddress, eventState, 0, 0))
+			eventId = cur.fetchone()[0]
+			
+			if currentDate >= datetime.date.today() or (eventEndDate and eventEndDate >= datetime.date.today()):
+				# In the future
 				continue
 			
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
 			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisions"]
 			divisionsResponse = requests.get(divisionsUrl)
-			time.sleep(1)
+			# time.sleep(1)
 
 			if divisionsResponse.status_code != 200:
 				errorLogging(f"Error fetching divisions for {eventName}. Status code: {divisionsResponse.status_code}")
@@ -178,6 +196,8 @@ while currentDate <= endDate:
 
 			for division in divisions:
 				divisionName = division["label"]
+				
+				# logMessage(f"Fetching details for { divisionName }")
 
 				if len(divisionName) > 0:
 					divisionFilter = apiUrls["divisionFilter"].format(divisionName=divisionName)
