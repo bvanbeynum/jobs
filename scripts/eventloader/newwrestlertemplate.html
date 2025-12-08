@@ -92,12 +92,12 @@ white-space: normal;
 	<table class="report-table">
 	<thead>
 		<tr>
+		<th>&nbsp;</th>
 		<th>Existing ID</th>
 		<th>New ID</th>
 		<th>Existing Wrestler</th>
 		<th>New Wrestler</th>
 		<th class="team-col">Team</th>
-		<th>Last Event</th>
 		<th>Script</th>
 		</tr>
 	</thead>
@@ -108,7 +108,35 @@ white-space: normal;
 	</tbody>
 	</table>
 
+	<h2>Generated Script</h2>
+	<textarea id="scriptTextArea" style="width: 100%; height: 150px;"></textarea>
+
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+	const scriptTextArea = document.getElementById('scriptTextArea');
+	const checkboxes = document.querySelectorAll('.wrestler-checkbox');
+
+	checkboxes.forEach(checkbox => {
+		checkbox.addEventListener('change', updateScriptTextArea);
+	});
+
+	function updateScriptTextArea() {
+		let scripts = [];
+		checkboxes.forEach(checkbox => {
+			if (checkbox.checked) {
+				const row = checkbox.closest('tr');
+				const scriptCell = row.querySelector('.script-cell');
+				if (scriptCell) {
+					scripts.push(scriptCell.textContent);
+				}
+			}
+		});
+		scriptTextArea.value = scripts.join('\n');
+	}
+});
+</script>
 
 </body>
 </html>

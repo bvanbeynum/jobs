@@ -343,13 +343,13 @@ if len(newWrestlers) > 0:
 
 		row = f"""
 		<tr {class_string}>
+			<td><input type="checkbox" class="wrestler-checkbox"></td>
 			<td>{wrestler.ExistingID}</td>
 			<td>{wrestler.NewID}</td>
 			<td>{existing_wrestler_html}</td>
 			<td>{new_wrestler_html}</td>
 			<td class="team-col">{wrestler.MatchedTeams}</td>
-			<td>{last_event_date}</td>
-			<td>{script}</td>
+			<td class="script-cell">{script}</td>
 		</tr>
 		"""
 		rows.append(row)
