@@ -289,11 +289,11 @@ while currentDate <= endDate:
 
 logMessage(f"---------- FloWrestling scraper finished.")
 
-logMessage(f"Process Team Duplicates.")
-cur.execute(sql["ProcessTeamDups"])
-
 logMessage(f"Process Name Updates.")
 cur.execute(sql["ProcessWrestlerNames"])
+
+logMessage(f"Process Team Duplicates.")
+cur.execute(sql["ProcessTeamDups"])
 
 logMessage(f"Email new wrestlers.")
 
