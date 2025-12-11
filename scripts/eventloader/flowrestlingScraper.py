@@ -159,7 +159,6 @@ while currentDate <= endDate:
 
 			eventName = event["name"]
 			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
-			eventState = event["location"]["region"]
 
 			informationUrl = apiUrls["base"] + apiUrls["information"].format(systemId=systemId)
 			informationResponse = requests.get(informationUrl)
@@ -178,7 +177,7 @@ while currentDate <= endDate:
 				eventEndDate = currentDate
 
 			# Update the event details
-			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, endDateStr, eventAddress, eventState, 0, 0))
+			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, endDateStr, eventAddress, state, 0, 0))
 			eventId = cur.fetchone()[0]
 			
 			if currentDate >= datetime.date.today() or (eventEndDate and eventEndDate >= datetime.date.today()):
@@ -280,7 +279,7 @@ while currentDate <= endDate:
 				cur.execute(sql["LoadBatchProcess"])
 				dataModified = True
 				
-			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, eventState, 1, 0))
+			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
 
 		# Next state
 
