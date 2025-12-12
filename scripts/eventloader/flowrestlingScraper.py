@@ -119,7 +119,7 @@ dataModified = True
 while currentDate <= endDate:
 	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
-		logMessage(f"Fetching details for { dateStr } in { state }")
+		# logMessage(f"Fetching details for { dateStr } in { state }")
 		
 		if dataModified and currentDate <= datetime.date.today():
 			# Update Wrestler Name Lookup
@@ -273,7 +273,7 @@ while currentDate <= endDate:
 			try:
 				# Create the batch load
 				if len(batchLoad) > 0:
-					logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
+					# logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
 					cur.execute(sql["LoadBatchCreate"])
 
 					insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batchLoad)
