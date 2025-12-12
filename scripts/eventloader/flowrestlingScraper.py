@@ -108,7 +108,8 @@ endDate = today + datetime.timedelta(weeks=8)
 
 states = ["SC", "NC", "GA", "TN"]
 
-# startDate = datetime.datetime.strptime("2025-12-06", "%Y-%m-%d").date()
+# startDate = datetime.datetime.strptime("2025-12-03", "%Y-%m-%d").date()
+# endDate = datetime.date.today()
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
@@ -150,6 +151,8 @@ while currentDate <= endDate:
 
 		eventsData = response.json()
 		events = eventsData["data"]["events"]
+
+		# events = [ event for event in events if event["url"].split('/')[5] == "14568669" ]
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
@@ -267,19 +270,22 @@ while currentDate <= endDate:
 								if not re.search("bye", winType, re.I):
 									batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, { sort })")
 
-			# Create the batch load
-			if len(batchLoad) > 0:
-				logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
-				cur.execute(sql["LoadBatchCreate"])
+			try:
+				# Create the batch load
+				if len(batchLoad) > 0:
+					logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
+					cur.execute(sql["LoadBatchCreate"])
 
-				insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batchLoad)
-				cur.execute(insertSql)
+					insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batchLoad)
+					cur.execute(insertSql)
 
-				# Process all the updates
-				cur.execute(sql["LoadBatchProcess"])
-				dataModified = True
-				
-			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+					# Process all the updates
+					cur.execute(sql["LoadBatchProcess"])
+					dataModified = True
+					
+				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+			except Exception as error:
+				errorLogging(f"DB save error: event {eventName}. Error: {error}")
 
 		# Next state
 
