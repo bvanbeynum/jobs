@@ -108,7 +108,7 @@ endDate = today + datetime.timedelta(weeks=8)
 
 states = ["SC", "NC", "GA", "TN"]
 
-# startDate = datetime.datetime.strptime("2025-12-03", "%Y-%m-%d").date()
+# startDate = datetime.datetime.strptime("2025-12-12", "%Y-%m-%d").date()
 # endDate = datetime.date.today()
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
@@ -152,7 +152,7 @@ while currentDate <= endDate:
 		eventsData = response.json()
 		events = eventsData["data"]["events"]
 
-		# events = [ event for event in events if event["url"].split('/')[5] == "14568669" ]
+		# events = [ event for event in events if event["url"].split('/')[5] == "14463800" ]
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
@@ -183,7 +183,7 @@ while currentDate <= endDate:
 			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, endDateStr, eventAddress, state, 0, 0))
 			eventId = cur.fetchone()[0]
 			
-			if currentDate >= datetime.date.today() or (eventEndDate and eventEndDate >= datetime.date.today()):
+			if currentDate >= datetime.date.today() or (eventEndDate and eventEndDate > datetime.date.today()):
 				# In the future
 				continue
 			
@@ -276,8 +276,10 @@ while currentDate <= endDate:
 					# logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
 					cur.execute(sql["LoadBatchCreate"])
 
-					insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batchLoad)
-					cur.execute(insertSql)
+					for i in range(0, len(batchLoad), 500):
+						batch = batchLoad[i:i+500]
+						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batch)
+						cur.execute(insertSql)
 
 					# Process all the updates
 					cur.execute(sql["LoadBatchProcess"])
