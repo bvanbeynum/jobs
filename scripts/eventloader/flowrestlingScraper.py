@@ -313,49 +313,50 @@ if len(newWrestlers) > 0:
 		htmlTemplate = reader.read()
 
 	rows = []
-	wrestler_groups = {}
+	wrestlerGroups = {}
 	for wrestler in newWrestlers:
-		if wrestler.MatchGroupID not in wrestler_groups:
-			wrestler_groups[wrestler.MatchGroupID] = []
-		wrestler_groups[wrestler.MatchGroupID].append(wrestler)
+		if wrestler.MatchGroupID not in wrestlerGroups:
+			wrestlerGroups[wrestler.MatchGroupID] = []
+		wrestlerGroups[wrestler.MatchGroupID].append(wrestler)
 
-	last_match_group_id = None
-	group_counter = 0
+	lastMatchGroupId = None
+	groupCounter = 0
 	for index, wrestler in enumerate(newWrestlers):
 		
-		if wrestler.MatchGroupID != last_match_group_id:
-			group_counter += 1
-			last_match_group_id = wrestler.MatchGroupID
+		if wrestler.MatchGroupID != lastMatchGroupId:
+			groupCounter += 1
+			lastMatchGroupId = wrestler.MatchGroupID
 
-		row_class = []
-		if group_counter % 2 != 0:
-			row_class.append("odd-group")
+		rowClass = []
+		if groupCounter % 2 != 0:
+			rowClass.append("odd-group")
 		
 		# Check if the group has more than one wrestler
-		if len(wrestler_groups[wrestler.MatchGroupID]) > 1:
-			row_class.append("group-row")
+		if len(wrestlerGroups[wrestler.MatchGroupID]) > 1:
+			rowClass.append("group-row")
 			
 		# Check if it's the last wrestler in the group
-		is_last_in_group = (index == len(newWrestlers) - 1) or (newWrestlers[index+1].MatchGroupID != wrestler.MatchGroupID)
-		if is_last_in_group:
-			row_class.append("group-end")
+		isLastInGroup = (index == len(newWrestlers) - 1) or (newWrestlers[index+1].MatchGroupID != wrestler.MatchGroupID)
+		if isLastInGroup:
+			rowClass.append("group-end")
 
-		class_string = f'class="{" ".join(row_class)}"' if row_class else ""
+		classString = f'class="{" ".join(rowClass)}"' if rowClass else ""
 
-		existing_wrestler_html, new_wrestler_html = getNameDiffHtml(wrestler.ExistingWrestler, wrestler.NewWrestler)
+		existingWrestlerHtml, newWrestlerHtml = getNameDiffHtml(wrestler.ExistingWrestler, wrestler.NewWrestler)
 		
-		last_event_date = wrestler.LastEvent.strftime("%Y-%m-%d") if wrestler.LastEvent else ""
+		addDateStr = wrestler.AddDate.strftime("%m/%d/%Y") if wrestler.AddDate else ""
 
 		script = f"insert into #dedup (saveid, dupid) values({wrestler.ExistingID},{wrestler.NewID});"
 
 		row = f"""
-		<tr {class_string}>
+		<tr {classString}>
 			<td><input type="checkbox" class="wrestler-checkbox"></td>
 			<td>{wrestler.ExistingID}</td>
 			<td>{wrestler.NewID}</td>
-			<td>{existing_wrestler_html}</td>
-			<td>{new_wrestler_html}</td>
+			<td>{existingWrestlerHtml}</td>
+			<td>{newWrestlerHtml}</td>
 			<td class="team-col">{wrestler.MatchedTeams}</td>
+			<td>{addDateStr}</td>
 			<td class="script-cell">{script}</td>
 		</tr>
 		"""

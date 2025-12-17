@@ -101,6 +101,7 @@ select	WrestlerID = EventWrestler.ID
 		, LastName = case when charindex(' ', EventWrestler.WrestlerName) > 0 then substring(EventWrestler.WrestlerName, charindex(' ', EventWrestler.WrestlerName) + 1, len(EventWrestler.WrestlerName)) else EventWrestler.WrestlerName end
 		, LastInitial = case when charindex(' ', EventWrestler.WrestlerName) > 0 then substring(EventWrestler.WrestlerName, charindex(' ', EventWrestler.WrestlerName) + 1, 1) else EventWrestler.WrestlerName end
 		, GroupID = TeamGroup.GroupID
+		, AddDate = cast(EventWrestler.InsertDate as date)
 into	#NewWrestlers
 from	EventWrestler
 cross apply (
@@ -110,8 +111,14 @@ cross apply (
 		on		EventWrestlerMatch.TeamName = TeamGroup.TeamName
 		where	EventWrestlerMatch.EventWrestlerID = EventWrestler.ID
 		) TeamGroup
-where	EventWrestler.InsertDate > getdate() - 3 -- Since it runs daily, only get wrestlers in the last 3 days
-		and len(trim(EventWrestler.WrestlerName)) > 0;
+where	len(trim(EventWrestler.WrestlerName)) > 0
+		and (
+			EventWrestler.InsertDate > getdate() - 3
+			or (
+				datepart(dw, getdate()) in (2, 7, 1) -- Monday, Saturday, Sunday
+				and EventWrestler.InsertDate > getdate() - 7
+			)
+		);
 
 -- Get the dataset of all the existing wrestlers
 ;with TeamGroup as (
@@ -173,6 +180,7 @@ select	NewID = PotentialMatches.NewWrestlerID
 		, ExistingWrestler = PotentialMatches.ExistingWrestler
 		, MatchedTeams = TeamLink.Teams
 		, LastEvent = PotentialMatches.LastEvent
+		, AddDate = PotentialMatches.AddDate
 into	#Matches
 from	(
 		select	distinct NewWrestlerID = NewWrestlers.WrestlerID
@@ -181,6 +189,7 @@ from	(
 				, ExistingWrestler = DupWrestlers.WrestlerName
 				, LastEvent = DupWrestlers.LastEvent
 				, NewWrestlers.GroupID
+				, NewWrestlers.AddDate
 		from	#NewWrestlers NewWrestlers
 		join	#DupWrestlers DupWrestlers
 		on		NewWrestlers.FirstName = DupWrestlers.FirstName
@@ -194,6 +203,7 @@ from	(
 				, ExistingWrestler = DupWrestlers.WrestlerName
 				, LastEvent = DupWrestlers.LastEvent
 				, NewWrestlers.GroupID
+				, NewWrestlers.AddDate
 		from	#NewWrestlers NewWrestlers
 		join	#DupWrestlers DupWrestlers
 		on		NewWrestlers.LastName = DupWrestlers.LastName 
@@ -218,6 +228,7 @@ order by
 
 -- Get the output
 select	MatchGroup.MatchGroupID
+		, Matches.AddDate
 		, Matches.NewID
 		, Matches.ExistingID
 		, Matches.NewWrestler
@@ -235,7 +246,8 @@ from	(
 join	#Matches Matches
 on		MatchGroup.NewID = Matches.NewID
 order by
-		MatchedTeams
+		AddDate
+		, MatchedTeams
 		, MatchGroupID
 		, ExistingID;
 
