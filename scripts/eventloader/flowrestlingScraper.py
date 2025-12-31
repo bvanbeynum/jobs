@@ -286,6 +286,7 @@ while currentDate <= endDate:
 					dataModified = True
 					
 				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+				excludedEvents.append(systemId)
 			except Exception as error:
 				errorLogging(f"DB save error: event {eventName}. Error: {error}")
 

@@ -99,6 +99,11 @@ on		MatchStage.EventID = EventMatch.EventID
 		and MatchStage.SystemID = EventMatch.SystemID
 join	#WrestlerLookupMatch WrestlerLookupMatch
 on		MatchStage.Wrestler1SystemID = WrestlerLookupMatch.SystemID
+left join
+		EventWrestlerMatch
+on		WrestlerLookupMatch.EventWrestlerID = EventWrestlerMatch.EventWrestlerID
+		and EventWrestlerMatch.EventMatchID = EventMatch.ID
+where	EventWrestlerMatch.ID is null
 union
 select	WrestlerLookupMatch.EventWrestlerID
 		, EventMatch.ID
@@ -110,6 +115,11 @@ join	EventMatch
 on		MatchStage.EventID = EventMatch.EventID
 		and MatchStage.SystemID = EventMatch.SystemID
 join	#WrestlerLookupMatch WrestlerLookupMatch
-on		MatchStage.Wrestler2SystemID = WrestlerLookupMatch.SystemID;
+on		MatchStage.Wrestler2SystemID = WrestlerLookupMatch.SystemID
+left join
+		EventWrestlerMatch
+on		WrestlerLookupMatch.EventWrestlerID = EventWrestlerMatch.EventWrestlerID
+		and EventWrestlerMatch.EventMatchID = EventMatch.ID
+where	EventWrestlerMatch.ID is null;
 
 set nocount off;
