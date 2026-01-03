@@ -94,28 +94,32 @@ sql = loadSql()
 apiUrls = {
 	"base": "https://prod-web-api.flowrestling.org/api/",
 	"schedule": "schedule/events",
-	"event": "event-hub/{systemId}/results",
-	"information": "event-hub/{systemId}/information",
-	"divisions": "/filters/divisionName?limit=1000",
-	"divisionFilter": "&filters=[%7B%22id%22:%22divisionName%22,%22type%22:%22string%22,%22value%22:%22{divisionName}%22%7D]",
-	"weightclasses": "?tab=weight{divisionFilter}&offset=0&limit=1000",
-	"results": "/group?tab=weight{divisionFilter}&groupFilter=%7B%22id%22:%22weightClassName%22,%22type%22:%22string%22,%22value%22:%22{weightClassName}%22%7D"
+	"event": "event-hub/{systemId}",
+	"information": "/information",
+	"divisionWeight": "/brackets/divisions",
+	"bracket": "/brackets/{bracketId}"
 }
+
+requestHeaders = { "User-Agent": config["userAgent"] }
 
 today = datetime.date.today()
 startDate = today - datetime.timedelta(weeks=2)
 endDate = today + datetime.timedelta(weeks=8)
+dataModified = True
 
 states = ["SC", "NC", "GA", "TN"]
 
-# startDate = datetime.datetime.strptime("2025-12-12", "%Y-%m-%d").date()
-# endDate = datetime.date.today()
+startDate = datetime.datetime.strptime("2025-12-01", "%Y-%m-%d").date()
+endDate = datetime.date.today()
+# states = ["SC"]
+# dataModified = False
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
+# excludedEvents = []
+
 currentDate = startDate
-dataModified = True
 while currentDate <= endDate:
 	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
@@ -152,7 +156,7 @@ while currentDate <= endDate:
 		eventsData = response.json()
 		events = eventsData["data"]["events"]
 
-		# events = [ event for event in events if event["url"].split('/')[5] == "14463800" ]
+		# events = [ event for event in events if event["url"].split('/')[5] == "14833369" ]
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
@@ -163,8 +167,8 @@ while currentDate <= endDate:
 			eventName = event["name"]
 			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
 
-			informationUrl = apiUrls["base"] + apiUrls["information"].format(systemId=systemId)
-			informationResponse = requests.get(informationUrl)
+			informationUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["information"]
+			informationResponse = requests.get(informationUrl, headers=requestHeaders)
 			
 			if informationResponse.status_code != 200:
 				errorLogging(f"Error fetching information for {eventName}. Status code: {divisionsResponse.status_code}")
@@ -188,52 +192,53 @@ while currentDate <= endDate:
 				continue
 			
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
-			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisions"]
-			divisionsResponse = requests.get(divisionsUrl)
+			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisionWeight"]
+			divisionsResponse = requests.get(divisionsUrl, headers=requestHeaders)
 			time.sleep(1)
 
 			if divisionsResponse.status_code != 200:
 				errorLogging(f"Error fetching divisions for {eventName}. Status code: {divisionsResponse.status_code}")
 				continue
-			
+
 			divisionsData = divisionsResponse.json()
-			if not (divisionsData.get("data") and divisionsData["data"].get("options")):
+
+			if len(divisionsData["data"]["bracketOptionsContent"]["bracketOptions"]) == 0:
+				logMessage(f"Skipping {eventName}, no brackets")
+				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+				excludedEvents.append(systemId)
+				continue
+			
+			if (not (divisionsData.get("data") and divisionsData["data"].get("divisionContent") and divisionsData["data"]["divisionContent"].get("divisions"))) or len(next(iter(divisionsData["data"]["divisionContent"]["divisions"].values()))) == 0:
 				# If there are no divisions returned, load everything as one division
-				divisions = [{"label": ""}]
+				divisions = [{
+					"name": "",
+					"weightClasses": next(iter(divisionsData["data"]["bracketOptionsContent"]["bracketOptions"].items()))[1]
+				}]
 			else:
-				divisions = divisionsData["data"]["options"]
+				divisionItems = next(iter(divisionsData["data"]["divisionContent"]["divisions"].items()))[1]
+				divisions = [ {
+					"id": division["divisionId"],
+					"name": division["text"],
+					"weightClasses": divisionsData["data"]["bracketOptionsContent"]["bracketOptions"][division["divisionId"]]
+					} for division in divisionItems ]
 
 			batchLoad = []
 			for division in divisions:
-				divisionName = division["label"]
+				divisionName = division["name"]
 				
 				# logMessage(f"Fetching details for { divisionName }")
 
-				if len(divisionName) > 0:
-					divisionFilter = apiUrls["divisionFilter"].format(divisionName=divisionName)
-				else:
-					# Don't invlude division filter if no division name
-					divisionFilter = ""
+				for weightClass in division["weightClasses"]:
+					if weightClass["isDisabled"]:
+						continue
 
-				weightclassesUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["weightclasses"].format(divisionFilter=divisionFilter)
-				weightclassesResponse = requests.get(weightclassesUrl)
+					weightClassName = weightClass["text"]
 
-				if weightclassesResponse.status_code != 200:
-					errorLogging(f"Error fetching weight classes for {eventName}, division {divisionName}. Status code: {weightclassesResponse.status_code}")
-					continue
-
-				weightclassesData = weightclassesResponse.json()
-				if not (weightclassesData.get("data") and weightclassesData["data"].get("results")):
-					continue
-
-				for weightClass in weightclassesData["data"]["results"]:
-					weightClassName = weightClass["title"]
-
-					resultsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["results"].format(divisionFilter=divisionFilter, weightClassName=weightClassName)
+					resultsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["bracket"].format(bracketId=weightClass["bracketId"])
 					resultsResponse = None
 					for i in range(3):
 						try:
-							resultsResponse = requests.get(resultsUrl)
+							resultsResponse = requests.get(resultsUrl, headers=requestHeaders)
 							break
 						except requests.exceptions.ConnectionError as e:
 							errorLogging(f"Connection error: event {eventName}, division {divisionName}, weight class {weightClassName}. Retrying in {i*2+2} seconds. Error: {e}")
@@ -244,31 +249,32 @@ while currentDate <= endDate:
 						continue
 
 					resultsData = resultsResponse.json()
-					if not (resultsData.get("data") and resultsData["data"].get("results")):
+					if not (resultsData.get("data") and resultsData["data"].get("matches")):
 						continue
 					
-					for roundData in resultsData["data"]["results"]:
-						for matchIndex, match in enumerate(roundData["items"]):
+					for matchIndex, match in enumerate(resultsData["data"]["matches"].values()):
+						if not re.search("bye", (match.get("winType") or ""), re.I) and match.get("topParticipant") and match.get("bottomParticipant"):
+							
+							athlete1Id = match["topParticipant"]["id"]
+							athlete1Name = match["topParticipant"]["name"] or ""
+							athlete1Team = match["topParticipant"]["teamName"] or ""
+							athlete1Winner = 1 if match["topParticipant"]["winner"] else 0
+							athlete1Seed = match["topParticipant"]["seed"]
+							athlete1Score = match["topParticipant"]["score"]
 
-							if len(match["athlete1"]["name"]) > 0 and len(match["athlete2"]["name"]) > 0:
-								# No name, don't save
-								athlete1Id = match["athlete1"]["id"]
-								athlete1Name = match["athlete1"]["name"]
-								athlete1Team = match["athlete1"]["team"]["name"]
-								athlete1Winner = 1 if match["athlete1"]["isWinner"] else 0
+							athlete2Id = match["bottomParticipant"]["id"]
+							athlete2Name = match["bottomParticipant"]["name"] or ""
+							athlete2Team = match["bottomParticipant"]["teamName"] or ""
+							athlete2Winner = 1 if match["bottomParticipant"]["winner"] else 0
+							athlete2Seed = match["bottomParticipant"]["seed"]
+							athlete2Score = match["bottomParticipant"]["score"]
 
-								athlete2Id = match["athlete2"]["id"]
-								athlete2Name = match["athlete2"]["name"]
-								athlete2Team = match["athlete2"]["team"]["name"]
-								athlete2Winner = 1 if match["athlete2"]["isWinner"] else 0
+							winType = match["winType"] or ""
+							matchRound = match.get("roundName")  or ""
+							matchId = match["id"]
+							sort = match.get("matchNumber") if match.get("matchNumber") and str.isnumeric(str(match.get("matchNumber"))) else (matchIndex + 1)
 
-								winType = match["winType"]
-								matchRound = match.get('round') if match.get('round') else None
-								matchId = match["id"]
-								sort = match.get("boutNumber") if match.get("boutNumber") and str.isnumeric(str(match.get("boutNumber"))) else (matchIndex + 1)
-
-								if not re.search("bye", winType, re.I):
-									batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, { sort })")
+							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, { sort })")
 
 			try:
 				# Create the batch load
