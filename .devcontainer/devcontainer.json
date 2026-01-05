@@ -17,6 +17,10 @@
 		"--network=host"
 	],
 
+	"mounts": [
+		"source=/home/bvanbeynum/.ssh/id_rsa,target=/home/appuser/.ssh/id_rsa,type=bind,consistency=cached,readonly"
+	],
+
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 
@@ -33,7 +37,8 @@
 				"ms-python.debugpy",
 				"ms-python.vscode-pylance",
 				"ms-mssql.mssql",
-				"google.geminicodeassist"
+				"google.geminicodeassist",
+				"mongodb.mongodb-vscode"
 			]
 		}
 	}

@@ -13,21 +13,26 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl && \
-    curl https://packages.microsoft.com/keys/microsoft.asc > /etc/apt/trusted.gpg.d/microsoft.asc && \
-    curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
-    msodbcsql18 \
-    unixodbc-dev \
-    freetds-dev \
-    chromium-driver \
-    build-essential \
-    libxml2-dev \
-    libxslt1-dev \
-    xsel && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+	apt-get install -y --no-install-recommends \
+	curl \
+	gnupg && \
+	curl -fsSL https://pgp.mongodb.com/server-6.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-6.0.gpg && \
+	echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-6.0.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list && \
+	curl https://packages.microsoft.com/keys/microsoft.asc > /etc/apt/trusted.gpg.d/microsoft.asc && \
+	curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+	apt-get update && \
+	ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+	msodbcsql18 \
+	unixodbc-dev \
+	freetds-dev \
+	chromium-driver \
+	build-essential \
+	libxml2-dev \
+	libxslt1-dev \
+	mongodb-org-tools \
+	xsel && \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip
 
