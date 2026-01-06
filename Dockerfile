@@ -42,9 +42,13 @@ RUN python -m pip install -r requirements.txt
 
 COPY . .
 
-# Creates a non-root user with an explicit UID and adds permission to access the /app folder
+# Creates a non-root user with a dynamic UID and GID to match the host user
 # For more info, please refer to https://aka.ms/vscode-docker-python-configure-containers
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser .
+ARG UID=1000
+ARG GID=1000
+RUN groupadd -g ${GID} appuser && \
+    useradd -s /bin/bash --uid ${UID} --gid ${GID} -m appuser && \
+    chown -R appuser:appuser .
 USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
