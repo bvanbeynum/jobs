@@ -90,12 +90,30 @@ for databaseName in config["mongo"]["backupDBs"]:
 	try:
 		logMessage(f"Transferring file to {backupServer}...")
 		subprocess.run(scpCommand, check=True)
-		logMessage(f"Transfer successful.")
+		logMessage("--> Transfer successful.")
 	except subprocess.CalledProcessError as error:
 		errorLogging(f"Error transferring file: {error}")
 		sys.exit(1)
 
-	# 4. Clean up local temp file on Jobs Box
+	# 4. Delete old backups on the Raspberry Pi
+	deleteCommand = [
+		"ssh",
+		"-p", "9501",
+		"-i", containerKeyPath,
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		f"{backupUser}@{backupServer}",
+		f"find {backupFolder} -name '{databaseName}_backup_*.dump' -not -name '{filename}' -delete"
+	]
+	try:
+		logMessage(f"Deleting old backups for {databaseName} on {backupServer}...")
+		subprocess.run(deleteCommand, check=True)
+		logMessage("--> Old backups deleted.")
+	except subprocess.CalledProcessError as error:
+		errorLogging(f"Error deleting old backups: {error}")
+		# Not exiting because it's not a critical failure
+
+	# 5. Clean up local temp file on Jobs Box
 	try:
 		os.remove(localFilepath)
 		logMessage("--> Local temp file cleaned up.")
