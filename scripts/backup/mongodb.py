@@ -43,6 +43,9 @@ backupFolder = "~/prod/data/backup"
 localTemp = "/tmp" # Where to store the dump temporarily on 110
 today = datetime.date.today().strftime("%Y-%m-%d")
 
+# --- Backup Retention ---
+backupRetentionDays = 7
+
 # ---------------------
 
 for databaseName in config["mongo"]["backupDBs"]:
@@ -103,10 +106,10 @@ for databaseName in config["mongo"]["backupDBs"]:
 		"-o", "StrictHostKeyChecking=no",
 		"-o", "UserKnownHostsFile=/dev/null",
 		f"{backupUser}@{backupServer}",
-		f"find {backupFolder} -name '{databaseName}_backup_*.dump' -not -name '{filename}' -delete"
+		f"find {backupFolder} -name '{databaseName}_backup_*.dump' -not -name '{filename}' -mtime +{backupRetentionDays} -delete"
 	]
 	try:
-		logMessage(f"Deleting old backups for {databaseName} on {backupServer}...")
+		logMessage(f"Deleting old backups for {databaseName} on {backupServer} (older than {backupRetentionDays} days)......")
 		subprocess.run(deleteCommand, check=True)
 		logMessage("--> Old backups deleted.")
 	except subprocess.CalledProcessError as error:

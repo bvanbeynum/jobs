@@ -59,6 +59,9 @@ cloudServerBackupPath = f"{cloudServerBackupDir}/{backupFileName}"
 localTempDir = "/tmp"
 localBackupPath = os.path.join(localTempDir, backupFileName)
 
+# --- Backup Retention ---
+cloudBackupRetentionDays = 7
+
 
 logMessage("----------- 1. Trigger SQL Server Backup")
 try:
@@ -162,7 +165,38 @@ except Exception as e:
 	sys.exit(1)
 
 
-logMessage("----------- 4. Cleanup Remote Backup on SQL Server Host")
+logMessage("----------- 4. Cleanup Old Backups on Cloud Server")
+try:
+	databaseName = config['database']['database']
+	cleanupCommand = f"find {cloudServerBackupDir} -name '{databaseName}-*.bak' -type f -mtime +{cloudBackupRetentionDays} -delete"
+	
+	cleanupCloudSshCommand = [
+		"ssh",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-p", str(sshPort),
+		"-i", sshKeyFile,
+		f"{sshUser}@{cloudServerHost}",
+		cleanupCommand
+	]
+
+	logMessage(f"Deleting old backups on {cloudServerHost} (older than {cloudBackupRetentionDays} days)...")
+	process = subprocess.run(
+		cleanupCloudSshCommand,
+		check=True,
+		capture_output=True,
+		text=True
+	)
+	logMessage("Old cloud backups deleted successfully.")
+except subprocess.CalledProcessError as e:
+	errorLogging(f"Warning: Failed to delete old cloud backup files. SSH command failed with exit code {e.returncode}")
+	logMessage(f"STDOUT: {e.stdout}")
+	logMessage(f"STDERR: {e.stderr}")
+except Exception as e:
+	errorLogging(f"An unexpected error occurred during old cloud backup cleanup: {e}")
+
+
+logMessage("----------- 5. Cleanup Remote Backup on SQL Server Host")
 cleanupCommandSsh = [
 	"ssh",
 	"-o", "StrictHostKeyChecking=no",
@@ -189,7 +223,7 @@ except subprocess.CalledProcessError as e:
 except Exception as e:
 	errorLogging(f"An unexpected error occurred during remote cleanup: {e}")
 
-logMessage("----------- 5. Cleanup Local Temp Backup")
+logMessage("----------- 6. Cleanup Local Temp Backup")
 try:
 	os.remove(localBackupPath)
 	logMessage("--> Local temp file cleaned up.")
