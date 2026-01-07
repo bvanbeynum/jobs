@@ -191,7 +191,6 @@ while currentDate <= endDate:
 				# In the future
 				continue
 			
-			logMessage(f"Fetching details for {eventName} on {dateStr}")
 			divisionsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["divisionWeight"]
 			divisionsResponse = requests.get(divisionsUrl, headers=requestHeaders)
 			time.sleep(1)
@@ -203,10 +202,12 @@ while currentDate <= endDate:
 			divisionsData = divisionsResponse.json()
 
 			if len(divisionsData["data"]["bracketOptionsContent"]["bracketOptions"]) == 0:
-				logMessage(f"Skipping {eventName}, no brackets")
+				# Skipping - no brackets
 				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
 				excludedEvents.append(systemId)
 				continue
+			
+			logMessage(f"Fetching details for {eventName} on {dateStr}")
 			
 			if (not (divisionsData.get("data") and divisionsData["data"].get("divisionContent") and divisionsData["data"]["divisionContent"].get("divisions"))) or len(next(iter(divisionsData["data"]["divisionContent"]["divisions"].values()))) == 0:
 				# If there are no divisions returned, load everything as one division
