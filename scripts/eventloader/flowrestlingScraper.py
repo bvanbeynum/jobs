@@ -109,8 +109,8 @@ dataModified = True
 
 states = ["SC", "NC", "GA", "TN"]
 
-startDate = datetime.datetime.strptime("2025-12-01", "%Y-%m-%d").date()
-endDate = datetime.date.today()
+# startDate = datetime.datetime.strptime("2025-12-01", "%Y-%m-%d").date()
+# endDate = datetime.date.today()
 # states = ["SC"]
 # dataModified = False
 
