@@ -1,5 +1,6 @@
 # For more information, please refer to https://aka.ms/vscode-docker-python
-FROM python:3.14
+# Switch to bookworm to match your MS and Mongo repositories
+FROM python:3.12-bookworm
 
 RUN ln -sf /usr/share/zoneinfo/America/New_York /etc/localtime
 
@@ -12,14 +13,18 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
+# Install system dependencies
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
 	curl \
-	gnupg && \
-	curl -fsSL https://pgp.mongodb.com/server-6.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-6.0.gpg && \
-	echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-6.0.gpg ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/6.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list && \
-	curl https://packages.microsoft.com/keys/microsoft.asc > /etc/apt/trusted.gpg.d/microsoft.asc && \
-	curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
+	gnupg \
+	wget && \
+	# MongoDB 7.0 (Fixes the SHA1 signature rejection)
+	curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg && \
+	echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/debian bookworm/mongodb-org/7.0 main" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list && \
+	# Microsoft SQL (Fixes the missing keyring file error)
+	curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg && \
+	curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
 	apt-get update && \
 	ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
 	msodbcsql18 \
@@ -29,8 +34,12 @@ RUN apt-get update && \
 	build-essential \
 	libxml2-dev \
 	libxslt1-dev \
-	mongodb-org-tools \
 	xsel && \
+	# Manually install the Ubuntu arm64 MongoDB tools since Debian arm64 is missing them
+	wget https://fastdl.mongodb.org/tools/db/mongodb-database-tools-ubuntu2204-arm64-100.10.0.deb && \
+	apt-get install -y --no-install-recommends ./mongodb-database-tools-ubuntu2204-arm64-100.10.0.deb && \
+	rm mongodb-database-tools-ubuntu2204-arm64-100.10.0.deb && \
+	# Cleanup
 	apt-get clean && \
 	rm -rf /var/lib/apt/lists/*
 
@@ -47,8 +56,8 @@ COPY . .
 ARG UID=1000
 ARG GID=1000
 RUN groupadd -g ${GID} appuser && \
-    useradd -s /bin/bash --uid ${UID} --gid ${GID} -m appuser && \
-    chown -R appuser:appuser .
+	useradd -s /bin/bash --uid ${UID} --gid ${GID} -m appuser && \
+	chown -R appuser:appuser .
 USER appuser
 
 # During debugging, this entry point will be overridden. For more information, please refer to https://aka.ms/vscode-docker-python-debug
