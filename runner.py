@@ -71,16 +71,27 @@ def ServiceLoop():
 				errorLogging(errorMessage, 553)
 				continue
 
+		now = datetime.datetime.now()
+
 		# Start jobs
 		runningIds = [ job["jobId"] for job in runningJobs ]
 		for job in jobs:
-		
+
 			completeDates = [ run["completeTime"] for run in job["runs"] if run["completeTime"] is not None ] if len(job["runs"]) > 0 else None
 			lastRun = None
 			if completeDates is not None and len(completeDates) > 0:
 				lastRun = max(completeDates)
 
-			if job["id"] not in runningIds and (lastRun is None or datetime.datetime.now(datetime.timezone.utc) > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])):
+			isTimeElapsed = False
+			if job["startTime"]:
+				# 1. Parse the startTime (HH:MM) into a datetime object for today
+				hour, minute = map(int, job["startTime"].split(':'))
+				target_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+				isTimeElapsed = now >= target_time_today and (lastRun is None or lastRun.date() < now.date())
+			else:
+				isTimeElapsed = lastRun is None or datetime.datetime.now(datetime.timezone.utc) > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])
+
+			if job["id"] not in runningIds and isTimeElapsed:
 				print(f"{ currentTime() }: Starting: { job['name'] }")
 				
 				sleepTime = sleepShort # Shorten the sleep time to get updates
