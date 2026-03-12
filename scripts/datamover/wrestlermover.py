@@ -73,7 +73,7 @@ if len(mongoWrestlers) > 0:
 
 print(f"{ currentTime() }: Load wrestlers")
 
-modifiedTimespan = -60
+modifiedTimespan = -14
 wrestledTimespan = -720
 offset = 0
 batchSize = 5000  # Adjust batch size as needed
