@@ -45,6 +45,7 @@ mongoWrestlers = json.loads(response.text)["wrestlers"]
 wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
 
 if len(mongoWrestlers) > 0:
+	print(f"{ currentTime() }: Load mill wrestlers to stage")
 	cur.execute(sql["WrestlerMover_WrestlerStageCreate"])
 	cur.executemany("insert #WrestlerStage (WrestlerID, MongoID) values (?,?);", [ (wrestler["sqlId"],wrestler["id"]) for wrestler in mongoWrestlers ])
 	cur.execute(sql["WrestlerMover_WrestlersMissing"])
@@ -52,6 +53,7 @@ if len(mongoWrestlers) > 0:
 	rowIndex = 0
 	errorCount = 0
 
+	print(f"{ currentTime() }: Loop through wrestlers to delete")
 	for row in cur:
 		response = requests.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
 
@@ -71,6 +73,8 @@ if len(mongoWrestlers) > 0:
 
 print(f"{ currentTime() }: Load wrestlers")
 
+modifiedTimespan = -60
+wrestledTimespan = -720
 offset = 0
 batchSize = 5000  # Adjust batch size as needed
 wrestlersCompleted = 0
@@ -79,7 +83,7 @@ rowIndex = 0
 errorCount = 0
 
 while True:
-	cur.execute(sql["WrestlerMover_WrestlersLoad"], (offset, batchSize))
+	cur.execute(sql["WrestlerMover_WrestlersLoad"], (modifiedTimespan, wrestledTimespan, offset, batchSize))
 	wrestlers_batch = cur.fetchall()
 	print(f"{ currentTime() }: { batchSize } wrestlers loaded")
 
@@ -116,8 +120,9 @@ while True:
 			"name": wrestlerRow.WrestlerName,
 			"rating": float(wrestlerRow.Rating) if wrestlerRow.Rating is not None else None,
 			"deviation": float(wrestlerRow.Deviation) if wrestlerRow.Deviation is not None else None,
+			# "searchNames": wrestlerRow.SearchNames,
+			# "searchTeams": wrestlerRow.SearchTeams,
 			"events": [],
-			"lineage": [],
 			"ratingHistory": []
 		}
 
@@ -154,17 +159,14 @@ while True:
 				"vs": matchRow.OpponentName,
 				"vsTeam": matchRow.OpponentTeamName,
 				"vsSqlId": matchRow.OpponentID,
+				"vsRating": float(matchRow.OpponentRating) if matchRow.OpponentRating is not None else None,
+				"vsDeviation": float(matchRow.OpponentDeviation) if matchRow.OpponentDeviation is not None else None,
 				"isWinner": matchRow.IsWinner,
 				"winType": matchRow.WinType,
 				"sort": matchRow.MatchSort
 			})
 
 		wrestler["events"] = list(events.values())
-
-		if wrestlerRow.LineagePacket:
-			wrestler["lineage"] = json.loads(wrestlerRow.LineagePacket)
-		else:
-			wrestler["lineage"] = []
 
 		response = requests.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
 
@@ -185,6 +187,42 @@ while True:
 		break
 
 print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
+
+print(f"{ currentTime() }: Get Schools from Wrestlingmill")
+
+response = requests.get(f"{ millDBURL }/data/school?select=sqlId")
+mongoSchools = json.loads(response.text)["schools"]
+
+# Create a lookup dictionary for mongoWrestlers by sqlId
+schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
+
+cur.execute(sql["SchoolGet"])
+schools = cur.fetchall()
+
+schoolsCompleted = 0
+
+for school in schools:
+	schoolSave = {
+		"sqlId": school.SchoolID,
+		"name": school.SchoolName,
+		"classification": school.Classification,
+		"region": school.Region,
+		"lookupNames": json.loads(school.LookupNames) if school.LookupNames else []
+	}
+	
+	# Add id if a match is found in wrestlerLookup
+	if school.SchoolID in schoolLookup:
+		schoolSave["id"] = schoolLookup[school.SchoolID]
+
+	response = requests.post(f"{ millDBURL }/data/school", json={ "school": schoolSave })
+
+	if response.status_code >= 400:
+		errorCount += 1
+		print(f"{ currentTime() }: Error saving school: { response.status_code } - { response.text }")
+	
+	schoolsCompleted += 1
+
+print(f"{ currentTime() }: { schoolsCompleted } schools processed")
 
 cur.close()
 cn.close()
