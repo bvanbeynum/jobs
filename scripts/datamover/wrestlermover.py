@@ -196,7 +196,7 @@ mongoSchools = json.loads(response.text)["schools"]
 # Create a lookup dictionary for mongoWrestlers by sqlId
 schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
 
-cur.execute(sql["WrestlerMover_SchoolGet"])
+cur.execute(sql["WrestlerMover_SchoolsGet"])
 schools = cur.fetchall()
 
 schoolsCompleted = 0
