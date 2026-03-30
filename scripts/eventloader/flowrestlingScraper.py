@@ -257,21 +257,21 @@ while currentDate <= endDate:
 						if not re.search("bye", (match.get("winType") or ""), re.I) and match.get("topParticipant") and match.get("bottomParticipant"):
 							
 							athlete1Id = match["topParticipant"]["id"]
-							athlete1Name = match["topParticipant"]["name"] or ""
-							athlete1Team = match["topParticipant"]["teamName"] or ""
-							athlete1Winner = 1 if match["topParticipant"]["winner"] else 0
-							athlete1Seed = match["topParticipant"]["seed"]
-							athlete1Score = match["topParticipant"]["score"]
+							athlete1Name = match["topParticipant"].get("name", "")
+							athlete1Team = match["topParticipant"].get("teamName", "")
+							athlete1Winner = 1 if match["topParticipant"].get("winner", False) else 0
+							athlete1Seed = match["topParticipant"].get("seed")
+							athlete1Score = match["topParticipant"].get("score")
 
 							athlete2Id = match["bottomParticipant"]["id"]
-							athlete2Name = match["bottomParticipant"]["name"] or ""
-							athlete2Team = match["bottomParticipant"]["teamName"] or ""
-							athlete2Winner = 1 if match["bottomParticipant"]["winner"] else 0
-							athlete2Seed = match["bottomParticipant"]["seed"]
-							athlete2Score = match["bottomParticipant"]["score"]
+							athlete2Name = match["bottomParticipant"].get("name", "")
+							athlete2Team = match["bottomParticipant"].get("teamName", "")
+							athlete2Winner = 1 if match["bottomParticipant"].get("winner", False) else 0
+							athlete2Seed = match["bottomParticipant"].get("seed")
+							athlete2Score = match["bottomParticipant"].get("score")
 
-							winType = match["winType"] or ""
-							matchRound = match.get("roundName")  or ""
+							winType = match.get("winType")
+							matchRound = match.get("roundName", "")
 							matchId = match["id"]
 							sort = match.get("matchNumber") if match.get("matchNumber") and str.isnumeric(str(match.get("matchNumber"))) else (matchIndex + 1)
 
