@@ -131,12 +131,12 @@ while currentDate <= endDate:
 			dataModified = False
 
 		payload = {
-			"date": dateStr,
-			"query": None,
+			"afterDate": dateStr,
+			"daysToFetch": 1,
 			"filters": [
 				{
-					"id": "event-location",
-					"type": "string-lazy",
+					"id": "administrative-region",
+					"type": "string",
 					"value": f"29US{state}00000000000"
 				}
 			],
@@ -154,7 +154,7 @@ while currentDate <= endDate:
 			continue
 
 		eventsData = response.json()
-		events = eventsData["data"]["events"]
+		events = eventsData["data"][0]["events"]
 
 		# events = [ event for event in events if event["url"].split('/')[5] == "14833369" ]
 		
