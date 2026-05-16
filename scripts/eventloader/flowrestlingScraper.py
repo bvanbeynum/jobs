@@ -254,8 +254,12 @@ while currentDate <= endDate:
 						continue
 					
 					for matchIndex, match in enumerate(resultsData["data"]["matches"].values()):
-						if not re.search("bye", (match.get("winType") or ""), re.I) and match.get("topParticipant") and match.get("bottomParticipant"):
-							
+						if not re.search("bye", (match.get("winType") or ""), re.I) \
+							and match.get("topParticipant") \
+							and match["topParticipant"].get("name") is not None \
+							and match.get("bottomParticipant") \
+							and match["bottomParticipant"].get("name") is not None:
+
 							athlete1Id = match["topParticipant"]["id"]
 							athlete1Name = match["topParticipant"].get("name", "")
 							athlete1Team = match["topParticipant"].get("teamName", "")
