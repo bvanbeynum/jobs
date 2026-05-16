@@ -314,89 +314,92 @@ cur.execute(sql["ProcessWrestlerNames"])
 logMessage(f"Process Team Duplicates.")
 cur.execute(sql["ProcessTeamDups"])
 
-logMessage(f"Email new wrestlers.")
+# Stop this for offseason
+if False:
 
-cur.execute(sql["GetNewWrestlers"])
-newWrestlers = cur.fetchall()
+	logMessage(f"Email new wrestlers.")
 
-if len(newWrestlers) > 0:
+	cur.execute(sql["GetNewWrestlers"])
+	newWrestlers = cur.fetchall()
 
-	with open("./scripts/eventloader/newwrestlertemplate.html", "r") as reader:
-		htmlTemplate = reader.read()
+	if len(newWrestlers) > 0:
 
-	rows = []
-	wrestlerGroups = {}
-	for wrestler in newWrestlers:
-		if wrestler.MatchGroupID not in wrestlerGroups:
-			wrestlerGroups[wrestler.MatchGroupID] = []
-		wrestlerGroups[wrestler.MatchGroupID].append(wrestler)
+		with open("./scripts/eventloader/newwrestlertemplate.html", "r") as reader:
+			htmlTemplate = reader.read()
 
-	lastMatchGroupId = None
-	groupCounter = 0
-	for index, wrestler in enumerate(newWrestlers):
-		
-		if wrestler.MatchGroupID != lastMatchGroupId:
-			groupCounter += 1
-			lastMatchGroupId = wrestler.MatchGroupID
+		rows = []
+		wrestlerGroups = {}
+		for wrestler in newWrestlers:
+			if wrestler.MatchGroupID not in wrestlerGroups:
+				wrestlerGroups[wrestler.MatchGroupID] = []
+			wrestlerGroups[wrestler.MatchGroupID].append(wrestler)
 
-		rowClass = []
-		if groupCounter % 2 != 0:
-			rowClass.append("odd-group")
-		
-		# Check if the group has more than one wrestler
-		if len(wrestlerGroups[wrestler.MatchGroupID]) > 1:
-			rowClass.append("group-row")
+		lastMatchGroupId = None
+		groupCounter = 0
+		for index, wrestler in enumerate(newWrestlers):
 			
-		# Check if it's the last wrestler in the group
-		isLastInGroup = (index == len(newWrestlers) - 1) or (newWrestlers[index+1].MatchGroupID != wrestler.MatchGroupID)
-		if isLastInGroup:
-			rowClass.append("group-end")
+			if wrestler.MatchGroupID != lastMatchGroupId:
+				groupCounter += 1
+				lastMatchGroupId = wrestler.MatchGroupID
 
-		classString = f'class="{" ".join(rowClass)}"' if rowClass else ""
+			rowClass = []
+			if groupCounter % 2 != 0:
+				rowClass.append("odd-group")
+			
+			# Check if the group has more than one wrestler
+			if len(wrestlerGroups[wrestler.MatchGroupID]) > 1:
+				rowClass.append("group-row")
+				
+			# Check if it's the last wrestler in the group
+			isLastInGroup = (index == len(newWrestlers) - 1) or (newWrestlers[index+1].MatchGroupID != wrestler.MatchGroupID)
+			if isLastInGroup:
+				rowClass.append("group-end")
 
-		existingWrestlerHtml, newWrestlerHtml = getNameDiffHtml(wrestler.ExistingWrestler, wrestler.NewWrestler)
-		
-		addDateStr = wrestler.AddDate.strftime("%m/%d/%Y") if wrestler.AddDate else ""
+			classString = f'class="{" ".join(rowClass)}"' if rowClass else ""
 
-		script = f"insert into #dedup (saveid, dupid) values({wrestler.ExistingID},{wrestler.NewID});"
+			existingWrestlerHtml, newWrestlerHtml = getNameDiffHtml(wrestler.ExistingWrestler, wrestler.NewWrestler)
+			
+			addDateStr = wrestler.AddDate.strftime("%m/%d/%Y") if wrestler.AddDate else ""
 
-		row = f"""
-		<tr {classString}>
-			<td><input type="checkbox" class="wrestler-checkbox"></td>
-			<td>{wrestler.ExistingID}</td>
-			<td>{wrestler.NewID}</td>
-			<td>{existingWrestlerHtml}</td>
-			<td>{newWrestlerHtml}</td>
-			<td class="team-col">{wrestler.MatchedTeams}</td>
-			<td>{addDateStr}</td>
-			<td class="script-cell">{script}</td>
-		</tr>
-		"""
-		rows.append(row)
+			script = f"insert into #dedup (saveid, dupid) values({wrestler.ExistingID},{wrestler.NewID});"
 
-	htmlBody = htmlTemplate.replace("<NewEmailData>", "\n".join(rows))
+			row = f"""
+			<tr {classString}>
+				<td><input type="checkbox" class="wrestler-checkbox"></td>
+				<td>{wrestler.ExistingID}</td>
+				<td>{wrestler.NewID}</td>
+				<td>{existingWrestlerHtml}</td>
+				<td>{newWrestlerHtml}</td>
+				<td class="team-col">{wrestler.MatchedTeams}</td>
+				<td>{addDateStr}</td>
+				<td class="script-cell">{script}</td>
+			</tr>
+			"""
+			rows.append(row)
 
-	msg = MIMEMultipart()
-	msg["From"] = "wrestlingfortmill@gmail.com"
-	msg["To"] = "maildrop444@gmail.com"
-	msg["Subject"] = "New Wrestler Report - " + datetime.datetime.now().strftime("%Y-%m-%d")
+		htmlBody = htmlTemplate.replace("<NewEmailData>", "\n".join(rows))
 
-	msg.attach(MIMEText("New wrestler report is attached.", "plain"))
+		msg = MIMEMultipart()
+		msg["From"] = "wrestlingfortmill@gmail.com"
+		msg["To"] = "maildrop444@gmail.com"
+		msg["Subject"] = "New Wrestler Report - " + datetime.datetime.now().strftime("%Y-%m-%d")
 
-	attachment = MIMEApplication(htmlBody, _subtype="html")
-	attachment.add_header("Content-Disposition", "attachment", filename="newWrestlerReport.html")
-	msg.attach(attachment)
+		msg.attach(MIMEText("New wrestler report is attached.", "plain"))
 
-	try:
-		with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-			smtp.login("wrestlingfortmill@gmail.com", config["googleAppPassword"])
-			smtp.send_message(msg)
+		attachment = MIMEApplication(htmlBody, _subtype="html")
+		attachment.add_header("Content-Disposition", "attachment", filename="newWrestlerReport.html")
+		msg.attach(attachment)
 
-		logMessage(f"Email sent successfully.")
-	except Exception as e:
-		errorLogging(f"Failed to send email. Error: {e}")
+		try:
+			with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+				smtp.login("wrestlingfortmill@gmail.com", config["googleAppPassword"])
+				smtp.send_message(msg)
 
-else:
-	logMessage(f"No new wrestlers found.")
+			logMessage(f"Email sent successfully.")
+		except Exception as e:
+			errorLogging(f"Failed to send email. Error: {e}")
+
+	else:
+		logMessage(f"No new wrestlers found.")
 
 logMessage(f"---------- Complete.")
