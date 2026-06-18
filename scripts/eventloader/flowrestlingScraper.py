@@ -171,7 +171,7 @@ while currentDate <= endDate:
 			informationResponse = requests.get(informationUrl, headers=requestHeaders)
 			
 			if informationResponse.status_code != 200:
-				errorLogging(f"Error fetching information for {eventName}. Status code: {divisionsResponse.status_code}")
+				errorLogging(f"Error fetching information for {eventName}. Status code: {informationResponse.status_code}")
 				continue
 
 			informationData = informationResponse.json()
