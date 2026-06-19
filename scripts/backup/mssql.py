@@ -100,6 +100,36 @@ except Exception as e:
 	errorLogging(f"An unexpected error occurred during backup: {e}")
 	sys.exit(1)
 
+logMessage("----------- 1.5. Set Permissions on Backup File")
+try:
+	logMessage(f"Ensuring read permissions on backup file {remoteHostBackupPath} on {sqlServerHost}...")
+	sshChmodCommand = [
+		"ssh",
+		"-o", "StrictHostKeyChecking=no",
+		"-o", "UserKnownHostsFile=/dev/null",
+		"-p", str(sshPort),
+		"-i", sshKeyFile,
+		f"{sshUser}@{sqlServerHost}",
+		f"sudo chmod o+r {remoteHostBackupPath}"
+	]
+	process = subprocess.run(
+		sshChmodCommand,
+		check=True,
+		capture_output=True,
+		text=True
+	)
+	logMessage(f"Read permissions set on backup file.")
+
+except subprocess.CalledProcessError as e:
+	errorLogging(f"SSH command to set file permissions failed with exit code {e.returncode}")
+	logMessage(f"STDOUT: {e.stdout}")
+	logMessage(f"STDERR: {e.stderr}")
+	errorLogging(f"Failed to set permissions for {remoteHostBackupPath} on {sqlServerHost}. If this fails, ensure user {sshUser} has passwordless sudo rights.")
+	sys.exit(1)
+except Exception as e:
+	errorLogging(f"An unexpected error occurred during file permission setting: {e}")
+	sys.exit(1)
+
 logMessage("----------- 2. Copy Backup From SQL Host")
 remoteScpPath = f"{sshUser}@{sqlServerHost}:{remoteHostBackupPath}"
 scpFromPiCommand = [

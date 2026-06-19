@@ -95,7 +95,6 @@ apiUrls = {
 	"base": "https://prod-web-api.flowrestling.org/api/",
 	"schedule": "schedule/events",
 	"event": "event-hub/{systemId}",
-	"information": "/information",
 	"divisionWeight": "/brackets/divisions",
 	"bracket": "/brackets/{bracketId}"
 }
@@ -167,7 +166,7 @@ while currentDate <= endDate:
 			eventName = event["name"]
 			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
 
-			informationUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["information"]
+			informationUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId)
 			informationResponse = requests.get(informationUrl, headers=requestHeaders)
 			
 			if informationResponse.status_code != 200:
