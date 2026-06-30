@@ -19,6 +19,20 @@ def loadSQL():
 def currentTime():
 	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
 
+def errorLogging(errorMessage):
+	print(f"{currentTime()}: {errorMessage}")
+	try:
+		logPayload = {
+			"log": {
+				"logTime": datetime.datetime.now().isoformat(),
+				"logTypeId": "6a43b752ff0bb2f165b4692b",
+				"message": errorMessage
+			}
+		}
+		requests.post(f"{config['apiServer']}/sys/api/addlog", json=logPayload)
+	except Exception as apiError:
+		print(f"{currentTime()}: Failed to log error to API: {apiError}")
+
 print(f"{ currentTime() }: ----------- Setup")
 
 print(f"{ currentTime() }: Load config")
@@ -59,7 +73,7 @@ if len(mongoWrestlers) > 0:
 
 		if response.status_code >= 400:
 			errorCount += 1
-			print(f"{ currentTime() }: Error deleting wrestler: { response.status_code } - { response.text }")
+			errorLogging(f"Error deleting wrestler: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
 			print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
@@ -172,7 +186,7 @@ while True:
 
 		if response.status_code >= 400:
 			errorCount += 1
-			print(f"{ currentTime() }: Error saving wrestler: { response.status_code } - { response.text }")
+			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
 			print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
@@ -218,7 +232,7 @@ for school in schools:
 
 	if response.status_code >= 400:
 		errorCount += 1
-		print(f"{ currentTime() }: Error saving school: { response.status_code } - { response.text }")
+		errorLogging(f"Error saving school: {response.status_code} - {response.text}")
 	
 	schoolsCompleted += 1
 
