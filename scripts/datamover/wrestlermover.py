@@ -3,6 +3,7 @@ import os
 import requests
 import json
 import pyodbc
+import sys
 
 def loadSQL():
 	sql = {}
@@ -29,7 +30,7 @@ def errorLogging(errorMessage):
 				"message": errorMessage
 			}
 		}
-		requests.post(f"{config['apiServer']}/sys/api/addlog", json=logPayload)
+		apiSession.post(f"{config['apiServer']}/sys/api/addlog", json=logPayload)
 	except Exception as apiError:
 		print(f"{currentTime()}: Failed to log error to API: {apiError}")
 
@@ -42,17 +43,23 @@ with open("./scripts/config.json", "r") as reader:
 
 millDBURL = config["millServer"]
 
+apiSession = requests.Session()
+
 sql = loadSQL()
 
 print(f"{ currentTime() }: DB connect")
 
-cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
-cur = cn.cursor()
+try:
+	cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
+	cur = cn.cursor()
+except pyodbc.Error as databaseError:
+	errorLogging(f"Database connection failed: {databaseError}")
+	sys.exit(1)
 
 print(f"{ currentTime() }: ----------- Sync")
 print(f"{ currentTime() }: Get wrestlers from Mill")
 
-response = requests.get(f"{ millDBURL }/data/wrestler?select=sqlId")
+response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
 mongoWrestlers = json.loads(response.text)["wrestlers"]
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
@@ -69,7 +76,7 @@ if len(mongoWrestlers) > 0:
 
 	print(f"{ currentTime() }: Loop through wrestlers to delete")
 	for row in cur:
-		response = requests.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
+		response = apiSession.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
 
 		if response.status_code >= 400:
 			errorCount += 1
@@ -182,7 +189,7 @@ while True:
 
 		wrestler["events"] = list(events.values())
 
-		response = requests.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
+		response = apiSession.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
 
 		if response.status_code >= 400:
 			errorCount += 1
@@ -204,7 +211,7 @@ print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
 
 print(f"{ currentTime() }: Get Schools from Wrestlingmill")
 
-response = requests.get(f"{ millDBURL }/data/school?select=sqlId")
+response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
 mongoSchools = json.loads(response.text)["schools"]
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
@@ -228,7 +235,7 @@ for school in schools:
 	if school.SchoolID in schoolLookup:
 		schoolSave["id"] = schoolLookup[school.SchoolID]
 
-	response = requests.post(f"{ millDBURL }/data/school", json={ "school": schoolSave })
+	response = apiSession.post(f"{ millDBURL }/data/school", json={ "school": schoolSave })
 
 	if response.status_code >= 400:
 		errorCount += 1
