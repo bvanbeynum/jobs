@@ -245,7 +245,175 @@ for school in schools:
 
 print(f"{ currentTime() }: { schoolsCompleted } schools processed")
 
+def getSeasonStartDate():
+	# Seasons run from 9/1 to 8/31. We want the start date of the past season.
+	# If today is after 9/1, past season started on 9/1 of last year.
+	# If today is before 8/31, past season started on 9/1 of two years ago.
+	today = datetime.datetime.now().date()
+	if today.month >= 9:
+		year = today.year - 1
+	else:
+		year = today.year - 2
+	return datetime.date(year, 9, 1)
+
+def isBonusPointWin(winType):
+	# Bonus points are awarded for Falls, Tech Falls, Major Decisions, Forfeits, Disqualifications, and Injury Defaults.
+	if not winType:
+		return False
+	wt = winType.upper()
+	if wt in ["F", "TF", "MD", "DQ", "FF", "DF", "INJ"]:
+		return True
+	for keyword in ["FALL", "TECH", "MAJOR", "FORFEIT", "DEFAULT", "INJURY", "DISQ", "DQ", "MD", "TF"]:
+		if keyword in wt:
+			return True
+	return False
+
+def formatDate(dateValue):
+	# Formats date/datetime objects to ISO string with milliseconds and Z timezone suffix.
+	if dateValue is None:
+		return None
+	if isinstance(dateValue, datetime.date) and not isinstance(dateValue, datetime.datetime):
+		dateValue = datetime.datetime.combine(dateValue, datetime.time.min)
+	return datetime.datetime.strftime(dateValue, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
+print(f"{ currentTime() }: ----------- Event Sync")
+
+modifiedTimespanDays = -7
+seasonStartDate = getSeasonStartDate()
+modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
+
+eventsProcessed = 0
+eventBatchSize = 1000
+eventOffset = 0
+
+while True:
+	# Load a batch of events directly from SQL to minimize peak memory usage
+	cur.execute(sql["WrestlerMover_EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
+	eventsRows = cur.fetchall()
+	
+	if not eventsRows:
+		break # No more events to sync
+		
+	print(f"{ currentTime() }: { len(eventsRows) } events loaded from database")
+	
+	# Load matches for the batch using a temp table to avoid passing large parameter lists
+	cur.execute(sql["WrestlerMover_EventBatchCreate"])
+	cur.executemany("insert #EventBatch (EventID) values (?);", [[eventRow.SqlID] for eventRow in eventsRows])
+	
+	cur.execute(sql["WrestlerMover_EventMatchesBatchLoad"])
+	matchesRows = cur.fetchall()
+	
+	# Group matches by event to map them into their respective parents efficiently
+	matchesByEvent = {}
+	for matchRow in matchesRows:
+		if matchRow.EventID not in matchesByEvent:
+			matchesByEvent[matchRow.EventID] = []
+		matchesByEvent[matchRow.EventID].append(matchRow)
+		
+	eventsPayload = []
+	for eventRow in eventsRows:
+		matchesList = []
+		eventMatches = matchesByEvent.get(eventRow.SqlID, [])
+		
+		# Collect ratings to compute the event average and check for upsets
+		eventRatings = []
+		upsetCount = 0
+		
+		for matchRow in eventMatches:
+			winnerRating = float(matchRow.WinnerRating) if matchRow.WinnerRating is not None else None
+			winnerDeviation = float(matchRow.WinnerDeviation) if matchRow.WinnerDeviation is not None else None
+			loserRating = float(matchRow.LoserRating) if matchRow.LoserRating is not None else None
+			loserDeviation = float(matchRow.LoserDeviation) if matchRow.LoserDeviation is not None else None
+			
+			if winnerRating is not None:
+				eventRatings.append(winnerRating)
+			if loserRating is not None:
+				eventRatings.append(loserRating)
+				
+			isUpset = False
+			if winnerRating is not None and loserRating is not None and loserRating > winnerRating:
+				isUpset = True
+				upsetCount += 1
+				
+			matchesList.append({
+				"matchSqlId": matchRow.MatchSqlID,
+				"weightClass": matchRow.WeightClass,
+				"roundName": matchRow.RoundName,
+				"winType": matchRow.WinType,
+				"isUpset": isUpset,
+				"winner": {
+					"wrestlerSqlId": matchRow.WinnerWrestlerSqlID,
+					"name": matchRow.WinnerName,
+					"team": matchRow.WinnerTeam,
+					"rating": winnerRating,
+					"deviation": winnerDeviation
+				},
+				"loser": {
+					"wrestlerSqlId": matchRow.LoserWrestlerSqlID,
+					"name": matchRow.LoserName,
+					"team": matchRow.LoserTeam,
+					"rating": loserRating,
+					"deviation": loserDeviation
+				}
+			})
+			
+		totalMatches = len(eventMatches)
+		averageGlicko = sum(eventRatings) / len(eventRatings) if eventRatings else None
+		upsetPercentage = (upsetCount / totalMatches * 100) if totalMatches > 0 else 0.0
+		
+		# Calculate bonus point percentage from win types
+		bonusCount = sum([1 for match in matchesList if isBonusPointWin(match["winType"])])
+		bonusPointPercentage = (bonusCount / totalMatches * 100) if totalMatches > 0 else 0.0
+		
+		eventSave = {
+			"sqlId": eventRow.SqlID,
+			"eventSystem": eventRow.EventSystem,
+			"systemId": eventRow.SystemID,
+			"eventType": eventRow.EventType,
+			"name": eventRow.EventName,
+			"date": formatDate(eventRow.EventDate),
+			"endDate": formatDate(eventRow.EndDate),
+			"location": eventRow.Location,
+			"state": eventRow.EventState,
+			"created": formatDate(eventRow.Created),
+			"modified": formatDate(eventRow.Modified),
+			"summaryStats": {
+				"totalMatches": totalMatches,
+				"averageGlicko": averageGlicko,
+				"upsetPercentage": upsetPercentage,
+				"bonusPointPercentage": bonusPointPercentage
+			},
+			"matches": matchesList
+		}
+		eventsPayload.append(eventSave)
+		
+	# Post current batch to the bulk save endpoint
+	response = apiSession.post(f"{ millDBURL }/api/eventsbulksave", json={ "events": eventsPayload })
+	
+	if response.status_code >= 400:
+		errorCount += 1
+		errorLogging(f"Error bulk saving events: { response.status_code } - { response.text }")
+	else:
+		try:
+			saveResult = response.json()
+			matched = saveResult.get("matchedCount", 0)
+			modified = saveResult.get("modifiedCount", 0)
+			upserted = saveResult.get("upsertedCount", 0)
+			inserted = saveResult.get("insertedCount", 0)
+			print(f"{ currentTime() }: Bulk save completed: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+		except Exception as parseError:
+			print(f"{ currentTime() }: Bulk save succeeded, but failed to parse response: { parseError }")
+			
+	if errorCount > 15:
+		print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+		break
+		
+	eventsProcessed += len(eventsPayload)
+	print(f"{ currentTime() }: { eventsProcessed } events processed")
+	eventOffset += eventBatchSize
+
 cur.close()
 cn.close()
 
 print(f"{ currentTime() }: ----------- End")
+
