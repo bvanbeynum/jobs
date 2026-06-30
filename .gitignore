@@ -11,3 +11,5 @@ pids
 config.json
 credentials.json
 .vscode
+
+__pycache__/
