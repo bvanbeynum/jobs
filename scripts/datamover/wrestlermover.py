@@ -34,6 +34,37 @@ def errorLogging(errorMessage):
 	except Exception as apiError:
 		print(f"{currentTime()}: Failed to log error to API: {apiError}")
 
+def getSeasonStartDate():
+	# Seasons run from 9/1 to 8/31. We want the start date of the past season.
+	# If today is after 9/1, past season started on 9/1 of last year.
+	# If today is before 8/31, past season started on 9/1 of two years ago.
+	today = datetime.datetime.now().date()
+	if today.month >= 9:
+		year = today.year - 1
+	else:
+		year = today.year - 2
+	return datetime.date(year, 9, 1)
+
+def isBonusPointWin(winType):
+	# Bonus points are awarded for Falls, Tech Falls, Major Decisions, Forfeits, Disqualifications, and Injury Defaults.
+	if not winType:
+		return False
+	wt = winType.upper()
+	if wt in ["F", "TF", "MD", "DQ", "FF", "DF", "INJ"]:
+		return True
+	for keyword in ["FALL", "TECH", "MAJOR", "FORFEIT", "DEFAULT", "INJURY", "DISQ", "DQ", "MD", "TF"]:
+		if keyword in wt:
+			return True
+	return False
+
+def formatDate(dateValue):
+	# Formats date/datetime objects to ISO string with milliseconds and Z timezone suffix.
+	if dateValue is None:
+		return None
+	if isinstance(dateValue, datetime.date) and not isinstance(dateValue, datetime.datetime):
+		dateValue = datetime.datetime.combine(dateValue, datetime.time.min)
+	return datetime.datetime.strftime(dateValue, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+
 print(f"{ currentTime() }: ----------- Setup")
 
 print(f"{ currentTime() }: Load config")
@@ -244,37 +275,6 @@ for school in schools:
 	schoolsCompleted += 1
 
 print(f"{ currentTime() }: { schoolsCompleted } schools processed")
-
-def getSeasonStartDate():
-	# Seasons run from 9/1 to 8/31. We want the start date of the past season.
-	# If today is after 9/1, past season started on 9/1 of last year.
-	# If today is before 8/31, past season started on 9/1 of two years ago.
-	today = datetime.datetime.now().date()
-	if today.month >= 9:
-		year = today.year - 1
-	else:
-		year = today.year - 2
-	return datetime.date(year, 9, 1)
-
-def isBonusPointWin(winType):
-	# Bonus points are awarded for Falls, Tech Falls, Major Decisions, Forfeits, Disqualifications, and Injury Defaults.
-	if not winType:
-		return False
-	wt = winType.upper()
-	if wt in ["F", "TF", "MD", "DQ", "FF", "DF", "INJ"]:
-		return True
-	for keyword in ["FALL", "TECH", "MAJOR", "FORFEIT", "DEFAULT", "INJURY", "DISQ", "DQ", "MD", "TF"]:
-		if keyword in wt:
-			return True
-	return False
-
-def formatDate(dateValue):
-	# Formats date/datetime objects to ISO string with milliseconds and Z timezone suffix.
-	if dateValue is None:
-		return None
-	if isinstance(dateValue, datetime.date) and not isinstance(dateValue, datetime.datetime):
-		dateValue = datetime.datetime.combine(dateValue, datetime.time.min)
-	return datetime.datetime.strftime(dateValue, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 print(f"{ currentTime() }: ----------- Event Sync")
 
