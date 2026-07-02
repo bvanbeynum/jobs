@@ -125,7 +125,7 @@ if len(mongoWrestlers) > 0:
 
 print(f"{ currentTime() }: Load wrestlers")
 
-modifiedTimespan = -14
+modifiedTimespan = -5
 wrestledTimespan = -720
 offset = 0
 batchSize = 5000  # Adjust batch size as needed
@@ -278,12 +278,12 @@ print(f"{ currentTime() }: { schoolsCompleted } schools processed")
 
 print(f"{ currentTime() }: ----------- Event Sync")
 
-modifiedTimespanDays = -7
+modifiedTimespanDays = -5
 seasonStartDate = getSeasonStartDate()
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
 eventsProcessed = 0
-eventBatchSize = 1000
+eventBatchSize = 200
 eventOffset = 0
 
 while True:
@@ -294,7 +294,7 @@ while True:
 	if not eventsRows:
 		break # No more events to sync
 		
-	print(f"{ currentTime() }: { len(eventsRows) } events loaded from database")
+	# print(f"{ currentTime() }: { len(eventsRows) } events loaded from database")
 	
 	# Load matches for the batch using a temp table to avoid passing large parameter lists
 	cur.execute(sql["WrestlerMover_EventBatchCreate"])
@@ -400,7 +400,7 @@ while True:
 			modified = saveResult.get("modifiedCount", 0)
 			upserted = saveResult.get("upsertedCount", 0)
 			inserted = saveResult.get("insertedCount", 0)
-			print(f"{ currentTime() }: Bulk save completed: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+			# print(f"{ currentTime() }: Bulk save completed: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
 		except Exception as parseError:
 			print(f"{ currentTime() }: Bulk save succeeded, but failed to parse response: { parseError }")
 			
@@ -409,11 +409,13 @@ while True:
 		break
 		
 	eventsProcessed += len(eventsPayload)
-	print(f"{ currentTime() }: { eventsProcessed } events processed")
+	if eventsProcessed % 1000 == 0:
+		print(f"{ currentTime() }: { eventsProcessed } events processed")
 	eventOffset += eventBatchSize
 
 cur.close()
 cn.close()
 
+print(f"{ currentTime() }: { eventsProcessed } events processed")
 print(f"{ currentTime() }: ----------- End")
 
