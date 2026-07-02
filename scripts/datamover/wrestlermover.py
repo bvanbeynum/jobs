@@ -65,6 +65,51 @@ def formatDate(dateValue):
 		dateValue = datetime.datetime.combine(dateValue, datetime.time.min)
 	return datetime.datetime.strftime(dateValue, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
+def saveEventsBatch(eventsList, depth=0):
+	# Declare errorCount as global to update the global error threshold tracking
+	global errorCount
+	if not eventsList:
+		return True
+
+	# Try posting to the bulk save endpoint with a timeout
+	try:
+		response = apiSession.post(f"{ millDBURL }/api/eventsbulksave", json={ "events": eventsList }, timeout=95)
+		statusCode = response.status_code
+		responseText = response.text
+	except Exception as apiException:
+		statusCode = 504
+		responseText = str(apiException)
+
+	if statusCode >= 400:
+		# If the server timed out or failed to process the request, and the batch is large enough,
+		# split the batch in half and recursively retry to bypass gateway timeout limits.
+		if len(eventsList) > 10 and (statusCode == 504 or "timeout" in responseText.lower() or statusCode == 502):
+			midIndex = len(eventsList) // 2
+			firstHalf = eventsList[:midIndex]
+			secondHalf = eventsList[midIndex:]
+			print(f"{ currentTime() }: Gateway timeout/error on batch of { len(eventsList) } events. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			successFirst = saveEventsBatch(firstHalf, depth + 1)
+			successSecond = saveEventsBatch(secondHalf, depth + 1)
+			return successFirst and successSecond
+		else:
+			# If the batch cannot be split further or it's a non-transient error, log the failure.
+			errorCount += 1
+			errorLogging(f"Error bulk saving events (size { len(eventsList) }): { statusCode } - { responseText }")
+			return False
+	else:
+		try:
+			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
+			if depth > 0:
+				saveResult = response.json()
+				matched = saveResult.get("matchedCount", 0)
+				modified = saveResult.get("modifiedCount", 0)
+				upserted = saveResult.get("upsertedCount", 0)
+				inserted = saveResult.get("insertedCount", 0)
+				print(f"{ currentTime() }: Bulk save completed for chunk of { len(eventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+		except Exception as parseError:
+			print(f"{ currentTime() }: Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
+		return True
+
 print(f"{ currentTime() }: ----------- Setup")
 
 print(f"{ currentTime() }: Load config")
@@ -387,22 +432,8 @@ while True:
 		}
 		eventsPayload.append(eventSave)
 		
-	# Post current batch to the bulk save endpoint
-	response = apiSession.post(f"{ millDBURL }/api/eventsbulksave", json={ "events": eventsPayload })
-	
-	if response.status_code >= 400:
-		errorCount += 1
-		errorLogging(f"Error bulk saving events: { response.status_code } - { response.text }")
-	else:
-		try:
-			saveResult = response.json()
-			matched = saveResult.get("matchedCount", 0)
-			modified = saveResult.get("modifiedCount", 0)
-			upserted = saveResult.get("upsertedCount", 0)
-			inserted = saveResult.get("insertedCount", 0)
-			# print(f"{ currentTime() }: Bulk save completed: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
-		except Exception as parseError:
-			print(f"{ currentTime() }: Bulk save succeeded, but failed to parse response: { parseError }")
+	# Post current batch to the bulk save endpoint using retry/split logic
+	saveEventsBatch(eventsPayload)
 			
 	if errorCount > 15:
 		print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
