@@ -96,7 +96,8 @@ apiUrls = {
 	"schedule": "schedule/events",
 	"event": "event-hub/{systemId}",
 	"divisionWeight": "/brackets/divisions",
-	"bracket": "/brackets/{bracketId}"
+	"bracket": "/brackets/{bracketId}",
+	"matchDetails": "/brackets/bout-detail/{matchId}"
 }
 
 requestHeaders = { "User-Agent": config["userAgent"] }
@@ -224,6 +225,7 @@ while currentDate <= endDate:
 
 			batchLoad = []
 			for division in divisions:
+				wrestlers = {}
 				divisionName = division["name"]
 				
 				# logMessage(f"Fetching details for { divisionName }")
@@ -265,6 +267,7 @@ while currentDate <= endDate:
 							athlete1Winner = 1 if match["topParticipant"].get("winner", False) else 0
 							athlete1Seed = match["topParticipant"].get("seed")
 							athlete1Score = match["topParticipant"].get("score")
+							athlete1Seed = match["topParticipant"].get("seed")
 
 							athlete2Id = match["bottomParticipant"]["id"]
 							athlete2Name = match["bottomParticipant"].get("name", "")
@@ -272,13 +275,31 @@ while currentDate <= endDate:
 							athlete2Winner = 1 if match["bottomParticipant"].get("winner", False) else 0
 							athlete2Seed = match["bottomParticipant"].get("seed")
 							athlete2Score = match["bottomParticipant"].get("score")
+							athlete2Seed = match["bottomParticipant"].get("seed")
 
 							winType = match.get("winType")
 							matchRound = match.get("roundName", "")
 							matchId = match["id"]
 							sort = match.get("matchNumber") if match.get("matchNumber") and str.isnumeric(str(match.get("matchNumber"))) else (matchIndex + 1)
+							
+							if athlete1Id not in wrestlers or athlete2Id not in wrestlers:
+								bracketUrl = apiUrls["base"] + apiUrls["matchDetails"].format(matchId=matchId)
+								bracketResponse = requests.get(bracketUrl, headers=requestHeaders)
+								time.sleep(1)
 
-							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, { sort })")
+								if bracketResponse and bracketResponse.status_code == 200:
+									errorLogging(f"Error fetching match {match["id"]}. Status code: {bracketResponse.status_code if bracketResponse else 'N/A'}")
+
+									bracketData = bracketResponse.json()
+									if bracketData.get("data") is not None:
+										
+										if bracketData["data"].get("topAthlete") and bracketData["data"]["topAthlete"].get("grade") and bracketData["data"]["topAthlete"]["grade"].get("name"):
+											wrestlers.setdefault(athlete1Id, { "grade": bracketData["data"]["topAthlete"]["grade"]["name"] })
+										
+										if bracketData["data"].get("bottomAthlete") and bracketData["data"]["bottomAthlete"].get("grade") and bracketData["data"]["bottomAthlete"]["grade"].get("name"):
+											wrestlers.setdefault(athlete2Id, { "grade": bracketData["data"]["bottomAthlete"]["grade"]["name"] })
+							
+							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete1Seed }', '{ wrestlers.get(athlete1Id, {}).get("grade") or ""}', '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, '{ athlete2Seed }', '{ wrestlers.get(athlete2Id, {}).get("grade") or "" }' , { sort })")
 
 			try:
 				# Create the batch load
@@ -288,7 +309,7 @@ while currentDate <= endDate:
 
 					for i in range(0, len(batchLoad), 500):
 						batch = batchLoad[i:i+500]
-						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Sort) values " + ", ".join(batch)
+						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler1Seed, Wrestler1Grade, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Wrestler2Seed, Wrestler2Grade, Sort) values " + ", ".join(batch)
 						cur.execute(insertSql)
 
 					# Process all the updates

@@ -87,12 +87,16 @@ insert	EventWrestlerMatch (
 			, WrestlerName
 			, TeamName
 			, IsWinner
+			, Seed
+			, Grade
 		)
 select	WrestlerLookupMatch.EventWrestlerID
 		, EventMatch.ID
 		, WrestlerLookupMatch.WrestlerName
 		, WrestlerLookupMatch.WrestlerTeam
 		, MatchStage.Wrestler1IsWinner
+		, try_cast(MatchStage.Wrestler1Seed as int)
+		, MatchStage.Wrestler1Grade
 from	#MatchStage MatchStage
 join	EventMatch
 on		MatchStage.EventID = EventMatch.EventID
@@ -110,6 +114,8 @@ select	WrestlerLookupMatch.EventWrestlerID
 		, WrestlerLookupMatch.WrestlerName
 		, WrestlerLookupMatch.WrestlerTeam
 		, MatchStage.Wrestler2IsWinner
+		, try_cast(MatchStage.Wrestler2Seed as int)
+		, MatchStage.Wrestler2Grade
 from	#MatchStage MatchStage
 join	EventMatch
 on		MatchStage.EventID = EventMatch.EventID
