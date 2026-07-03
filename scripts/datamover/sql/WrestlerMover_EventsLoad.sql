@@ -10,7 +10,8 @@ select	SqlID = Event.ID
 		, Created = Event.InsertDate
 		, Modified = Event.ModifiedDate
 from	Event
-where	Event.EventDate >= ?
+where	Event.IsExcluded = 0
+		and Event.EventDate >= ?
 		and (
 			Event.ModifiedDate >= ?
 			or exists (
