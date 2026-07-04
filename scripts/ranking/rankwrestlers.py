@@ -86,6 +86,20 @@ except Exception as queryError:
 	connection.close()
 	sys.exit(1)
 
+currentDate = lastProcessedDate + datetime.timedelta(days = 1) if lastProcessedDate else minDate
+
+# Check if we have weeks to process before querying the database for all wrestler ratings to save resources.
+hasWeeksToProcess = False
+if currentDate and maxDate and currentDate <= maxDate:
+	firstWeekEnd = currentDate + datetime.timedelta(days = 6 - currentDate.weekday())
+	if firstWeekEnd <= datetime.datetime.now().date():
+		hasWeeksToProcess = True
+
+if not hasWeeksToProcess:
+	print(f"{ currentTime() }: No weeks to process. Exiting cleanly.")
+	connection.close()
+	sys.exit(0)
+
 # Load ALL latest ratings once from the database to initialize our in-memory cache
 print(f"{ currentTime() }: Loading initial wrestler ratings cache from DB")
 try:
@@ -107,8 +121,6 @@ except Exception as queryError:
 	logException("Failed to load initial wrestler ratings", queryError)
 	connection.close()
 	sys.exit(1)
-
-currentDate = lastProcessedDate + datetime.timedelta(days=1) if lastProcessedDate else minDate
 
 while currentDate <= maxDate:
 	weekEnd = currentDate + datetime.timedelta(days=6 - currentDate.weekday())
