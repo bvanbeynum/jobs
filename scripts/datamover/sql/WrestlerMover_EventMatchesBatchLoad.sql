@@ -1,5 +1,6 @@
 select	EventID = EventMatch.EventID
 		, MatchSqlID = EventMatch.ID
+		, Division = EventMatch.Division
 		, WeightClass = trim(replace(EventMatch.WeightClass, 'lbs', ''))
 		, RoundName = EventMatch.RoundName
 		, WinType = EventMatch.WinType

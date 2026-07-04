@@ -382,6 +382,7 @@ while True:
 				
 			matchesList.append({
 				"matchSqlId": matchRow.MatchSqlID,
+				"division": matchRow.Division,
 				"weightClass": matchRow.WeightClass,
 				"roundName": matchRow.RoundName,
 				"winType": matchRow.WinType,
@@ -402,14 +403,6 @@ while True:
 				}
 			})
 			
-		totalMatches = len(eventMatches)
-		averageGlicko = sum(eventRatings) / len(eventRatings) if eventRatings else None
-		upsetPercentage = (upsetCount / totalMatches * 100) if totalMatches > 0 else 0.0
-		
-		# Calculate bonus point percentage from win types
-		bonusCount = sum([1 for match in matchesList if isBonusPointWin(match["winType"])])
-		bonusPointPercentage = (bonusCount / totalMatches * 100) if totalMatches > 0 else 0.0
-		
 		eventSave = {
 			"sqlId": eventRow.SqlID,
 			"eventSystem": eventRow.EventSystem,
@@ -422,12 +415,6 @@ while True:
 			"state": eventRow.EventState,
 			"created": formatDate(eventRow.Created),
 			"modified": formatDate(eventRow.Modified),
-			"summaryStats": {
-				"totalMatches": totalMatches,
-				"averageGlicko": averageGlicko,
-				"upsetPercentage": upsetPercentage,
-				"bonusPointPercentage": bonusPointPercentage
-			},
 			"matches": matchesList
 		}
 		eventsPayload.append(eventSave)
