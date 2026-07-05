@@ -387,6 +387,7 @@ while True:
 				"roundName": matchRow.RoundName,
 				"winType": matchRow.WinType,
 				"isUpset": isUpset,
+				"sort": matchRow.MatchSort,
 				"winner": {
 					"wrestlerSqlId": matchRow.WinnerWrestlerSqlID,
 					"name": matchRow.WinnerName,
