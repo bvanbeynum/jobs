@@ -14,6 +14,8 @@ with WrestlerMatchSource as (
 	on		Event.ID = EventMatch.EventID
 	join	EventWrestlerMatch
 	on		EventMatch.ID = EventWrestlerMatch.EventMatchID
+	join	EventWrestler
+	on		EventWrestlerMatch.EventWrestlerID = EventWrestler.ID
 	left join
 			EventSchool
 	on		EventWrestlerMatch.TeamName = EventSchool.EventSchoolName
@@ -24,6 +26,7 @@ with WrestlerMatchSource as (
 			and (
 				Event.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 				or EventWrestlerMatch.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
+				or EventWrestler.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			)
 ),
 WrestlerNameAggregation as (

@@ -11,17 +11,17 @@ def loadSQL():
 
 	if os.path.exists(sqlPath):
 		for file in os.listdir(sqlPath):
-			if file.startswith("WrestlerMover"):
-				with open(f"{ sqlPath }/{ file }", "r") as fileReader:
-					sql[os.path.splitext(file)[0]] = fileReader.read()
+			with open(f"{ sqlPath }/{ file }", "r") as fileReader:
+				sql[os.path.splitext(file)[0]] = fileReader.read()
 	
 	return sql
 
-def currentTime():
-	return datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
+def logMessage(message):
+	logTime = datetime.datetime.strftime(datetime.datetime.now(), "%Y-%m-%d %H:%M:%S")
+	print(f"{logTime} - {message}")
 
 def errorLogging(errorMessage):
-	print(f"{currentTime()}: {errorMessage}")
+	logMessage(errorMessage)
 	try:
 		logPayload = {
 			"log": {
@@ -32,7 +32,7 @@ def errorLogging(errorMessage):
 		}
 		apiSession.post(f"{config['apiServer']}/sys/api/addlog", json=logPayload)
 	except Exception as apiError:
-		print(f"{currentTime()}: Failed to log error to API: {apiError}")
+		logMessage(f"Failed to log error to API: {apiError}")
 
 def getSeasonStartDate():
 	# Seasons run from 9/1 to 8/31. We want the start date of the past season.
@@ -87,7 +87,7 @@ def saveEventsBatch(eventsList, depth=0):
 			midIndex = len(eventsList) // 2
 			firstHalf = eventsList[:midIndex]
 			secondHalf = eventsList[midIndex:]
-			print(f"{ currentTime() }: Gateway timeout/error on batch of { len(eventsList) } events. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			logMessage(f"Gateway timeout/error on batch of { len(eventsList) } events. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
 			successFirst = saveEventsBatch(firstHalf, depth + 1)
 			successSecond = saveEventsBatch(secondHalf, depth + 1)
 			return successFirst and successSecond
@@ -105,14 +105,15 @@ def saveEventsBatch(eventsList, depth=0):
 				modified = saveResult.get("modifiedCount", 0)
 				upserted = saveResult.get("upsertedCount", 0)
 				inserted = saveResult.get("insertedCount", 0)
-				print(f"{ currentTime() }: Bulk save completed for chunk of { len(eventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+				logMessage(f"Bulk save completed for chunk of { len(eventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
 		except Exception as parseError:
-			print(f"{ currentTime() }: Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
+			errorLogging()
+			errorLogging(f"Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
 		return True
 
-print(f"{ currentTime() }: ----------- Setup")
+logMessage(f"----------- Setup")
 
-print(f"{ currentTime() }: Load config")
+logMessage(f"Load config")
 
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
@@ -123,7 +124,7 @@ apiSession = requests.Session()
 
 sql = loadSQL()
 
-print(f"{ currentTime() }: DB connect")
+logMessage(f"DB connect")
 
 try:
 	cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
@@ -132,25 +133,26 @@ except pyodbc.Error as databaseError:
 	errorLogging(f"Database connection failed: {databaseError}")
 	sys.exit(1)
 
-print(f"{ currentTime() }: ----------- Sync")
-print(f"{ currentTime() }: Get wrestlers from Mill")
+logMessage(f"----------- Sync")
+logMessage(f"Get wrestlers from Mill")
 
-response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
-mongoWrestlers = json.loads(response.text)["wrestlers"]
+# response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
+# mongoWrestlers = json.loads(response.text)["wrestlers"]
+mongoWrestlers = []
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
 wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
 
 if len(mongoWrestlers) > 0:
-	print(f"{ currentTime() }: Load mill wrestlers to stage")
-	cur.execute(sql["WrestlerMover_WrestlerStageCreate"])
+	logMessage(f"Load mill wrestlers to stage")
+	cur.execute(sql["WrestlerStageCreate"])
 	cur.executemany("insert #WrestlerStage (WrestlerID, MongoID) values (?,?);", [ (wrestler["sqlId"],wrestler["id"]) for wrestler in mongoWrestlers ])
-	cur.execute(sql["WrestlerMover_WrestlersMissing"])
+	cur.execute(sql["WrestlersMissing"])
 
 	rowIndex = 0
 	errorCount = 0
 
-	print(f"{ currentTime() }: Loop through wrestlers to delete")
+	logMessage(f"Loop through wrestlers to delete")
 	for row in cur:
 		response = apiSession.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
 
@@ -159,18 +161,18 @@ if len(mongoWrestlers) > 0:
 			errorLogging(f"Error deleting wrestler: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
-			print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+			logMessage(f"Too many errors ({ errorCount }). Exiting")
 			break
 		
 		rowIndex += 1
 		if rowIndex % 1000 == 0:
-			print(f"{ currentTime() }: { rowIndex } wrestlers deleted")
+			logMessage(f"{ rowIndex } wrestlers deleted")
 
-	print(f"{ currentTime() }: { rowIndex } wrestlers deleted")
+	logMessage(f"{ rowIndex } wrestlers deleted")
 
-print(f"{ currentTime() }: Load wrestlers")
+logMessage(f"Load wrestlers")
 
-modifiedTimespan = -5
+modifiedTimespan = -2
 wrestledTimespan = -720
 offset = 0
 batchSize = 5000  # Adjust batch size as needed
@@ -180,24 +182,24 @@ rowIndex = 0
 errorCount = 0
 
 while True:
-	cur.execute(sql["WrestlerMover_WrestlersLoad"], (modifiedTimespan, wrestledTimespan, offset, batchSize))
+	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, wrestledTimespan, offset, batchSize))
 	wrestlers_batch = cur.fetchall()
-	print(f"{ currentTime() }: { batchSize } wrestlers loaded")
+	logMessage(f"{ len(wrestlers_batch) } wrestlers loaded")
 
 	if not wrestlers_batch:
 		break  # No more wrestlers to fetch
 
 	# Batch load matches
-	cur.execute(sql["WrestlerMover_WrestlerBatchCreate"])
+	cur.execute(sql["WrestlerBatchCreate"])
 	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlers_batch])
-	cur.execute(sql["WrestlerMover_WrestlerMatchesBatchLoad"])
+	cur.execute(sql["WrestlerMatchesBatchLoad"])
 	matches_batch = cur.fetchall()
-	print(f"{ currentTime() }: { len(matches_batch) } matches loaded")
+	logMessage(f"{ len(matches_batch) } matches loaded")
 
 	# Batch load ratings
-	cur.execute(sql["WrestlerMover_WrestlerRatingsBatchLoad"])
+	cur.execute(sql["WrestlerRatingsBatchLoad"])
 	ratings_batch = cur.fetchall()
-	print(f"{ currentTime() }: { len(ratings_batch) } ratings loaded")
+	logMessage(f"{ len(ratings_batch) } ratings loaded")
 
 	matches_by_wrestler = {}
 	for match in matches_batch:
@@ -272,20 +274,20 @@ while True:
 			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
-			print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+			logMessage(f"Too many errors ({ errorCount }). Exiting")
 			break
 
 		wrestlersCompleted += 1
 		if wrestlersCompleted % 1000 == 0:
-			print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
+			logMessage(f"{ wrestlersCompleted } wrestlers processed")
 
 	offset += batchSize
 	if errorCount > 15: # Break outer loop if too many errors
 		break
 
-print(f"{ currentTime() }: { wrestlersCompleted } wrestlers processed")
+logMessage(f"{ wrestlersCompleted } wrestlers processed")
 
-print(f"{ currentTime() }: Get Schools from Wrestlingmill")
+logMessage(f"Get Schools from Wrestlingmill")
 
 response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
 mongoSchools = json.loads(response.text)["schools"]
@@ -293,7 +295,7 @@ mongoSchools = json.loads(response.text)["schools"]
 # Create a lookup dictionary for mongoWrestlers by sqlId
 schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
 
-cur.execute(sql["WrestlerMover_SchoolsGet"])
+cur.execute(sql["SchoolsGet"])
 schools = cur.fetchall()
 
 schoolsCompleted = 0
@@ -319,9 +321,9 @@ for school in schools:
 	
 	schoolsCompleted += 1
 
-print(f"{ currentTime() }: { schoolsCompleted } schools processed")
+logMessage(f"{ schoolsCompleted } schools processed")
 
-print(f"{ currentTime() }: ----------- Event Sync")
+logMessage(f"----------- Event Sync")
 
 modifiedTimespanDays = -5
 seasonStartDate = getSeasonStartDate()
@@ -333,19 +335,17 @@ eventOffset = 0
 
 while True:
 	# Load a batch of events directly from SQL to minimize peak memory usage
-	cur.execute(sql["WrestlerMover_EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
+	cur.execute(sql["EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
 	eventsRows = cur.fetchall()
 	
 	if not eventsRows:
 		break # No more events to sync
 		
-	# print(f"{ currentTime() }: { len(eventsRows) } events loaded from database")
-	
 	# Load matches for the batch using a temp table to avoid passing large parameter lists
-	cur.execute(sql["WrestlerMover_EventBatchCreate"])
+	cur.execute(sql["EventBatchCreate"])
 	cur.executemany("insert #EventBatch (EventID) values (?);", [[eventRow.SqlID] for eventRow in eventsRows])
 	
-	cur.execute(sql["WrestlerMover_EventMatchesBatchLoad"])
+	cur.execute(sql["EventMatchesBatchLoad"])
 	matchesRows = cur.fetchall()
 	
 	# Group matches by event to map them into their respective parents efficiently
@@ -424,17 +424,16 @@ while True:
 	saveEventsBatch(eventsPayload)
 			
 	if errorCount > 15:
-		print(f"{ currentTime() }: Too many errors ({ errorCount }). Exiting")
+		errorLogging(f"Too many errors ({ errorCount }). Exiting")
 		break
 		
 	eventsProcessed += len(eventsPayload)
 	if eventsProcessed % 1000 == 0:
-		print(f"{ currentTime() }: { eventsProcessed } events processed")
+		logMessage(f"{ eventsProcessed } events processed")
 	eventOffset += eventBatchSize
 
 cur.close()
 cn.close()
 
-print(f"{ currentTime() }: { eventsProcessed } events processed")
-print(f"{ currentTime() }: ----------- End")
-
+logMessage(f"{ eventsProcessed } events processed")
+logMessage(f"----------- End")
