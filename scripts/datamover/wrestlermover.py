@@ -136,9 +136,8 @@ except pyodbc.Error as databaseError:
 logMessage(f"----------- Sync")
 logMessage(f"Get wrestlers from Mill")
 
-# response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
-# mongoWrestlers = json.loads(response.text)["wrestlers"]
-mongoWrestlers = []
+response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
+mongoWrestlers = json.loads(response.text)["wrestlers"]
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
 wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
