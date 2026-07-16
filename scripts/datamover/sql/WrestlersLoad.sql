@@ -26,7 +26,6 @@ with WrestlerMatchSource as (
 			and (
 				Event.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 				or EventWrestlerMatch.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
-				or EventWrestler.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			)
 ),
 WrestlerNameAggregation as (
