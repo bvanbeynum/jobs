@@ -178,13 +178,16 @@ while currentDate <= endDate:
 			if informationData.get("data") and informationData["data"].get("startDate"):
 				eventStartDate = datetime.datetime.strptime(informationData["data"]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date()
 				eventEndDate = datetime.datetime.strptime(informationData["data"]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date() if informationData["data"].get("endDate") else eventStartDate
+				startDateStr = eventStartDate.strftime("%Y-%m-%d")
 				endDateStr = eventEndDate.strftime("%Y-%m-%d")
 			else:
+				startDateStr = dateStr
+				endDateStr = dateStr
 				eventStartDate = currentDate
 				eventEndDate = currentDate
 
 			# Update the event details
-			cur.execute(sql["EventSave"], (systemId, eventName, dateStr, endDateStr, eventAddress, state, 0, 0))
+			cur.execute(sql["EventSave"], (systemId, eventName, startDateStr, endDateStr, eventAddress, state, 0, 0))
 			eventId = cur.fetchone()[0]
 			
 			if currentDate >= datetime.date.today() or (eventEndDate and eventEndDate > datetime.date.today()):
@@ -203,7 +206,7 @@ while currentDate <= endDate:
 
 			if len(divisionsData["data"]["bracketOptionsContent"]["bracketOptions"]) == 0:
 				# Skipping - no brackets
-				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+				cur.execute(sql["EventSave"], (systemId, eventName, startDateStr, endDateStr, eventAddress, state, 1, 0))
 				excludedEvents.append(systemId)
 				continue
 			
@@ -322,7 +325,7 @@ while currentDate <= endDate:
 					
 					logMessage(f"DB Load { len(batchLoad) } matches for { eventName }")
 					
-				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
+				cur.execute(sql["EventSave"], (systemId, eventName, startDateStr, endDateStr, eventAddress, state, 1, 0))
 				excludedEvents.append(systemId)
 			except Exception as error:
 				errorLogging(f"DB save error: event {eventName}. Error: {error}")
