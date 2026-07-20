@@ -13,12 +13,14 @@ create table #MatchStage (
 	, Wrestler1Team varchar(255)
 	, Wrestler1IsWinner bit
 	, Wrestler1Seed varchar(255)
+	, Wrestler1Score varchar(255)
 	, Wrestler1Grade varchar(255)
 	, Wrestler2SystemID varchar(255)
 	, Wrestler2Name varchar(255)
 	, Wrestler2Team varchar(255)
 	, Wrestler2IsWinner bit
 	, Wrestler2Seed varchar(255)
+	, Wrestler2Score varchar(255)
 	, Wrestler2Grade varchar(255)
 	, Sort int
 );

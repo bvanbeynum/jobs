@@ -92,12 +92,12 @@ cur = cn.cursor()
 sql = loadSql()
 
 apiUrls = {
-	"base": "https://prod-web-api.flowrestling.org/api/",
-	"schedule": "schedule/events",
-	"event": "event-hub/{systemId}",
+	"base": "https://prod-web-api.flowrestling.org/api",
+	"schedule": "/schedule/events",
+	"event": "/event-hub/{systemId}",
 	"divisionWeight": "/brackets/divisions",
 	"bracket": "/brackets/{bracketId}",
-	"matchDetails": "/brackets/bout-detail/{matchId}"
+	"matchDetails": "/bout-detail/{matchId}"
 }
 
 requestHeaders = { "User-Agent": config["userAgent"] }
@@ -109,8 +109,8 @@ dataModified = True
 
 states = ["SC", "NC", "GA", "TN"]
 
-# startDate = datetime.datetime.strptime("2025-12-01", "%Y-%m-%d").date()
-# endDate = datetime.date.today()
+# startDate = datetime.datetime.strptime("2026-02-20", "%Y-%m-%d").date()
+# endDate = datetime.datetime.strptime("2026-02-20", "%Y-%m-%d").date()
 # states = ["SC"]
 # dataModified = False
 
@@ -156,7 +156,7 @@ while currentDate <= endDate:
 		eventsData = response.json()
 		events = eventsData["data"][0]["events"]
 
-		# events = [ event for event in events if event["url"].split('/')[5] == "14833369" ]
+		# events = [ event for event in events if event["url"].split('/')[5] == "14830881" ]
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
@@ -224,16 +224,19 @@ while currentDate <= endDate:
 					} for division in divisionItems ]
 
 			batchLoad = []
+			divisionCount = 0
+			weightClassCount = 0
+			matchCount = 0
 			for division in divisions:
 				wrestlers = {}
 				divisionName = division["name"]
+				divisionCount += 1
 				
-				# logMessage(f"Fetching details for { divisionName }")
-
 				for weightClass in division["weightClasses"]:
 					if weightClass["isDisabled"]:
 						continue
 
+					weightClassCount += 1
 					weightClassName = weightClass["text"]
 
 					resultsUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["bracket"].format(bracketId=weightClass["bracketId"])
@@ -261,9 +264,11 @@ while currentDate <= endDate:
 							and match.get("bottomParticipant") \
 							and match["bottomParticipant"].get("name") is not None:
 
+							matchCount += 1
+
 							athlete1Id = match["topParticipant"]["id"]
 							athlete1Name = match["topParticipant"].get("name", "")
-							athlete1Team = match["topParticipant"].get("teamName", "")
+							athlete1Team = match["topParticipant"].get("team", "")
 							athlete1Winner = 1 if match["topParticipant"].get("winner", False) else 0
 							athlete1Seed = match["topParticipant"].get("seed")
 							athlete1Score = match["topParticipant"].get("score")
@@ -271,7 +276,7 @@ while currentDate <= endDate:
 
 							athlete2Id = match["bottomParticipant"]["id"]
 							athlete2Name = match["bottomParticipant"].get("name", "")
-							athlete2Team = match["bottomParticipant"].get("teamName", "")
+							athlete2Team = match["bottomParticipant"].get("team", "")
 							athlete2Winner = 1 if match["bottomParticipant"].get("winner", False) else 0
 							athlete2Seed = match["bottomParticipant"].get("seed")
 							athlete2Score = match["bottomParticipant"].get("score")
@@ -283,13 +288,11 @@ while currentDate <= endDate:
 							sort = match.get("matchNumber") if match.get("matchNumber") and str.isnumeric(str(match.get("matchNumber"))) else (matchIndex + 1)
 							
 							if athlete1Id not in wrestlers or athlete2Id not in wrestlers:
-								bracketUrl = apiUrls["base"] + apiUrls["matchDetails"].format(matchId=matchId)
+								bracketUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["matchDetails"].format(matchId=matchId)
 								bracketResponse = requests.get(bracketUrl, headers=requestHeaders)
 								time.sleep(1)
 
 								if bracketResponse and bracketResponse.status_code == 200:
-									errorLogging(f"Error fetching match {match["id"]}. Status code: {bracketResponse.status_code if bracketResponse else 'N/A'}")
-
 									bracketData = bracketResponse.json()
 									if bracketData.get("data") is not None:
 										
@@ -299,22 +302,25 @@ while currentDate <= endDate:
 										if bracketData["data"].get("bottomAthlete") and bracketData["data"]["bottomAthlete"].get("grade") and bracketData["data"]["bottomAthlete"]["grade"].get("name"):
 											wrestlers.setdefault(athlete2Id, { "grade": bracketData["data"]["bottomAthlete"]["grade"]["name"] })
 							
-							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete1Seed }', '{ wrestlers.get(athlete1Id, {}).get("grade") or ""}', '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, '{ athlete2Seed }', '{ wrestlers.get(athlete2Id, {}).get("grade") or "" }' , { sort })")
+							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete1Seed }', '{ athlete1Score }', '{ wrestlers.get(athlete1Id, {}).get("grade") or ""}', '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, '{ athlete2Seed }', '{ athlete2Score }', '{ wrestlers.get(athlete2Id, {}).get("grade") or "" }' , { sort })")
+
+			logMessage(f"From Flo: { divisionCount } divisions, { weightClassCount } weight classes, { matchCount } matches for { eventName }")
 
 			try:
 				# Create the batch load
 				if len(batchLoad) > 0:
-					# logMessage(f"Loading batch { len(batchLoad) } for { eventName }")
 					cur.execute(sql["LoadBatchCreate"])
 
 					for i in range(0, len(batchLoad), 500):
 						batch = batchLoad[i:i+500]
-						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler1Seed, Wrestler1Grade, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Wrestler2Seed, Wrestler2Grade, Sort) values " + ", ".join(batch)
+						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler1Seed, Wrestler1Score, Wrestler1Grade, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Wrestler2Seed, Wrestler2Score, Wrestler2Grade, Sort) values " + ", ".join(batch)
 						cur.execute(insertSql)
 
 					# Process all the updates
 					cur.execute(sql["LoadBatchProcess"])
 					dataModified = True
+					
+					logMessage(f"DB Load { len(batchLoad) } matches for { eventName }")
 					
 				cur.execute(sql["EventSave"], (systemId, eventName, dateStr, None, eventAddress, state, 1, 0))
 				excludedEvents.append(systemId)
