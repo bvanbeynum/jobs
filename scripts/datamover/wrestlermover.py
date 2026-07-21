@@ -119,6 +119,7 @@ with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
 millDBURL = config["millServer"]
+testMode = False
 
 apiSession = requests.Session()
 
@@ -136,8 +137,11 @@ except pyodbc.Error as databaseError:
 logMessage(f"----------- Sync")
 logMessage(f"Get wrestlers from Mill")
 
-response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
-mongoWrestlers = json.loads(response.text)["wrestlers"]
+if not testMode:
+	response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
+	mongoWrestlers = json.loads(response.text)["wrestlers"]
+else:
+	mongoWrestlers = []
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
 wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
@@ -180,7 +184,7 @@ wrestlersCompleted = 0
 rowIndex = 0
 errorCount = 0
 
-while True:
+while True and not testMode:
 	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, wrestledTimespan, offset, batchSize))
 	wrestlers_batch = cur.fetchall()
 	logMessage(f"{ len(wrestlers_batch) } wrestlers loaded")
@@ -288,14 +292,18 @@ logMessage(f"{ wrestlersCompleted } wrestlers processed")
 
 logMessage(f"Get Schools from Wrestlingmill")
 
-response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
-mongoSchools = json.loads(response.text)["schools"]
+if not testMode:
+	response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
+	mongoSchools = json.loads(response.text)["schools"]
 
-# Create a lookup dictionary for mongoWrestlers by sqlId
-schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
+	# Create a lookup dictionary for mongoWrestlers by sqlId
+	schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
 
-cur.execute(sql["SchoolsGet"])
-schools = cur.fetchall()
+	cur.execute(sql["SchoolsGet"])
+	schools = cur.fetchall()
+else:
+	schools = []
+	schoolLookup = {}
 
 schoolsCompleted = 0
 
@@ -328,21 +336,55 @@ modifiedTimespanDays = -5
 seasonStartDate = getSeasonStartDate()
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
+logMessage(f"Get events from Mill")
+
+if not testMode or True:
+	response = apiSession.get(f"{ millDBURL }/data/event?select=sqlId")
+	mongoEvents = json.loads(response.text)["events"]
+else:
+	mongoEvents = []
+
+cur.execute(sql["EventsAllSeason"], (seasonStartDate))
+eventIds = [eventRow.SqlID for eventRow in cur.fetchall()]
+
+logMessage(f"Delete missing events")
+
+deletedEvents = 0
+for mongoEvent in mongoEvents:
+	if mongoEvent["sqlId"] not in eventIds:
+		
+		# Delete the event since it's not in the current list
+		response = apiSession.delete(f"{ millDBURL }/data/event?id={ mongoEvent['id'] }")
+		if response.status_code >= 400:
+			errorLogging(f"Error deleting event: {response.status_code} - {response.text}")
+		else:
+			deletedEvents += 1
+
+logMessage(f"Deleted { deletedEvents } events")
+
 eventsProcessed = 0
 eventBatchSize = 200
 eventOffset = 0
+eventIds = []
 
-while True:
+modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
+
+logMessage(f"Load events to mill")
+
+while True and not testMode:
 	# Load a batch of events directly from SQL to minimize peak memory usage
 	cur.execute(sql["EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
 	eventsRows = cur.fetchall()
 	
 	if not eventsRows:
 		break # No more events to sync
-		
+
+	sqlIds = [eventRow.SqlID for eventRow in eventsRows]
+	eventIds.extend(sqlIds)
+
 	# Load matches for the batch using a temp table to avoid passing large parameter lists
 	cur.execute(sql["EventBatchCreate"])
-	cur.executemany("insert #EventBatch (EventID) values (?);", [[eventRow.SqlID] for eventRow in eventsRows])
+	cur.executemany("insert #EventBatch (EventID) values (?);", [[eventId] for eventId in sqlIds])
 	
 	cur.execute(sql["EventMatchesBatchLoad"])
 	matchesRows = cur.fetchall()
@@ -426,7 +468,7 @@ while True:
 		errorLogging(f"Too many errors ({ errorCount }). Exiting")
 		break
 		
-	eventsProcessed += len(eventsPayload)
+	eventsProcessed += len(sqlIds)
 	if eventsProcessed % 1000 == 0:
 		logMessage(f"{ eventsProcessed } events processed")
 	eventOffset += eventBatchSize
