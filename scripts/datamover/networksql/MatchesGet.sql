@@ -14,6 +14,8 @@ select	sourceid = SourceMatch.EventWrestlerID
 from	Event
 join	EventMatch
 on		Event.ID = EventMatch.EventID
+		and EventMatch.WinType is not null
+		and EventMatch.WinType not like '%for%'
 join	EventWrestlerMatch SourceMatch
 on		EventMatch.ID = SourceMatch.EventMatchID
 join	EventWrestlerMatch TargetMatch
