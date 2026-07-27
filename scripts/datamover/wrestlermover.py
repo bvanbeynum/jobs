@@ -332,7 +332,7 @@ logMessage(f"{ schoolsCompleted } schools processed")
 
 logMessage(f"----------- Event Sync")
 
-modifiedTimespanDays = -5
+modifiedTimespanDays = -3
 seasonStartDate = getSeasonStartDate()
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
@@ -367,7 +367,8 @@ eventBatchSize = 200
 eventOffset = 0
 eventIds = []
 
-modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
+# modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
+modifiedThreshold = datetime.datetime.now() - datetime.timedelta(days=modifiedTimespanDays)
 
 logMessage(f"Load events to mill")
 
