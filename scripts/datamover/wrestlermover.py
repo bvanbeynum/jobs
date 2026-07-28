@@ -176,7 +176,6 @@ if len(mongoWrestlers) > 0:
 logMessage(f"Load wrestlers")
 
 modifiedTimespan = -2
-wrestledTimespan = -720
 offset = 0
 batchSize = 5000  # Adjust batch size as needed
 wrestlersCompleted = 0
@@ -185,7 +184,7 @@ rowIndex = 0
 errorCount = 0
 
 while True and not testMode:
-	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, wrestledTimespan, offset, batchSize))
+	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, offset, batchSize))
 	wrestlers_batch = cur.fetchall()
 	logMessage(f"{ len(wrestlers_batch) } wrestlers loaded")
 
@@ -222,8 +221,13 @@ while True and not testMode:
 			"name": wrestlerRow.WrestlerName,
 			"rating": float(wrestlerRow.Rating) if wrestlerRow.Rating is not None else None,
 			"deviation": float(wrestlerRow.Deviation) if wrestlerRow.Deviation is not None else None,
-			# "searchNames": wrestlerRow.SearchNames,
-			# "searchTeams": wrestlerRow.SearchTeams,
+			"grade": wrestlerRow.Grade,
+			"searchNames": wrestlerRow.SearchNames,
+			"searchTeams": wrestlerRow.SearchTeams,
+			"lastWeightClass": wrestlerRow.LastWeightClass,
+			"schoolName": wrestlerRow.SchoolName,
+			"schoolDivision": wrestlerRow.SchoolDivision,
+			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
 			"events": [],
 			"ratingHistory": []
 		}
@@ -246,17 +250,20 @@ while True and not testMode:
 		for matchRow in matches:
 			if matchRow.EventID not in events:
 				events[matchRow.EventID] = {
+					"wrestlerSqlId": wrestlerRow.WrestlerID,
 					"sqlId": matchRow.EventID,
 					"name": matchRow.EventName,
 					"date": datetime.datetime.strftime(matchRow.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] if matchRow.EventDate is not None else None,
 					"team": matchRow.TeamName,
 					"locationState": matchRow.EventState,
+					"seed": matchRow.Seed,
 					"matches": []
 				}
 
 			events[matchRow.EventID]["matches"].append({
 				"division": matchRow.Division,
 				"weightClass": matchRow.WeightClass,
+				"matchSqlId": matchRow.MatchSQLID,
 				"round": matchRow.MatchRound,
 				"vs": matchRow.OpponentName,
 				"vsTeam": matchRow.OpponentTeamName,
@@ -275,6 +282,16 @@ while True and not testMode:
 		if response.status_code >= 400:
 			errorCount += 1
 			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
+		else:
+			wrestlerId = json.loads(response.text)["id"]
+			wrestlerEvents = list(events.values())
+			for event in wrestlerEvents:
+				event["wrestlerId"] = wrestlerId
+
+			response = apiSession.post(f"{ millDBURL }/api/wrestlereventsbulksave", json={ "wrestlerEvents": wrestlerEvents })
+			if response.status_code >= 400:
+				errorCount += 1
+				errorLogging(f"Error saving wrestler events: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
 			logMessage(f"Too many errors ({ errorCount }). Exiting")
