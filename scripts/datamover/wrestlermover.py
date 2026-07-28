@@ -177,7 +177,7 @@ logMessage(f"Load wrestlers")
 
 modifiedTimespan = -2
 offset = 0
-batchSize = 5000  # Adjust batch size as needed
+batchSize = 1000  # Adjust batch size as needed
 wrestlersCompleted = 0
 
 rowIndex = 0
