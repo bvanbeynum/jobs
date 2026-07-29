@@ -178,7 +178,7 @@ logMessage(f"Load wrestlers")
 modifiedTimespan = -2
 eventTimespan = -730
 offset = 0
-batchSize = 1000  # Adjust batch size as needed
+batchSize = 200  # Adjust batch size as needed
 wrestlersCompleted = 0
 
 rowIndex = 0
@@ -216,6 +216,7 @@ while True and not testMode:
 			ratings_by_wrestler[rating.EventWrestlerID] = []
 		ratings_by_wrestler[rating.EventWrestlerID].append(rating)
 
+	wrestlerUpdates = []
 	for wrestlerRow in wrestlers_batch:
 		wrestler = {
 			"sqlId": wrestlerRow.WrestlerID,
@@ -229,7 +230,7 @@ while True and not testMode:
 			"schoolName": wrestlerRow.SchoolName,
 			"schoolDivision": wrestlerRow.SchoolDivision,
 			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
-			# "events": [],
+			"events": [],
 			"ratingHistory": []
 		}
 
@@ -276,31 +277,15 @@ while True and not testMode:
 				"sort": matchRow.MatchSort
 			})
 
-		# wrestler["events"] = list(events.values())
+		wrestler["events"] = list(events.values())
+		wrestlerUpdates.append(wrestler)
 
-		response = apiSession.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
+	if len(wrestlerUpdates) > 0:
+		response = apiSession.post(f"{ millDBURL }/api/wrestlerbulksave", json={ "wrestlers": wrestlerUpdates })
 
 		if response.status_code >= 400:
 			errorCount += 1
-			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
-		else:
-			wrestlerId = json.loads(response.text)["id"]
-			wrestlerEvents = list(events.values())
-			for event in wrestlerEvents:
-				event["wrestlerId"] = wrestlerId
-
-			response = apiSession.post(f"{ millDBURL }/api/wrestlereventsbulksave", json={ "wrestlerEvents": wrestlerEvents })
-			if response.status_code >= 400:
-				errorCount += 1
-				errorLogging(f"Error saving wrestler events: {response.status_code} - {response.text}")
-
-		if errorCount > 15:
-			logMessage(f"Too many errors ({ errorCount }). Exiting")
-			break
-
-		wrestlersCompleted += 1
-		if wrestlersCompleted % 1000 == 0:
-			logMessage(f"{ wrestlersCompleted } wrestlers processed")
+			errorLogging(f"Error saving wrestlers: {response.status_code} - {response.text}")
 
 	offset += batchSize
 	if errorCount > 15: # Break outer loop if too many errors
