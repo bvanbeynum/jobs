@@ -10,7 +10,7 @@ outer apply (
 		on		EventWrestlerMatch.EventMatchID = EventMatch.ID
 		join	Event
 		on		EventMatch.EventID = Event.ID
-		where	Event.EventDate > getdate() - 720
+		where	Event.EventDate > getdate() - 730
 				and EventWrestler.ID = #WrestlerStage.WrestlerID
 		) ExistingWrestler
 where	ExistingWrestler.WrestlerID is null

@@ -176,6 +176,7 @@ if len(mongoWrestlers) > 0:
 logMessage(f"Load wrestlers")
 
 modifiedTimespan = -2
+eventTimespan = -730
 offset = 0
 batchSize = 1000  # Adjust batch size as needed
 wrestlersCompleted = 0
@@ -184,7 +185,7 @@ rowIndex = 0
 errorCount = 0
 
 while True and not testMode:
-	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, offset, batchSize))
+	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, eventTimespan, offset, batchSize))
 	wrestlers_batch = cur.fetchall()
 	logMessage(f"{ len(wrestlers_batch) } wrestlers loaded")
 
@@ -228,7 +229,7 @@ while True and not testMode:
 			"schoolName": wrestlerRow.SchoolName,
 			"schoolDivision": wrestlerRow.SchoolDivision,
 			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
-			"events": [],
+			# "events": [],
 			"ratingHistory": []
 		}
 
@@ -275,7 +276,7 @@ while True and not testMode:
 				"sort": matchRow.MatchSort
 			})
 
-		wrestler["events"] = list(events.values())
+		# wrestler["events"] = list(events.values())
 
 		response = apiSession.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
 
