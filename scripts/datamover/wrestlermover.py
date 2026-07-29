@@ -146,12 +146,7 @@ def saveWrestlersBatch(wrestlersList, depth=0):
 		try:
 			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
 			if depth > 0:
-				saveResult = response.json()
-				matched = saveResult.get("matchedCount", 0)
-				modified = saveResult.get("modifiedCount", 0)
-				upserted = saveResult.get("upsertedCount", 0)
-				inserted = saveResult.get("insertedCount", 0)
-				logMessage(f"Bulk save completed for chunk of { len(wrestlersList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+				logMessage(f"Bulk save completed for chunk of { len(wrestlersList) }")
 		except Exception as parseError:
 			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlersList) }, but failed to parse response: { parseError }")
 		return True
