@@ -195,6 +195,8 @@ if len(mongoWrestlers) > 0:
 	logMessage(f"Load mill wrestlers to stage")
 	cur.execute(sql["WrestlerStageCreate"])
 	cur.executemany("insert #WrestlerStage (WrestlerID, MongoID) values (?,?);", [ (wrestler["sqlId"],wrestler["id"]) for wrestler in mongoWrestlers ])
+	
+	logMessage(f"Get missing wrestlers from stage")
 	cur.execute(sql["WrestlersMissing"])
 
 	rowIndex = 0
