@@ -111,46 +111,6 @@ def saveEventsBatch(eventsList, depth=0):
 			errorLogging(f"Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
 		return True
 
-def saveWrestlersBatch(wrestlersList, depth=0):
-	# Declare errorCount as global to update the global error threshold tracking
-	global errorCount
-	if not wrestlersList:
-		return True
-
-	# Try posting to the bulk save endpoint with a timeout
-	try:
-		response = apiSession.post(f"{ millDBURL }/api/wrestlerbulksave", json={ "wrestlers": wrestlersList }, timeout=95)
-		statusCode = response.status_code
-		responseText = response.text
-	except Exception as apiException:
-		statusCode = 504
-		responseText = str(apiException)
-
-	if statusCode >= 400:
-		# If the server timed out or failed to process the request, and the batch is large enough,
-		# split the batch in half and recursively retry to bypass gateway timeout limits.
-		if len(wrestlersList) > 10 and (statusCode == 504 or "timeout" in responseText.lower() or statusCode == 502):
-			midIndex = len(wrestlersList) // 2
-			firstHalf = wrestlersList[:midIndex]
-			secondHalf = wrestlersList[midIndex:]
-			logMessage(f"Gateway timeout/error on batch of { len(wrestlersList) } wrestlers. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
-			successFirst = saveWrestlersBatch(firstHalf, depth + 1)
-			successSecond = saveWrestlersBatch(secondHalf, depth + 1)
-			return successFirst and successSecond
-		else:
-			# If the batch cannot be split further or it's a non-transient error, log the failure.
-			errorCount += 1
-			errorLogging(f"Error bulk saving wrestlers (size { len(wrestlersList) }): { statusCode } - { responseText }")
-			return False
-	else:
-		try:
-			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
-			if depth > 0:
-				logMessage(f"Bulk save completed for chunk of { len(wrestlersList) }")
-		except Exception as parseError:
-			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlersList) }, but failed to parse response: { parseError }")
-		return True
-
 logMessage(f"----------- Setup")
 
 logMessage(f"Load config")
@@ -258,7 +218,6 @@ while True and not testMode:
 			ratings_by_wrestler[rating.EventWrestlerID] = []
 		ratings_by_wrestler[rating.EventWrestlerID].append(rating)
 
-	wrestlerUpdates = []
 	for wrestlerRow in wrestlers_batch:
 		wrestler = {
 			"sqlId": wrestlerRow.WrestlerID,
@@ -272,7 +231,7 @@ while True and not testMode:
 			"schoolName": wrestlerRow.SchoolName,
 			"schoolDivision": wrestlerRow.SchoolDivision,
 			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
-			"events": [],
+			# "events": [],
 			"ratingHistory": []
 		}
 
@@ -319,11 +278,31 @@ while True and not testMode:
 				"sort": matchRow.MatchSort
 			})
 
-		wrestler["events"] = list(events.values())
-		wrestlerUpdates.append(wrestler)
+		# wrestler["events"] = list(events.values())
 
-	if len(wrestlerUpdates) > 0:
-		saveWrestlersBatch(wrestlerUpdates)
+		response = apiSession.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
+
+		if response.status_code >= 400:
+			errorCount += 1
+			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
+		else:
+			wrestlerId = json.loads(response.text)["id"]
+			wrestlerEvents = list(events.values())
+			for event in wrestlerEvents:
+				event["wrestlerId"] = wrestlerId
+
+			response = apiSession.post(f"{ millDBURL }/api/wrestlereventsbulksave", json={ "wrestlerEvents": wrestlerEvents })
+			if response.status_code >= 400:
+				errorCount += 1
+				errorLogging(f"Error saving wrestler events: {response.status_code} - {response.text}")
+
+		if errorCount > 15:
+			logMessage(f"Too many errors ({ errorCount }). Exiting")
+			break
+
+		wrestlersCompleted += 1
+		if wrestlersCompleted % 1000 == 0:
+			logMessage(f"{ wrestlersCompleted } wrestlers processed")
 
 	offset += batchSize
 	if errorCount > 15: # Break outer loop if too many errors
