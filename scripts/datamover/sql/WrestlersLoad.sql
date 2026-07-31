@@ -34,6 +34,7 @@ order by
 offset @Offset rows fetch next @BatchSize rows only;
 
 select	EventWrestlerMatch.EventWrestlerID
+		, Event.EventName
 		, Event.EventDate
 		, Event.EventState
 		, WrestlerName = max(EventWrestlerMatch.WrestlerName)
@@ -58,6 +59,7 @@ on		EventSchool.SchoolID = School.ID
 where	EventWrestlerMatch.EventWrestlerID in (select EventWrestlerID from #PagedWrestler)
 group by
 		EventWrestlerMatch.EventWrestlerID
+		, Event.EventName
 		, Event.EventDate
 		, Event.EventState
 
@@ -75,9 +77,20 @@ group by
 	group by
 			WrestlerMatchSource.EventWrestlerID
 )
+, StateAggregation as (
+	select	WrestlerMatchSource.EventWrestlerID
+			, States = '["' + string_agg(upper(WrestlerMatchSource.EventState), '", "') within group (order by WrestlerMatchSource.EventState) + '"]'
+	from	(select distinct EventWrestlerID, EventState from #WrestlerData) as WrestlerMatchSource
+	group by
+			WrestlerMatchSource.EventWrestlerID
+)
 , LastEvent as (
 	select	WrestlerData.EventWrestlerID
 			, RowFilter = row_number() over (partition by WrestlerData.EventWrestlerID order by WrestlerData.EventDate desc)
+			, EventName = WrestlerData.EventName
+			, EventDate = WrestlerData.EventDate
+			, EventState = WrestlerData.EventState
+			, WrestlerData.TeamName
 			, WeightClass = WrestlerData.WeightClass
 	from	#WrestlerData WrestlerData
 )
@@ -97,6 +110,11 @@ select	WrestlerID = EventWrestler.ID
 		, Grade = WrestlerGrade.Grade
 		, SearchNames = WrestlerNameAggregation.Names
 		, SearchTeams = TeamNameAggregation.Teams
+		, States = StateAggregation.States
+		, LastEventName = LastEvent.EventName
+		, LastEventDate = LastEvent.EventDate
+		, LastEventState = LastEvent.EventState
+		, LastTeamName = LastEvent.TeamName
 		, LastWeightClass = LastEvent.WeightClass
 		, SchoolName = LastSchoolEvent.SchoolName
 		, SchoolDivision = LastSchoolEvent.Division
@@ -108,6 +126,8 @@ join	WrestlerNameAggregation
 on		EventWrestler.ID = WrestlerNameAggregation.EventWrestlerID
 join	TeamNameAggregation
 on		EventWrestler.ID = TeamNameAggregation.EventWrestlerID
+join	StateAggregation
+on		EventWrestler.ID = StateAggregation.EventWrestlerID
 left join
 		LastEvent
 on		WrestlerPopulation.EventWrestlerID = LastEvent.EventWrestlerID
