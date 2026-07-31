@@ -65,15 +65,107 @@ def formatDate(dateValue):
 		dateValue = datetime.datetime.combine(dateValue, datetime.time.min)
 	return datetime.datetime.strftime(dateValue, "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
+def saveWrestlersBatch(wrestlersList, depth=0):
+	# Declare errorCount as global to update the global error threshold tracking
+	errorCount = 0
+	if not wrestlersList:
+		return True
+
+	# Try posting to the bulk save endpoint with a timeout
+	try:
+		response = apiSession.post(f"{ millDBURL }/data/wrestler/bulk", json={ "wrestlers": wrestlersList }, timeout=300)
+		statusCode = response.status_code
+		responseText = response.text
+	except Exception as apiException:
+		statusCode = 504
+		responseText = str(apiException)
+
+	if statusCode >= 400:
+		# If the server timed out or failed to process the request, and the batch is large enough,
+		# split the batch in half and recursively retry to bypass gateway timeout limits.
+		if len(wrestlersList) > 10 and (statusCode == 504 or "timeout" in responseText.lower() or statusCode == 502):
+			midIndex = len(wrestlersList) // 2
+			firstHalf = wrestlersList[:midIndex]
+			secondHalf = wrestlersList[midIndex:]
+			logMessage(f"Gateway timeout/error on batch of { len(wrestlersList) } wrestlers. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			successFirst = saveWrestlersBatch(firstHalf, depth + 1)
+			successSecond = saveWrestlersBatch(secondHalf, depth + 1)
+			return successFirst and successSecond
+		else:
+			# If the batch cannot be split further or it's a non-transient error, log the failure.
+			errorCount += 1
+			errorLogging(f"Error bulk saving wrestlers (size { len(wrestlersList) }): { statusCode } - { responseText }")
+			return False
+	else:
+		try:
+			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
+			if depth > 0:
+				saveResult = response.json()
+				matched = saveResult.get("matchedCount", 0)
+				modified = saveResult.get("modifiedCount", 0)
+				upserted = saveResult.get("upsertedCount", 0)
+				inserted = saveResult.get("insertedCount", 0)
+				logMessage(f"Bulk save completed for chunk of { len(wrestlersList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+		except Exception as parseError:
+			errorLogging()
+			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlersList) }, but failed to parse response: { parseError }")
+		return True
+
+def saveWrestlerEventsBatch(wrestlerEventsList, depth=0):
+	# Declare errorCount as global to update the global error threshold tracking
+	errorCount = 0
+	if not wrestlerEventsList:
+		return True
+
+	# Try posting to the bulk save endpoint with a timeout
+	try:
+		response = apiSession.post(f"{ millDBURL }/data/wrestlerevent/bulk", json={ "wrestlerevents": wrestlerEventsList }, timeout=300)
+		statusCode = response.status_code
+		responseText = response.text
+	except Exception as apiException:
+		statusCode = 504
+		responseText = str(apiException)
+
+	if statusCode >= 400:
+		# If the server timed out or failed to process the request, and the batch is large enough,
+		# split the batch in half and recursively retry to bypass gateway timeout limits.
+		if len(wrestlerEventsList) > 10 and (statusCode == 504 or "timeout" in responseText.lower() or statusCode == 502):
+			midIndex = len(wrestlerEventsList) // 2
+			firstHalf = wrestlerEventsList[:midIndex]
+			secondHalf = wrestlerEventsList[midIndex:]
+			logMessage(f"Gateway timeout/error on batch of { len(wrestlerEventsList) } wrestlerEvents. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			successFirst = saveWrestlerEventsBatch(firstHalf, depth + 1)
+			successSecond = saveWrestlerEventsBatch(secondHalf, depth + 1)
+			return successFirst and successSecond
+		else:
+			# If the batch cannot be split further or it's a non-transient error, log the failure.
+			errorCount += 1
+			errorLogging(f"Error bulk saving wrestlerEvents (size { len(wrestlerEventsList) }): { statusCode } - { responseText }")
+			return False
+	else:
+		try:
+			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
+			if depth > 0:
+				saveResult = response.json()
+				matched = saveResult.get("matchedCount", 0)
+				modified = saveResult.get("modifiedCount", 0)
+				upserted = saveResult.get("upsertedCount", 0)
+				inserted = saveResult.get("insertedCount", 0)
+				logMessage(f"Bulk save completed for chunk of { len(wrestlerEventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+		except Exception as parseError:
+			errorLogging()
+			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlerEventsList) }, but failed to parse response: { parseError }")
+		return True
+
 def saveEventsBatch(eventsList, depth=0):
 	# Declare errorCount as global to update the global error threshold tracking
-	global errorCount
+	errorCount = 0
 	if not eventsList:
 		return True
 
 	# Try posting to the bulk save endpoint with a timeout
 	try:
-		response = apiSession.post(f"{ millDBURL }/api/eventsbulksave", json={ "events": eventsList }, timeout=95)
+		response = apiSession.post(f"{ millDBURL }/data/event/bulk", json={ "events": eventsList }, timeout=300)
 		statusCode = response.status_code
 		responseText = response.text
 	except Exception as apiException:
@@ -111,21 +203,16 @@ def saveEventsBatch(eventsList, depth=0):
 			errorLogging(f"Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
 		return True
 
-logMessage(f"----------- Setup")
-
-logMessage(f"Load config")
+logMessage(f"Setup")
 
 with open("./scripts/config.json", "r") as reader:
 	config = json.load(reader)
 
 millDBURL = config["millServer"]
-testMode = False
-
 apiSession = requests.Session()
-
 sql = loadSQL()
 
-logMessage(f"DB connect")
+logMessage(f"	DB connect")
 
 try:
 	cn = pyodbc.connect(f"DRIVER={{ODBC Driver 18 for SQL Server}};SERVER={ config['database']['server'] };DATABASE={ config['database']['database'] };ENCRYPT=no;UID={ config['database']['user'] };PWD={ config['database']['password'] }", autocommit=True)
@@ -134,48 +221,42 @@ except pyodbc.Error as databaseError:
 	errorLogging(f"Database connection failed: {databaseError}")
 	sys.exit(1)
 
-logMessage(f"----------- Sync")
-logMessage(f"Get wrestlers from Mill")
+logMessage(f"Delete old wrestlers")
+logMessage(f"	Get wrestlers from Mill")
 
-if not testMode:
-	response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
-	mongoWrestlers = json.loads(response.text)["wrestlers"]
-else:
-	mongoWrestlers = []
+response = apiSession.get(f"{ millDBURL }/data/wrestler?select=sqlId")
+mongoWrestlers = json.loads(response.text)["wrestlers"]
 
 # Create a lookup dictionary for mongoWrestlers by sqlId
 wrestlerLookup = {wrestler['sqlId']: wrestler['id'] for wrestler in mongoWrestlers}
 
 if len(mongoWrestlers) > 0:
-	logMessage(f"Load mill wrestlers to stage")
+	logMessage(f"	Load mill wrestlers to stage")
 	cur.execute(sql["WrestlerStageCreate"])
 	cur.executemany("insert #WrestlerStage (WrestlerID, MongoID) values (?,?);", [ (wrestler["sqlId"],wrestler["id"]) for wrestler in mongoWrestlers ])
-	
-	logMessage(f"Get missing wrestlers from stage")
 	cur.execute(sql["WrestlersMissing"])
 
 	rowIndex = 0
 	errorCount = 0
 
-	logMessage(f"Loop through wrestlers to delete")
 	for row in cur:
 		response = apiSession.delete(f"{ millDBURL }/data/wrestler?id={ row.MongoID }")
 
 		if response.status_code >= 400:
 			errorCount += 1
-			errorLogging(f"Error deleting wrestler: {response.status_code} - {response.text}")
+			errorLogging(f"	Error deleting wrestler: {response.status_code} - {response.text}")
 
 		if errorCount > 15:
-			logMessage(f"Too many errors ({ errorCount }). Exiting")
+			logMessage(f"	Too many errors ({ errorCount }). Exiting")
 			break
 		
 		rowIndex += 1
 		if rowIndex % 1000 == 0:
-			logMessage(f"{ rowIndex } wrestlers deleted")
+			logMessage(f"	{ rowIndex } wrestlers deleted")
 
-	logMessage(f"{ rowIndex } wrestlers deleted")
+	logMessage(f"	Total { rowIndex } wrestlers deleted")
 
-logMessage(f"Load wrestlers")
+logMessage(f"Process new and updated wrestlers")
 
 modifiedTimespan = -2
 eventTimespan = -730
@@ -183,34 +264,21 @@ offset = 0
 batchSize = 1000  # Adjust batch size as needed
 wrestlersCompleted = 0
 
-rowIndex = 0
-errorCount = 0
-
-while True and not testMode:
+wrestlersUpdated = []
+while True:
 	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, eventTimespan, offset, batchSize))
-	wrestlers_batch = cur.fetchall()
-	logMessage(f"{ len(wrestlers_batch) } wrestlers loaded")
+	wrestlersBatch = cur.fetchall()
 
-	if not wrestlers_batch:
+	if not wrestlersBatch:
 		break  # No more wrestlers to fetch
 
 	# Batch load matches
 	cur.execute(sql["WrestlerBatchCreate"])
-	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlers_batch])
-	cur.execute(sql["WrestlerMatchesBatchLoad"])
-	matches_batch = cur.fetchall()
-	logMessage(f"{ len(matches_batch) } matches loaded")
+	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlersBatch])
 
 	# Batch load ratings
 	cur.execute(sql["WrestlerRatingsBatchLoad"])
 	ratings_batch = cur.fetchall()
-	logMessage(f"{ len(ratings_batch) } ratings loaded")
-
-	matches_by_wrestler = {}
-	for match in matches_batch:
-		if match.EventWrestlerID not in matches_by_wrestler:
-			matches_by_wrestler[match.EventWrestlerID] = []
-		matches_by_wrestler[match.EventWrestlerID].append(match)
 
 	ratings_by_wrestler = {}
 	for rating in ratings_batch:
@@ -218,7 +286,8 @@ while True and not testMode:
 			ratings_by_wrestler[rating.EventWrestlerID] = []
 		ratings_by_wrestler[rating.EventWrestlerID].append(rating)
 
-	for wrestlerRow in wrestlers_batch:
+	wrestlersPayload = []
+	for wrestlerRow in wrestlersBatch:
 		wrestler = {
 			"sqlId": wrestlerRow.WrestlerID,
 			"name": wrestlerRow.WrestlerName,
@@ -228,13 +297,12 @@ while True and not testMode:
 			"searchNames": json.loads(wrestlerRow.SearchNames) if wrestlerRow.SearchNames else [],
 			"searchTeams": json.loads(wrestlerRow.SearchTeams) if wrestlerRow.SearchTeams else [],
 			"states": json.loads(wrestlerRow.States) if wrestlerRow.States else [],
-			"lastTeam": wrestlerRow.LastTeam,
-			"lastEvent": { "name": wrestlerRow.LastEventName, "date": wrestlerRow.LastEventDate, "state": wrestlerRow.LastEventState },
+			"lastTeam": wrestlerRow.LastTeamName,
+			"lastEvent": { "name": wrestlerRow.LastEventName, "date": formatDate(wrestlerRow.LastEventDate), "state": wrestlerRow.LastEventState },
 			"lastWeightClass": wrestlerRow.LastWeightClass,
 			"schoolName": wrestlerRow.SchoolName,
 			"schoolDivision": wrestlerRow.SchoolDivision,
 			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
-			# "events": [],
 			"ratingHistory": []
 		}
 
@@ -242,7 +310,6 @@ while True and not testMode:
 		if wrestlerRow.WrestlerID in wrestlerLookup:
 			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
 
-		matches = matches_by_wrestler.get(wrestlerRow.WrestlerID, [])
 		ratings = ratings_by_wrestler.get(wrestlerRow.WrestlerID, [])
 
 		for ratingRow in ratings:
@@ -252,125 +319,93 @@ while True and not testMode:
 				"deviation": float(ratingRow.Deviation)
 			})
 
-		events = {}
-		for matchRow in matches:
-			if matchRow.EventID not in events:
-				events[matchRow.EventID] = {
-					"wrestlerSqlId": wrestlerRow.WrestlerID,
-					"sqlId": matchRow.EventID,
-					"name": matchRow.EventName,
-					"date": datetime.datetime.strftime(matchRow.EventDate, "%Y-%m-%dT%H:%M:%S.%f")[:-3] if matchRow.EventDate is not None else None,
-					"team": matchRow.TeamName,
-					"locationState": matchRow.EventState,
-					"seed": matchRow.Seed,
-					"matches": []
-				}
+		wrestlersUpdated.append(wrestlerRow.WrestlerID)
+		wrestlersPayload.append(wrestler)
+	
+	# Post current batch to the bulk save endpoint using retry/split logic
+	saveWrestlersBatch(wrestlersPayload)
+			
+	wrestlersCompleted += len(wrestlersPayload)
+	if wrestlersCompleted % 1000 == 0:
+		logMessage(f"	{ wrestlersCompleted } wrestlers processed")
+	offset += batchSize
 
-			events[matchRow.EventID]["matches"].append({
+logMessage(f"	Total { wrestlersCompleted } wrestlers processed")
+logMessage(f"Process wrestler events")
+
+offset = 0
+batchSize = 500  # Adjust batch size as needed
+wrestlersEventsCompleted = 0
+
+while True:
+	wrestlerEventBatchIDs = wrestlersUpdated[offset:offset + batchSize]
+
+	# Batch load matches
+	cur.execute(sql["WrestlerEventsBatchCreate"])
+	cur.executemany("insert #WrestlerEventsBatch (WrestlerID) values (?);", [[wrestlerID] for wrestlerID in wrestlerEventBatchIDs])
+	cur.execute(sql["WrestlerEventsBatchLoad"])
+	matchesBatch = cur.fetchall()
+
+	if not matchesBatch:
+		break  # No more wrestlers to fetch
+
+	events = {}
+	for matchRow in matchesBatch:
+		eventKey = str(matchRow.EventID) + "|" + str(matchRow.WrestlerID)
+		if eventKey not in events:
+			events[eventKey] = {
+				"wrestlerSqlId": matchRow.WrestlerID,
+				"sqlId": matchRow.EventID,
+				"name": matchRow.EventName,
+				"date": formatDate(matchRow.EventDate),
+				"team": matchRow.TeamName,
 				"division": matchRow.Division,
 				"weightClass": matchRow.WeightClass,
-				"matchSqlId": matchRow.MatchSQLID,
-				"round": matchRow.MatchRound,
-				"vs": matchRow.OpponentName,
-				"vsTeam": matchRow.OpponentTeamName,
-				"vsSqlId": matchRow.OpponentID,
-				"vsRating": float(matchRow.OpponentRating) if matchRow.OpponentRating is not None else None,
-				"vsDeviation": float(matchRow.OpponentDeviation) if matchRow.OpponentDeviation is not None else None,
-				"isWinner": matchRow.IsWinner,
-				"winType": matchRow.WinType,
-				"sort": matchRow.MatchSort
-			})
+				"locationState": matchRow.EventState,
+				"seed": matchRow.Seed,
+				"matches": []
+			}
 
-		# wrestler["events"] = list(events.values())
-
-		response = apiSession.post(f"{ millDBURL }/data/wrestler", json={ "wrestler": wrestler })
-
-		if response.status_code >= 400:
-			errorCount += 1
-			errorLogging(f"Error saving wrestler: {response.status_code} - {response.text}")
-		else:
-			wrestlerId = json.loads(response.text)["id"]
-			wrestlerEvents = list(events.values())
-			for event in wrestlerEvents:
-				event["wrestlerId"] = wrestlerId
-
-			response = apiSession.post(f"{ millDBURL }/api/wrestlereventsbulksave", json={ "wrestlerEvents": wrestlerEvents })
-			if response.status_code >= 400:
-				errorCount += 1
-				errorLogging(f"Error saving wrestler events: {response.status_code} - {response.text}")
-
-		if errorCount > 15:
-			logMessage(f"Too many errors ({ errorCount }). Exiting")
-			break
-
-		wrestlersCompleted += 1
-		if wrestlersCompleted % 1000 == 0:
-			logMessage(f"{ wrestlersCompleted } wrestlers processed")
+		events[eventKey]["matches"].append({
+			"division": matchRow.Division,
+			"weightClass": matchRow.WeightClass,
+			"matchSqlId": matchRow.MatchSQLID,
+			"round": matchRow.MatchRound,
+			"vs": matchRow.OpponentName,
+			"vsTeam": matchRow.OpponentTeamName,
+			"vsSqlId": matchRow.OpponentID,
+			"vsRating": float(matchRow.OpponentRating) if matchRow.OpponentRating is not None else None,
+			"vsDeviation": float(matchRow.OpponentDeviation) if matchRow.OpponentDeviation is not None else None,
+			"isWinner": matchRow.IsWinner,
+			"winType": matchRow.WinType,
+			"sort": matchRow.MatchSort
+		})
+	
+	# Post current batch to the bulk save endpoint using retry/split logic
+	wrestlerEventsPayload = list(events.values())
+	saveWrestlerEventsBatch(wrestlerEventsPayload)
+	
+	wrestlersEventsCompleted += len(wrestlerEventsPayload)
+	logMessage(f"	{ len(wrestlerEventsPayload) } wrestler events processed")
 
 	offset += batchSize
-	if errorCount > 15: # Break outer loop if too many errors
-		break
 
-logMessage(f"{ wrestlersCompleted } wrestlers processed")
-
-logMessage(f"Get Schools from Wrestlingmill")
-
-if not testMode:
-	response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
-	mongoSchools = json.loads(response.text)["schools"]
-
-	# Create a lookup dictionary for mongoWrestlers by sqlId
-	schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
-
-	cur.execute(sql["SchoolsGet"])
-	schools = cur.fetchall()
-else:
-	schools = []
-	schoolLookup = {}
-
-schoolsCompleted = 0
-
-for school in schools:
-	schoolSave = {
-		"sqlId": school.SchoolID,
-		"name": school.SchoolName,
-		"classification": school.Classification,
-		"region": school.Region,
-		"lookupNames": json.loads(school.LookupNames) if school.LookupNames else []
-	}
-	
-	# Add id if a match is found in wrestlerLookup
-	if school.SchoolID in schoolLookup:
-		schoolSave["id"] = schoolLookup[school.SchoolID]
-
-	response = apiSession.post(f"{ millDBURL }/data/school", json={ "school": schoolSave })
-
-	if response.status_code >= 400:
-		errorCount += 1
-		errorLogging(f"Error saving school: {response.status_code} - {response.text}")
-	
-	schoolsCompleted += 1
-
-logMessage(f"{ schoolsCompleted } schools processed")
-
+logMessage(f"	Total { wrestlersEventsCompleted } wrestler events processed")
 logMessage(f"----------- Event Sync")
 
-modifiedTimespanDays = -3
+modifiedTimespanDays = -2
 seasonStartDate = getSeasonStartDate()
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
-logMessage(f"Get events from Mill")
+logMessage(f"	Get events from Mill")
 
-if not testMode or True:
-	response = apiSession.get(f"{ millDBURL }/data/event?select=sqlId")
-	mongoEvents = json.loads(response.text)["events"]
-else:
-	mongoEvents = []
+response = apiSession.get(f"{ millDBURL }/data/event?select=sqlId")
+mongoEvents = json.loads(response.text)["events"]
 
 cur.execute(sql["EventsAllSeason"], (seasonStartDate))
 eventIds = [eventRow.SqlID for eventRow in cur.fetchall()]
 
-logMessage(f"Delete missing events")
+logMessage(f"	Delete missing events")
 
 deletedEvents = 0
 for mongoEvent in mongoEvents:
@@ -383,7 +418,7 @@ for mongoEvent in mongoEvents:
 		else:
 			deletedEvents += 1
 
-logMessage(f"Deleted { deletedEvents } events")
+logMessage(f"	Deleted { deletedEvents } events")
 
 eventsProcessed = 0
 eventBatchSize = 200
@@ -393,9 +428,9 @@ eventIds = []
 # modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
 modifiedThreshold = datetime.datetime.now() - datetime.timedelta(days=modifiedTimespanDays)
 
-logMessage(f"Load events to mill")
+while True:
+	logMessage(f"	Load events to mill")
 
-while True and not testMode:
 	# Load a batch of events directly from SQL to minimize peak memory usage
 	cur.execute(sql["EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
 	eventsRows = cur.fetchall()
@@ -488,17 +523,49 @@ while True and not testMode:
 	# Post current batch to the bulk save endpoint using retry/split logic
 	saveEventsBatch(eventsPayload)
 			
-	if errorCount > 15:
-		errorLogging(f"Too many errors ({ errorCount }). Exiting")
-		break
-		
 	eventsProcessed += len(sqlIds)
 	if eventsProcessed % 1000 == 0:
-		logMessage(f"{ eventsProcessed } events processed")
+		logMessage(f"	{ eventsProcessed } events processed")
 	eventOffset += eventBatchSize
+
+logMessage(f"	Total { eventsProcessed } events processed")
+logMessage(f"Process schools")
+
+response = apiSession.get(f"{ millDBURL }/data/school?select=sqlId")
+mongoSchools = json.loads(response.text)["schools"]
+
+# Create a lookup dictionary for mongoWrestlers by sqlId
+schoolLookup = {school['sqlId']: school['id'] for school in mongoSchools}
+
+cur.execute(sql["SchoolsGet"])
+schools = cur.fetchall()
+
+schoolsCompleted = 0
+
+for school in schools:
+	schoolSave = {
+		"sqlId": school.SchoolID,
+		"name": school.SchoolName,
+		"classification": school.Classification,
+		"region": school.Region,
+		"lookupNames": json.loads(school.LookupNames) if school.LookupNames else []
+	}
+	
+	# Add id if a match is found in wrestlerLookup
+	if school.SchoolID in schoolLookup:
+		schoolSave["id"] = schoolLookup[school.SchoolID]
+
+	response = apiSession.post(f"{ millDBURL }/data/school", json={ "school": schoolSave })
+
+	if response.status_code >= 400:
+		errorCount += 1
+		errorLogging(f"	Error saving school: {response.status_code} - {response.text}")
+	
+	schoolsCompleted += 1
+
+logMessage(f"	Total { schoolsCompleted } schools processed")
 
 cur.close()
 cn.close()
 
-logMessage(f"{ eventsProcessed } events processed")
-logMessage(f"----------- End")
+logMessage(f"End")
