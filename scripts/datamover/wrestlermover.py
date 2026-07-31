@@ -340,14 +340,14 @@ wrestlersEventsCompleted = 0
 while True:
 	wrestlerEventBatchIDs = wrestlersUpdated[offset:offset + batchSize]
 
+	if not wrestlerEventBatchIDs or len(wrestlerEventBatchIDs) == 0:
+		break  # No more wrestlers to fetch
+
 	# Batch load matches
 	cur.execute(sql["WrestlerEventsBatchCreate"])
 	cur.executemany("insert #WrestlerEventsBatch (WrestlerID) values (?);", [[wrestlerID] for wrestlerID in wrestlerEventBatchIDs])
 	cur.execute(sql["WrestlerEventsBatchLoad"])
 	matchesBatch = cur.fetchall()
-
-	if not matchesBatch:
-		break  # No more wrestlers to fetch
 
 	events = {}
 	for matchRow in matchesBatch:
