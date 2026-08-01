@@ -3,6 +3,7 @@ select	EventID = EventMatch.EventID
 		, Division = EventMatch.Division
 		, WeightClass = trim(replace(EventMatch.WeightClass, 'lbs', ''))
 		, RoundName = EventMatch.RoundName
+		, EventMatch.VideoURL
 		, WinType = EventMatch.WinType
 		, MatchSort = EventMatch.Sort
 		, WinnerWrestlerSqlID = Winner.ID
@@ -10,11 +11,19 @@ select	EventID = EventMatch.EventID
 		, WinnerTeam = WinnerMatch.TeamName
 		, WinnerRating = WinnerRating.Rating
 		, WinnerDeviation = WinnerRating.Deviation
+		, WinnerTakedowns = WinnerMatch.Takedowns
+		, WinnerEscapes = WinnerMatch.Escapes
+		, WinnerNearFalls = WinnerMatch.Nearfalls
+		, WinnerReversals = WinnerMatch.Reversals
 		, LoserWrestlerSqlID = Loser.ID
 		, LoserName = LoserMatch.WrestlerName
 		, LoserTeam = LoserMatch.TeamName
 		, LoserRating = LoserRating.Rating
 		, LoserDeviation = LoserRating.Deviation
+		, LoserTakedowns = LoserMatch.Takedowns
+		, LoserEscapes = LoserMatch.Escapes
+		, LoserNearFalls = LoserMatch.Nearfalls
+		, LoserReversals = LoserMatch.Reversals
 from	#EventBatch
 join	EventMatch
 on		#EventBatch.EventID = EventMatch.EventID

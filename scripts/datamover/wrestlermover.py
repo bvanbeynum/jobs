@@ -371,6 +371,7 @@ while True:
 			"weightClass": matchRow.WeightClass,
 			"matchSqlId": matchRow.MatchSQLID,
 			"round": matchRow.MatchRound,
+			"videoUrl": matchRow.VideoURL,
 			"vs": matchRow.OpponentName,
 			"vsTeam": matchRow.OpponentTeamName,
 			"vsSqlId": matchRow.OpponentID,
@@ -378,7 +379,11 @@ while True:
 			"vsDeviation": float(matchRow.OpponentDeviation) if matchRow.OpponentDeviation is not None else None,
 			"isWinner": matchRow.IsWinner,
 			"winType": matchRow.WinType,
-			"sort": matchRow.MatchSort
+			"sort": matchRow.MatchSort,
+			"takedowns": matchRow.Takedowns,
+			"escapes": matchRow.Escapes,
+			"nearfalls": matchRow.Nearfalls,
+			"reversals": matchRow.Reversals
 		})
 	
 	# Post current batch to the bulk save endpoint using retry/split logic
@@ -485,6 +490,7 @@ while True:
 				"division": matchRow.Division,
 				"weightClass": matchRow.WeightClass,
 				"roundName": matchRow.RoundName,
+				"videoUrl": matchRow.VideoURL,
 				"winType": matchRow.WinType,
 				"isUpset": isUpset,
 				"sort": matchRow.MatchSort,
@@ -493,14 +499,22 @@ while True:
 					"name": matchRow.WinnerName,
 					"team": matchRow.WinnerTeam,
 					"rating": winnerRating,
-					"deviation": winnerDeviation
+					"deviation": winnerDeviation,
+					"takedowns": matchRow.WinnerTakedowns,
+					"escapes": matchRow.WinnerEscapes,
+					"nearfalls": matchRow.WinnerNearfalls,
+					"reversals": matchRow.WinnerReversals
 				},
 				"loser": {
 					"wrestlerSqlId": matchRow.LoserWrestlerSqlID,
 					"name": matchRow.LoserName,
 					"team": matchRow.LoserTeam,
 					"rating": loserRating,
-					"deviation": loserDeviation
+					"deviation": loserDeviation,
+					"takedowns": matchRow.LoserTakedowns,
+					"escapes": matchRow.LoserEscapes,
+					"nearfalls": matchRow.LoserNearfalls,
+					"reversals": matchRow.LoserReversals
 				}
 			})
 			

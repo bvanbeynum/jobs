@@ -9,6 +9,7 @@ select	WrestlerID = EventWrestlerMatch.EventWrestlerID
 		, Seed = min(EventWrestlerMatch.Seed) over (partition by EventWrestlerMatch.EventWrestlerID, event.ID)
 		, MatchSQLID = EventMatch.ID
 		, MatchRound = EventMatch.RoundName
+		, EventMatch.VideoURL
 		, MatchSort = EventMatch.Sort
 		, OpponentName = Opponent.WrestlerName
 		, OpponentTeamName = coalesce(OpponentSchool.SchoolName, OpponentMatch.TeamName)
@@ -17,6 +18,10 @@ select	WrestlerID = EventWrestlerMatch.EventWrestlerID
 		, OpponentDeviation = OpponentRating.Deviation
 		, IsWinner = EventWrestlerMatch.IsWinner
 		, WinType = EventMatch.WinType
+		, EventWrestlerMatch.Takedowns
+		, EventWrestlerMatch.Escapes
+		, EventWrestlerMatch.Nearfalls
+		, EventWrestlerMatch.Reversals
 from	EventWrestlerMatch
 join	#WrestlerEventsBatch Batch
 on		EventWrestlerMatch.EventWrestlerID = Batch.WrestlerID
