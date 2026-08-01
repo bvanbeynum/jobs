@@ -56,6 +56,7 @@ insert	EventMatch (
 		, RoundName
 		, WinType
 		, Sort
+		, VideoURL
 		, SystemID
 		)
 select	MatchStage.EventID
@@ -64,6 +65,7 @@ select	MatchStage.EventID
 		, MatchStage.MatchRound
 		, MatchStage.WinType
 		, MatchStage.Sort
+		, MatchStage.VideoURL
 		, min(MatchStage.SystemID) -- Exclude duplicates
 from	#MatchStage MatchStage
 left join
@@ -78,6 +80,7 @@ group by
 		, MatchStage.MatchRound
 		, MatchStage.WinType
 		, MatchStage.Sort
+		, MatchStage.VideoURL
 		, MatchStage.Wrestler1SystemID -- If same wrestler
 		, MatchStage.Wrestler2SystemID;
 
@@ -90,6 +93,10 @@ insert	EventWrestlerMatch (
 			, Seed
 			, Score
 			, Grade
+			, Takedowns
+			, Escapes
+			, Nearfalls
+			, Reversals
 		)
 select	WrestlerLookupMatch.EventWrestlerID
 		, EventMatch.ID
@@ -99,6 +106,10 @@ select	WrestlerLookupMatch.EventWrestlerID
 		, try_cast(MatchStage.Wrestler1Seed as int)
 		, try_cast(MatchStage.Wrestler1Score as int)
 		, MatchStage.Wrestler1Grade
+		, try_cast(MatchStage.Wrestler1Takedowns as int)
+		, try_cast(MatchStage.Wrestler1Escapes as int)
+		, try_cast(MatchStage.Wrestler1Nearfalls as int)
+		, try_cast(MatchStage.Wrestler1Reversals as int)
 from	#MatchStage MatchStage
 join	EventMatch
 on		MatchStage.EventID = EventMatch.EventID
@@ -119,6 +130,10 @@ select	WrestlerLookupMatch.EventWrestlerID
 		, try_cast(MatchStage.Wrestler2Seed as int)
 		, try_cast(MatchStage.Wrestler2Score as int)
 		, MatchStage.Wrestler2Grade
+		, try_cast(MatchStage.Wrestler2Takedowns as int)
+		, try_cast(MatchStage.Wrestler2Escapes as int)
+		, try_cast(MatchStage.Wrestler2Nearfalls as int)
+		, try_cast(MatchStage.Wrestler2Reversals as int)
 from	#MatchStage MatchStage
 join	EventMatch
 on		MatchStage.EventID = EventMatch.EventID

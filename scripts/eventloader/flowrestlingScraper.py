@@ -97,7 +97,7 @@ apiUrls = {
 	"event": "/event-hub/{systemId}",
 	"divisionWeight": "/brackets/divisions",
 	"bracket": "/brackets/{bracketId}",
-	"matchDetails": "/bout-detail/{matchId}"
+	"matchDetails": "/brackets/bout-detail/{matchId}"
 }
 
 requestHeaders = { "User-Agent": config["userAgent"] }
@@ -270,42 +270,81 @@ while currentDate <= endDate:
 							matchCount += 1
 
 							athlete1Id = match["topParticipant"]["id"]
-							athlete1Name = match["topParticipant"].get("name", "")
-							athlete1Team = match["topParticipant"].get("team", "")
+							athlete1Name = (match["topParticipant"].get("name") or "").replace("'", "''")
+							athlete1Team = (match["topParticipant"].get("team") or "").replace("'", "''")
 							athlete1Winner = 1 if match["topParticipant"].get("winner", False) else 0
 							athlete1Seed = match["topParticipant"].get("seed")
 							athlete1Score = match["topParticipant"].get("score")
 							athlete1Seed = match["topParticipant"].get("seed")
 
 							athlete2Id = match["bottomParticipant"]["id"]
-							athlete2Name = match["bottomParticipant"].get("name", "")
-							athlete2Team = match["bottomParticipant"].get("team", "")
+							athlete2Name = (match["bottomParticipant"].get("name") or "").replace("'", "''")
+							athlete2Team = (match["bottomParticipant"].get("team") or "").replace("'", "''")
 							athlete2Winner = 1 if match["bottomParticipant"].get("winner", False) else 0
 							athlete2Seed = match["bottomParticipant"].get("seed")
 							athlete2Score = match["bottomParticipant"].get("score")
 							athlete2Seed = match["bottomParticipant"].get("seed")
 
-							winType = match.get("winType")
-							matchRound = match.get("roundName", "")
 							matchId = match["id"]
+							winType = (match.get("winType") or "").replace("'", "''")
+							matchRound = (match.get("roundName") or "").replace("'", "''")
+							matchVideoUrl = (match.get("boutVideoUrl") or "").replace("'", "''")
 							sort = match.get("matchNumber") if match.get("matchNumber") and str.isnumeric(str(match.get("matchNumber"))) else (matchIndex + 1)
 							
-							if athlete1Id not in wrestlers or athlete2Id not in wrestlers:
-								bracketUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["matchDetails"].format(matchId=matchId)
-								bracketResponse = requests.get(bracketUrl, headers=requestHeaders)
-								time.sleep(1)
+							bracketUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId) + apiUrls["matchDetails"].format(matchId=matchId)
+							bracketResponse = requests.get(bracketUrl, headers=requestHeaders)
+							time.sleep(1)
 
-								if bracketResponse and bracketResponse.status_code == 200:
-									bracketData = bracketResponse.json()
-									if bracketData.get("data") is not None:
-										
+							athlete1Actions = { "takedowns": None, "escapes": None, "nearfalls": None, "reversals": None  }
+							athlete2Actions = { "takedowns": None, "escapes": None, "nearfalls": None, "reversals": None  }
+							
+							if bracketResponse and bracketResponse.status_code == 200:
+								bracketData = bracketResponse.json()
+								if bracketData.get("data") is not None:
+
+									# Set the wrestler's grade only once
+									if athlete1Id not in wrestlers or athlete2Id not in wrestlers:
 										if bracketData["data"].get("topAthlete") and bracketData["data"]["topAthlete"].get("grade") and bracketData["data"]["topAthlete"]["grade"].get("name"):
 											wrestlers.setdefault(athlete1Id, { "grade": bracketData["data"]["topAthlete"]["grade"]["name"] })
 										
 										if bracketData["data"].get("bottomAthlete") and bracketData["data"]["bottomAthlete"].get("grade") and bracketData["data"]["bottomAthlete"]["grade"].get("name"):
 											wrestlers.setdefault(athlete2Id, { "grade": bracketData["data"]["bottomAthlete"]["grade"]["name"] })
+
+									# Get the actions for the match
+									if bracketData["data"].get("transcript") and len(bracketData["data"]["transcript"]) > 0:
+										athlete1Actions = { "takedowns": 0, "escapes": 0, "nearfalls": 0, "reversals": 0  }
+										athlete2Actions = { "takedowns": 0, "escapes": 0, "nearfalls": 0, "reversals": 0  }
 							
-							batchLoad.append(f"('{ matchId }', { eventId }, '{ divisionName }', '{ weightClassName }', '{ matchRound }', '{ winType }', '{ athlete1Id }', '{ athlete1Name.replace("'", "''") }', '{ athlete1Team.replace("'", "''") }', { athlete1Winner }, '{ athlete1Seed }', '{ athlete1Score }', '{ wrestlers.get(athlete1Id, {}).get("grade") or ""}', '{ athlete2Id }', '{ athlete2Name.replace("'", "''") }', '{ athlete2Team.replace("'", "''") }', { athlete2Winner }, '{ athlete2Seed }', '{ athlete2Score }', '{ wrestlers.get(athlete2Id, {}).get("grade") or "" }' , { sort })")
+										for action in bracketData["data"]["transcript"]:
+
+											wrestler = None
+											actionType = None
+											if action["bottomEventParticipantEntry"] is not None and action["bottomEventParticipantEntry"].get("entryTypeId") is not None:
+												wrestler = athlete2Actions
+												actionType = action["bottomEventParticipantEntry"]["entryTypeId"].lower()
+											else:
+												wrestler = athlete1Actions
+												actionType = action["topEventParticipantEntry"]["entryTypeId"].lower()
+												
+											if "takedown" in actionType:
+												wrestler["takedowns"] += 1
+											elif "escape" in actionType:
+												wrestler["escapes"] += 1
+											elif "near-fall" in actionType:
+												wrestler["nearfalls"] += 1
+											elif "reversal" in actionType:
+												wrestler["reversals"] += 1
+
+							insertString = (
+								f"('{ matchId }', { eventId }, '{ divisionName.replace("'", "''") }', '{ weightClassName.replace("'", "''") }', '{ matchRound }', '{ winType }', '{ matchVideoUrl }'"
+								f", '{ athlete1Id }', '{ athlete1Name }', '{ athlete1Team }', { athlete1Winner }, '{ athlete1Seed }', '{ athlete1Score }', '{ wrestlers.get(athlete1Id, {}).get("grade") or ""}'"
+								f", { "null" if athlete1Actions["takedowns"] is None else athlete1Actions["takedowns"] }, { "null" if athlete1Actions["escapes"] is None else athlete1Actions["escapes"] }, { "null" if athlete1Actions["nearfalls"] is None else athlete1Actions["nearfalls"] }, { "null" if athlete1Actions["reversals"] is None else athlete1Actions["reversals"] }"
+								f", '{ athlete2Id }', '{ athlete2Name }', '{ athlete2Team }', { athlete2Winner }, '{ athlete2Seed }', '{ athlete2Score }', '{ wrestlers.get(athlete2Id, {}).get("grade") or "" }'"
+								f", { "null" if athlete2Actions["takedowns"] is None else athlete2Actions["takedowns"] }, { "null" if athlete2Actions["escapes"] is None else athlete2Actions["escapes"] }, { "null" if athlete2Actions["nearfalls"] is None else athlete2Actions["nearfalls"] }, { "null" if athlete2Actions["reversals"] is None else athlete2Actions["reversals"] }"
+								f", { sort })"
+							)
+
+							batchLoad.append(insertString)
 
 			logMessage(f"From Flo: { divisionCount } divisions, { weightClassCount } weight classes, { matchCount } matches for { eventName }")
 
@@ -316,7 +355,15 @@ while currentDate <= endDate:
 
 					for i in range(0, len(batchLoad), 500):
 						batch = batchLoad[i:i+500]
-						insertSql = "insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler1Seed, Wrestler1Score, Wrestler1Grade, Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Wrestler2Seed, Wrestler2Score, Wrestler2Grade, Sort) values " + ", ".join(batch)
+						insertSql = (
+							"insert #MatchStage (SystemID, EventID, DivisionName, WeightClassName, MatchRound, WinType, VideoURL"
+							", Wrestler1SystemID, Wrestler1Name, Wrestler1Team, Wrestler1IsWinner, Wrestler1Seed, Wrestler1Score, Wrestler1Grade"
+							", Wrestler1Takedowns, Wrestler1Escapes, Wrestler1NearFalls, Wrestler1Reversals"
+							", Wrestler2SystemID, Wrestler2Name, Wrestler2Team, Wrestler2IsWinner, Wrestler2Seed, Wrestler2Score, Wrestler2Grade"
+							", Wrestler2Takedowns, Wrestler2Escapes, Wrestler2NearFalls, Wrestler2Reversals"
+							", Sort) values " + ", ".join(batch)
+						)
+
 						cur.execute(insertSql)
 
 					# Process all the updates

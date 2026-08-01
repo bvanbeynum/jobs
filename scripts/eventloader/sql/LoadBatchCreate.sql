@@ -8,6 +8,7 @@ create table #MatchStage (
 	, WeightClassName varchar(255)
 	, MatchRound varchar(255)
 	, WinType varchar(255)
+	, VideoURL varchar(255)
 	, Wrestler1SystemID varchar(255)
 	, Wrestler1Name varchar(255)
 	, Wrestler1Team varchar(255)
@@ -15,6 +16,10 @@ create table #MatchStage (
 	, Wrestler1Seed varchar(255)
 	, Wrestler1Score varchar(255)
 	, Wrestler1Grade varchar(255)
+	, Wrestler1Takedowns varchar(255)
+	, Wrestler1Escapes varchar(255)
+	, Wrestler1Nearfalls varchar(255)
+	, Wrestler1Reversals varchar(255)
 	, Wrestler2SystemID varchar(255)
 	, Wrestler2Name varchar(255)
 	, Wrestler2Team varchar(255)
@@ -22,5 +27,9 @@ create table #MatchStage (
 	, Wrestler2Seed varchar(255)
 	, Wrestler2Score varchar(255)
 	, Wrestler2Grade varchar(255)
+	, Wrestler2Takedowns varchar(255)
+	, Wrestler2Escapes varchar(255)
+	, Wrestler2Nearfalls varchar(255)
+	, Wrestler2Reversals varchar(255)
 	, Sort int
 );
