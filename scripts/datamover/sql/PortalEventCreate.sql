@@ -1,0 +1,31 @@
+if object_id('tempdb..#WrestlingPortalMatches') is not null
+	drop table #WrestlingPortalMatches
+
+create table #WrestlingPortalMatches (
+	EventID varchar(255)
+	, SystemID varchar(255)
+	, EventName varchar(255)
+	, EventDate varchar(255)
+	, EventAddress varchar(255)
+	, EventState varchar(255)
+	, MatchID varchar(255)
+	, Division varchar(255)
+	, WeightClass varchar(255)
+	, RoundName varchar(255)
+	, WinType varchar(255)
+	, Sort varchar(255)
+	, WinnerWrestlerID varchar(255)
+	, WinnerName varchar(255)
+	, WinnerTeam varchar(255)
+	, WinnerTakedowns varchar(255)
+	, WinnerEscapes varchar(255)
+	, WinnerNearFalls varchar(255)
+	, WinnerReversals varchar(255)
+	, LoserWrestlerID varchar(255)
+	, LoserName varchar(255)
+	, LoserTeam varchar(255)
+	, LoserTakedowns varchar(255)
+	, LoserEscapes varchar(255)
+	, LoserNearFalls varchar(255)
+	, LoserReversals varchar(255)
+);
