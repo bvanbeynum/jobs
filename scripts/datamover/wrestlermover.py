@@ -34,17 +34,6 @@ def errorLogging(errorMessage):
 	except Exception as apiError:
 		logMessage(f"Failed to log error to API: {apiError}")
 
-def getSeasonStartDate():
-	# Seasons run from 9/1 to 8/31. We want the start date of the past season.
-	# If today is after 9/1, past season started on 9/1 of last year.
-	# If today is before 8/31, past season started on 9/1 of two years ago.
-	today = datetime.datetime.now().date()
-	if today.month >= 9:
-		year = today.year - 1
-	else:
-		year = today.year - 2
-	return datetime.date(year, 9, 1)
-
 def isBonusPointWin(winType):
 	# Bonus points are awarded for Falls, Tech Falls, Major Decisions, Forfeits, Disqualifications, and Injury Defaults.
 	if not winType:
@@ -398,8 +387,14 @@ while True:
 logMessage(f"	Total { wrestlersEventsCompleted } wrestler events processed")
 logMessage(f"----------- Event Sync")
 
+today = datetime.datetime.now().date()
+if today.month >= 9:
+	year = today.year - 1
+else:
+	year = today.year - 2
+seasonStartDate = datetime.date(year, 9, 1)
+
 modifiedTimespanDays = -2
-seasonStartDate = getSeasonStartDate()
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
 logMessage(f"	Get events from Mill")
