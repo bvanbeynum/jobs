@@ -25,7 +25,7 @@ on		EventWrestlerMatch.EventMatchID = EventMatch.ID
 join	Event
 on		EventMatch.EventID = Event.ID
 where	EventWrestlerMatch.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
-		and Event.EventDate >= dateadd(day, @TimespanDays, getdate())
+		and Event.EventDate >= dateadd(day, @EventDays, getdate())
 group by
 		EventWrestlerMatch.EventWrestlerID
 order by

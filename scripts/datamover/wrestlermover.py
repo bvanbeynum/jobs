@@ -432,7 +432,7 @@ while True:
 	logMessage(f"	Load events to mill")
 
 	# Load a batch of events directly from SQL to minimize peak memory usage
-	cur.execute(sql["EventsLoad"], (seasonStartDate, modifiedThreshold, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
+	cur.execute(sql["EventsLoad"], (seasonStartDate, seasonStartDate, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
 	eventsRows = cur.fetchall()
 	
 	if not eventsRows:
