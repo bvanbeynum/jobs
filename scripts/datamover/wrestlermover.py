@@ -76,7 +76,7 @@ def saveWrestlersBatch(wrestlersList, depth=0):
 			midIndex = len(wrestlersList) // 2
 			firstHalf = wrestlersList[:midIndex]
 			secondHalf = wrestlersList[midIndex:]
-			logMessage(f"Gateway timeout/error on batch of { len(wrestlersList) } wrestlers. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			logMessage(f"	Gateway timeout/error on batch of { len(wrestlersList) } wrestlers. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
 			successFirst = saveWrestlersBatch(firstHalf, depth + 1)
 			successSecond = saveWrestlersBatch(secondHalf, depth + 1)
 			return successFirst and successSecond
@@ -94,10 +94,10 @@ def saveWrestlersBatch(wrestlersList, depth=0):
 				modified = saveResult.get("modifiedCount", 0)
 				upserted = saveResult.get("upsertedCount", 0)
 				inserted = saveResult.get("insertedCount", 0)
-				logMessage(f"Bulk save completed for chunk of { len(wrestlersList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+				logMessage(f"	Bulk save completed for chunk of { len(wrestlersList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
 		except Exception as parseError:
 			errorLogging()
-			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlersList) }, but failed to parse response: { parseError }")
+			errorLogging(f"	Bulk save succeeded for chunk of { len(wrestlersList) }, but failed to parse response: { parseError }")
 		return True
 
 def saveWrestlerEventsBatch(wrestlerEventsList, depth=0):
@@ -122,14 +122,14 @@ def saveWrestlerEventsBatch(wrestlerEventsList, depth=0):
 			midIndex = len(wrestlerEventsList) // 2
 			firstHalf = wrestlerEventsList[:midIndex]
 			secondHalf = wrestlerEventsList[midIndex:]
-			logMessage(f"Gateway timeout/error on batch of { len(wrestlerEventsList) } wrestlerEvents. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			logMessage(f"	Gateway timeout/error on batch of { len(wrestlerEventsList) } wrestlerEvents. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
 			successFirst = saveWrestlerEventsBatch(firstHalf, depth + 1)
 			successSecond = saveWrestlerEventsBatch(secondHalf, depth + 1)
 			return successFirst and successSecond
 		else:
 			# If the batch cannot be split further or it's a non-transient error, log the failure.
 			errorCount += 1
-			errorLogging(f"Error bulk saving wrestlerEvents (size { len(wrestlerEventsList) }): { statusCode } - { responseText }")
+			errorLogging(f"	Error bulk saving wrestlerEvents (size { len(wrestlerEventsList) }): { statusCode } - { responseText }")
 			return False
 	else:
 		try:
@@ -140,10 +140,10 @@ def saveWrestlerEventsBatch(wrestlerEventsList, depth=0):
 				modified = saveResult.get("modifiedCount", 0)
 				upserted = saveResult.get("upsertedCount", 0)
 				inserted = saveResult.get("insertedCount", 0)
-				logMessage(f"Bulk save completed for chunk of { len(wrestlerEventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+				logMessage(f"	Bulk save completed for chunk of { len(wrestlerEventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
 		except Exception as parseError:
 			errorLogging()
-			errorLogging(f"Bulk save succeeded for chunk of { len(wrestlerEventsList) }, but failed to parse response: { parseError }")
+			errorLogging(f"	Bulk save succeeded for chunk of { len(wrestlerEventsList) }, but failed to parse response: { parseError }")
 		return True
 
 def saveEventsBatch(eventsList, depth=0):
@@ -168,14 +168,14 @@ def saveEventsBatch(eventsList, depth=0):
 			midIndex = len(eventsList) // 2
 			firstHalf = eventsList[:midIndex]
 			secondHalf = eventsList[midIndex:]
-			logMessage(f"Gateway timeout/error on batch of { len(eventsList) } events. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			logMessage(f"	Gateway timeout/error on batch of { len(eventsList) } events. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
 			successFirst = saveEventsBatch(firstHalf, depth + 1)
 			successSecond = saveEventsBatch(secondHalf, depth + 1)
 			return successFirst and successSecond
 		else:
 			# If the batch cannot be split further or it's a non-transient error, log the failure.
 			errorCount += 1
-			errorLogging(f"Error bulk saving events (size { len(eventsList) }): { statusCode } - { responseText }")
+			errorLogging(f"	Error bulk saving events (size { len(eventsList) }): { statusCode } - { responseText }")
 			return False
 	else:
 		try:
@@ -186,10 +186,10 @@ def saveEventsBatch(eventsList, depth=0):
 				modified = saveResult.get("modifiedCount", 0)
 				upserted = saveResult.get("upsertedCount", 0)
 				inserted = saveResult.get("insertedCount", 0)
-				logMessage(f"Bulk save completed for chunk of { len(eventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+				logMessage(f"	Bulk save completed for chunk of { len(eventsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
 		except Exception as parseError:
 			errorLogging()
-			errorLogging(f"Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
+			errorLogging(f"	Bulk save succeeded for chunk of { len(eventsList) }, but failed to parse response: { parseError }")
 		return True
 
 logMessage(f"Setup")
@@ -428,8 +428,8 @@ eventIds = []
 # modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
 modifiedThreshold = datetime.datetime.now() - datetime.timedelta(days=modifiedTimespanDays)
 
+logMessage(f"	Load events to mill")
 while True:
-	logMessage(f"	Load events to mill")
 
 	# Load a batch of events directly from SQL to minimize peak memory usage
 	cur.execute(sql["EventsLoad"], (seasonStartDate, seasonStartDate, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
@@ -534,8 +534,7 @@ while True:
 	saveEventsBatch(eventsPayload)
 			
 	eventsProcessed += len(sqlIds)
-	if eventsProcessed % 1000 == 0:
-		logMessage(f"	{ eventsProcessed } events processed")
+	logMessage(f"	{ eventsProcessed } events processed")
 	eventOffset += eventBatchSize
 
 logMessage(f"	Total { eventsProcessed } events processed")
