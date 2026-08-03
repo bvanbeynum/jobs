@@ -13,7 +13,7 @@ select	EventID = EventMatch.EventID
 		, WinnerDeviation = WinnerRating.Deviation
 		, WinnerTakedowns = WinnerMatch.Takedowns
 		, WinnerEscapes = WinnerMatch.Escapes
-		, WinnerNearFalls = WinnerMatch.Nearfalls
+		, WinnerNearfalls = WinnerMatch.Nearfalls
 		, WinnerReversals = WinnerMatch.Reversals
 		, LoserWrestlerSqlID = Loser.ID
 		, LoserName = LoserMatch.WrestlerName
@@ -22,7 +22,7 @@ select	EventID = EventMatch.EventID
 		, LoserDeviation = LoserRating.Deviation
 		, LoserTakedowns = LoserMatch.Takedowns
 		, LoserEscapes = LoserMatch.Escapes
-		, LoserNearFalls = LoserMatch.Nearfalls
+		, LoserNearfalls = LoserMatch.Nearfalls
 		, LoserReversals = LoserMatch.Reversals
 from	#EventBatch
 join	EventMatch
