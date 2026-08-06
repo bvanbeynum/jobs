@@ -16,6 +16,25 @@ group by
 
 create index idx_WrestlerLookup_LookupName on #WrestlerLookup (LookupName);
 
+-- Wipe out any invalid sql ids so it can try to re-attach
+update	#WrestlingPortalMatches
+set		WinnerWrestlerID = null
+from	#WrestlingPortalMatches WrestlingPortalMatches
+left join
+		EventWrestler
+on		WrestlingPortalMatches.WinnerWrestlerID = EventWrestler.ID
+where	WrestlingPortalMatches.WinnerWrestlerID is not null
+		and EventWrestler.ID is null;
+
+update	#WrestlingPortalMatches
+set		LoserWrestlerID = null
+from	#WrestlingPortalMatches WrestlingPortalMatches
+left join
+		EventWrestler
+on		WrestlingPortalMatches.LoserWrestlerID = EventWrestler.ID
+where	WrestlingPortalMatches.LoserWrestlerID is not null
+		and EventWrestler.ID is null;
+
 if object_id('tempdb..#PortalWrestler') is not null
 	drop table #PortalWrestler;
 
@@ -88,6 +107,7 @@ on		WrestlingPortalMatches.LoserName = WrestlerMatch.WrestlerName
 begin transaction
 
 begin try
+
 update	Event
 set		EventSystem = 'WrestlingPortal'
 		, SystemID = WrestlingPortalMatches.SystemID
@@ -131,8 +151,11 @@ delete
 from	EventMatch
 where	EventID in (
 		select	ID
-		from	Event
-		where	EventSystem = 'WrestlingPortal'
+		from	#WrestlingPortalMatches WrestlingPortalMatches
+		join	Event
+		on		WrestlingPortalMatches.systemid = Event.SystemID
+				and Event.EventSystem = 'WrestlingPortal'
+
 		)
 
 insert	EventMatch (
@@ -155,8 +178,6 @@ from	#WrestlingPortalMatches WrestlingPortalMatches
 join	Event
 on		WrestlingPortalMatches.SystemID = Event.SystemID
 		and Event.EventSystem = 'WrestlingPortal'
-where	WrestlingPortalMatches.EventID is null
-		and WrestlingPortalMatches.MatchID is null
 
 insert	EventWrestlerMatch (
 		EventMatchID
@@ -172,7 +193,7 @@ insert	EventWrestlerMatch (
 		, ModifiedDate
 		)
 select	EventMatchID = EventMatch.ID
-		, EventWrestle = WrestlingPortalMatches.WinnerWrestlerID
+		, EventWrestlerID = WrestlingPortalMatches.WinnerWrestlerID
 		, WrestlerName = WrestlingPortalMatches.WinnerName
 		, TeamName = WrestlingPortalMatches.WinnerTeam
 		, IsWinner = 1
@@ -217,14 +238,12 @@ on		EventMatch.EventID = Event.ID
 		and WrestlingPortalMatches.Sort = EventMatch.Sort
 where	WrestlingPortalMatches.LoserWrestlerID is not null
 
-commit transaction
+commit
 
 end try
 begin catch
 
-	-- Check if there's an active transaction before rolling back
-	if xact_state() <> 0
-		rollback transaction
+	rollback;
 
 	throw;
 end catch;

@@ -210,6 +210,79 @@ except pyodbc.Error as databaseError:
 	errorLogging(f"Database connection failed: {databaseError}")
 	sys.exit(1)
 
+logMessage(f"----------- Portal Event Sync")
+
+modifiedTimespanDays = -14
+modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
+
+logMessage(f"	Get portal events from Mill")
+
+response = apiSession.get(f"{ millDBURL }/data/event?eventsystem=WrestlingPortal&modifiedsince={ modifiedThreshold.isoformat() }")
+portalEvents = json.loads(response.text)["events"]
+
+eventSaves = []
+for portalEvent in portalEvents:
+	for match in portalEvent["matches"]:
+		winner = [ wrestler for wrestler in match["wrestlers"] if wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
+		loser = [ wrestler for wrestler in match["wrestlers"] if not wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
+
+		match = (
+			portalEvent.get("sqlId"),
+			portalEvent.get("id"),
+			portalEvent.get("name"),
+			datetime.datetime.strptime(portalEvent.get("date"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S"),
+			portalEvent.get("location"),
+			portalEvent.get("state"),
+			match.get("matchSqlId"),
+			match.get("division"),
+			match.get("weightClass"),
+			match.get("roundName"),
+			match.get("winType"),
+			match.get("sort"),
+			winner.get("wrestlerSqlId"),
+			winner.get("name"),
+			winner.get("team"),
+			winner.get("takedowns"),
+			winner.get("escapes"),
+			winner.get("nearfalls"),
+			winner.get("reversals"),
+			loser.get("wrestlerSqlId"),
+			loser.get("name"),
+			loser.get("team"),
+			loser.get("takedowns"),
+			loser.get("escapes"),
+			loser.get("nearfalls"),
+			loser.get("reversals")
+		)
+
+		eventSaves.append(match)
+
+logMessage(f"	Saving { len([ event for event in portalEvents if event["matches"] and len(event["matches"]) > 0 ]) } events and { len(eventSaves) } matches to SQL")
+
+cur.execute(sql["PortalEventCreate"])
+cur.executemany("""insert #WrestlingPortalMatches
+(EventID, SystemID, EventName, EventDate, EventAddress, EventState, MatchID, Division, WeightClass, RoundName, WinType, Sort, WinnerWrestlerID, WinnerName, WinnerTeam, WinnerTakedowns, WinnerEscapes, WinnerNearFalls, WinnerReversals, LoserWrestlerID, LoserName, LoserTeam, LoserTakedowns, LoserEscapes, LoserNearFalls, LoserReversals)
+values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""", eventSaves)
+
+cur.execute(sql["PortalEventProcess"])
+cur.execute(sql["PortalEventGet"])
+sqlEvents = cur.fetchall()
+eventLookup = dict(sqlEvents)
+
+updateCount = 0
+for portalEvent in portalEvents:
+	if not portalEvent["sqlId"] and portalEvent["id"] in eventLookup:
+		portalEvent["sqlId"] = eventLookup[portalEvent["id"]]
+		
+		response = apiSession.post(f"{ millDBURL }/data/event", json={ "event": portalEvent })
+		if response.status_code >= 400:
+			errorCount += 1
+			errorLogging(f"	Error saving portal event: {response.status_code} - {response.text}")
+		else:
+			updateCount += 1
+
+logMessage(f"	Total { updateCount } portal events updated")
+
 logMessage(f"Delete old wrestlers")
 logMessage(f"	Get wrestlers from Mill")
 
@@ -538,79 +611,6 @@ while True:
 	eventOffset += eventBatchSize
 
 logMessage(f"	Total { eventsProcessed } events processed")
-
-logMessage(f"----------- Portal Event Sync")
-
-modifiedTimespanDays = -2
-modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
-
-logMessage(f"	Get portal events from Mill")
-
-response = apiSession.get(f"{ millDBURL }/data/event?eventsystem=WrestlingPortal&modifiedsince={ modifiedThreshold.isoformat() }")
-portalEvents = json.loads(response.text)["events"]
-
-eventSaves = []
-for portalEvent in portalEvents:
-	for match in portalEvent["matches"]:
-		winner = [ wrestler for wrestler in match["wrestlers"] if wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
-		loser = [ wrestler for wrestler in match["wrestlers"] if not wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
-
-		match = (
-			portalEvent.get("sqlId"),
-			portalEvent.get("id"),
-			portalEvent.get("name"),
-			datetime.datetime.strptime(portalEvent.get("date"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S"),
-			portalEvent.get("location"),
-			portalEvent.get("state"),
-			match.get("matchSqlId"),
-			match.get("division"),
-			match.get("weightClass"),
-			match.get("roundName"),
-			match.get("winType"),
-			match.get("sort"),
-			winner.get("wrestlerSqlId"),
-			winner.get("name"),
-			winner.get("team"),
-			winner.get("takedowns"),
-			winner.get("escapes"),
-			winner.get("nearfalls"),
-			winner.get("reversals"),
-			loser.get("wrestlerSqlId"),
-			loser.get("name"),
-			loser.get("team"),
-			loser.get("takedowns"),
-			loser.get("escapes"),
-			loser.get("nearfalls"),
-			loser.get("reversals")
-		)
-
-		eventSaves.append(match)
-
-logMessage(f"	Saving { len([ event for event in portalEvents if event["matches"] and len(event["matches"]) > 0 ]) } events and { len(eventSaves) } matches to SQL")
-
-cur.execute(sql["PortalEventCreate"])
-cur.executemany("""insert #WrestlingPortalMatches
-(EventID, SystemID, EventName, EventDate, EventAddress, EventState, MatchID, Division, WeightClass, RoundName, WinType, Sort, WinnerWrestlerID, WinnerName, WinnerTeam, WinnerTakedowns, WinnerEscapes, WinnerNearFalls, WinnerReversals, LoserWrestlerID, LoserName, LoserTeam, LoserTakedowns, LoserEscapes, LoserNearFalls, LoserReversals)
-values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""", eventSaves)
-
-cur.execute(sql["PortalEventProcess"])
-cur.execute(sql["PortalEventGet"])
-sqlEvents = cur.fetchall()
-eventLookup = dict(sqlEvents)
-
-updateCount = 0
-for portalEvent in portalEvents:
-	if not portalEvent["sqlId"] and portalEvent["id"] in eventLookup:
-		portalEvent["sqlId"] = eventLookup[portalEvent["id"]]
-		
-		response = apiSession.post(f"{ millDBURL }/data/event", json={ "event": portalEvent })
-		if response.status_code >= 400:
-			errorCount += 1
-			errorLogging(f"	Error saving portal event: {response.status_code} - {response.text}")
-		else:
-			updateCount += 1
-
-logMessage(f"	Total { updateCount } portal events updated")
 
 logMessage(f"Process schools")
 
