@@ -212,7 +212,7 @@ except pyodbc.Error as databaseError:
 
 logMessage(f"----------- Portal Event Sync")
 
-modifiedTimespanDays = -14
+modifiedTimespanDays = -2
 modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
 
 logMessage(f"	Get portal events from Mill")
