@@ -220,68 +220,73 @@ logMessage(f"	Get portal events from Mill")
 response = apiSession.get(f"{ millDBURL }/data/event?eventsystem=WrestlingPortal&modifiedsince={ modifiedThreshold.isoformat() }")
 portalEvents = json.loads(response.text)["events"]
 
-eventSaves = []
-for portalEvent in portalEvents:
-	for match in portalEvent["matches"]:
-		winner = [ wrestler for wrestler in match["wrestlers"] if wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
-		loser = [ wrestler for wrestler in match["wrestlers"] if not wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
+if len(portalEvents) > 0:
 
-		match = (
-			portalEvent.get("sqlId"),
-			portalEvent.get("id"),
-			portalEvent.get("name"),
-			datetime.datetime.strptime(portalEvent.get("date"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S"),
-			portalEvent.get("location"),
-			portalEvent.get("state"),
-			match.get("matchSqlId"),
-			match.get("division"),
-			match.get("weightClass"),
-			match.get("roundName"),
-			match.get("winType"),
-			match.get("sort"),
-			winner.get("wrestlerSqlId"),
-			winner.get("name"),
-			winner.get("team"),
-			winner.get("takedowns"),
-			winner.get("escapes"),
-			winner.get("nearfalls"),
-			winner.get("reversals"),
-			loser.get("wrestlerSqlId"),
-			loser.get("name"),
-			loser.get("team"),
-			loser.get("takedowns"),
-			loser.get("escapes"),
-			loser.get("nearfalls"),
-			loser.get("reversals")
-		)
+	eventSaves = []
+	for portalEvent in portalEvents:
+		for match in portalEvent["matches"]:
+			winner = [ wrestler for wrestler in match["wrestlers"] if wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
+			loser = [ wrestler for wrestler in match["wrestlers"] if not wrestler["isWinner"] ][0] if len(match["wrestlers"]) > 0 else None
 
-		eventSaves.append(match)
+			match = (
+				portalEvent.get("sqlId"),
+				portalEvent.get("id"),
+				portalEvent.get("name"),
+				datetime.datetime.strptime(portalEvent.get("date"), "%Y-%m-%dT%H:%M:%S.%fZ").strftime("%Y-%m-%d %H:%M:%S"),
+				portalEvent.get("location"),
+				portalEvent.get("state"),
+				match.get("matchSqlId"),
+				match.get("division"),
+				match.get("weightClass"),
+				match.get("roundName"),
+				match.get("winType"),
+				match.get("sort"),
+				winner.get("wrestlerSqlId"),
+				winner.get("name"),
+				winner.get("team"),
+				winner.get("takedowns"),
+				winner.get("escapes"),
+				winner.get("nearfalls"),
+				winner.get("reversals"),
+				loser.get("wrestlerSqlId"),
+				loser.get("name"),
+				loser.get("team"),
+				loser.get("takedowns"),
+				loser.get("escapes"),
+				loser.get("nearfalls"),
+				loser.get("reversals")
+			)
 
-logMessage(f"	Saving { len([ event for event in portalEvents if event["matches"] and len(event["matches"]) > 0 ]) } events and { len(eventSaves) } matches to SQL")
+			eventSaves.append(match)
 
-cur.execute(sql["PortalEventCreate"])
-cur.executemany("""insert #WrestlingPortalMatches
-(EventID, SystemID, EventName, EventDate, EventAddress, EventState, MatchID, Division, WeightClass, RoundName, WinType, Sort, WinnerWrestlerID, WinnerName, WinnerTeam, WinnerTakedowns, WinnerEscapes, WinnerNearFalls, WinnerReversals, LoserWrestlerID, LoserName, LoserTeam, LoserTakedowns, LoserEscapes, LoserNearFalls, LoserReversals)
-values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""", eventSaves)
+	logMessage(f"	Saving { len([ event for event in portalEvents if event["matches"] and len(event["matches"]) > 0 ]) } events and { len(eventSaves) } matches to SQL")
 
-cur.execute(sql["PortalEventProcess"])
-cur.execute(sql["PortalEventGet"])
-sqlEvents = cur.fetchall()
-eventLookup = dict(sqlEvents)
+	cur.execute(sql["PortalEventCreate"])
+	cur.executemany("""insert #WrestlingPortalMatches
+	(EventID, SystemID, EventName, EventDate, EventAddress, EventState, MatchID, Division, WeightClass, RoundName, WinType, Sort, WinnerWrestlerID, WinnerName, WinnerTeam, WinnerTakedowns, WinnerEscapes, WinnerNearFalls, WinnerReversals, LoserWrestlerID, LoserName, LoserTeam, LoserTakedowns, LoserEscapes, LoserNearFalls, LoserReversals)
+	values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);""", eventSaves)
 
-updateCount = 0
-for portalEvent in portalEvents:
-	if not portalEvent["sqlId"] and portalEvent["id"] in eventLookup:
-		portalEvent["sqlId"] = eventLookup[portalEvent["id"]]
-		
-		response = apiSession.post(f"{ millDBURL }/data/event", json={ "event": portalEvent })
-		if response.status_code >= 400:
-			errorCount += 1
-			errorLogging(f"	Error saving portal event: {response.status_code} - {response.text}")
-		else:
-			updateCount += 1
+	cur.execute(sql["PortalEventProcess"])
+	cur.execute(sql["PortalEventGet"])
+	sqlEvents = cur.fetchall()
+	eventLookup = dict(sqlEvents)
 
-logMessage(f"	Total { updateCount } portal events updated")
+	updateCount = 0
+	for portalEvent in portalEvents:
+		if not portalEvent["sqlId"] and portalEvent["id"] in eventLookup:
+			portalEvent["sqlId"] = eventLookup[portalEvent["id"]]
+			
+			response = apiSession.post(f"{ millDBURL }/data/event", json={ "event": portalEvent })
+			if response.status_code >= 400:
+				errorCount += 1
+				errorLogging(f"	Error saving portal event: {response.status_code} - {response.text}")
+			else:
+				updateCount += 1
+
+	logMessage(f"	Total { updateCount } portal events updated")
+
+else:
+	logMessage(f"	No events to update")
 
 logMessage(f"Delete old wrestlers")
 logMessage(f"	Get wrestlers from Mill")
