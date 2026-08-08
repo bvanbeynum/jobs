@@ -112,7 +112,7 @@ states = ["SC", "NC", "GA", "TN"]
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
-loadEvents = [35654]
+loadEvents = []
 if loadEvents and len(loadEvents) > 0:
 	cur.execute("select EventID = ID, EventDate, SystemID, EventState from Event where ID in (" + ",".join(map(str, loadEvents)) + ")")
 	loadEventsData = cur.fetchall()
