@@ -105,22 +105,27 @@ requestHeaders = { "User-Agent": config["userAgent"] }
 today = datetime.date.today()
 startDate = today - datetime.timedelta(weeks=2)
 endDate = today + datetime.timedelta(weeks=8)
+currentDate = startDate
 dataModified = True
-
 states = ["SC", "NC", "GA", "TN"]
-
-# startDate = datetime.datetime.strptime("2026-02-20", "%Y-%m-%d").date()
-# endDate = datetime.datetime.strptime("2026-02-20", "%Y-%m-%d").date()
-# states = ["SC"]
-# dataModified = False
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
-# excludedEvents = []
+loadEvents = []
+if loadEvents and len(loadEvents) > 0:
+	cur.execute("select EventID = ID, EventDate, SystemID, EventState from Event where ID in (" + ",".join(map(str, loadEvents)) + ")")
+	loadEventsData = cur.fetchall()
 
-currentDate = startDate
+	if loadEventsData and len(loadEventsData) > 0:
+		refreshEvent = loadEventsData[0]
+		currentDate = refreshEvent.EventDate
+		excludedEvents = []
+
 while currentDate <= endDate:
+	if refreshEvent:
+		states = [refreshEvent.EventState]
+
 	for state in states:
 		dateStr = currentDate.strftime("%Y-%m-%d")
 		# logMessage(f"Fetching details for { dateStr } in { state }")
@@ -155,8 +160,9 @@ while currentDate <= endDate:
 
 		eventsData = response.json()
 		events = eventsData["data"][0]["events"]
-
-		# events = [ event for event in events if event["url"].split('/')[5] == "14830881" ]
+		
+		if refreshEvent:
+			events = [ event for event in events if event["url"].split('/')[5] == refreshEvent.SystemID ]
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
@@ -211,6 +217,9 @@ while currentDate <= endDate:
 				continue
 			
 			logMessage(f"Fetching details for {eventName} on {dateStr}")
+
+			if refreshEvent:
+				cur.execute(f"delete from EventMatch where EventID = { refreshEvent.EventID }")
 			
 			if (not (divisionsData.get("data") and divisionsData["data"].get("divisionContent") and divisionsData["data"]["divisionContent"].get("divisions"))) or len(next(iter(divisionsData["data"]["divisionContent"]["divisions"].values()))) == 0:
 				# If there are no divisions returned, load everything as one division
@@ -380,7 +389,17 @@ while currentDate <= endDate:
 		# Next state
 
 	# Next date
-	currentDate += datetime.timedelta(days=1)
+	if refreshEvent:
+		loadEventsData = loadEventsData[1:]
+
+		if len(loadEventsData) > 0:
+			refreshEvent = loadEventsData[0]
+			currentDate = refreshEvent.EventDate + datetime.timedelta(days=1)
+		else:
+			currentDate = endDate + datetime.timedelta(days=1)
+
+	else:
+		currentDate += datetime.timedelta(days=1)
 
 logMessage(f"---------- FloWrestling scraper finished.")
 
