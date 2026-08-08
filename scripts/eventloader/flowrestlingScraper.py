@@ -112,7 +112,7 @@ states = ["SC", "NC", "GA", "TN"]
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
 
-loadEvents = []
+loadEvents = [35654]
 if loadEvents and len(loadEvents) > 0:
 	cur.execute("select EventID = ID, EventDate, SystemID, EventState from Event where ID in (" + ",".join(map(str, loadEvents)) + ")")
 	loadEventsData = cur.fetchall()
@@ -163,6 +163,9 @@ while currentDate <= endDate:
 		
 		if refreshEvent:
 			events = [ event for event in events if event["url"].split('/')[5] == refreshEvent.SystemID ]
+
+			if len(events) == 0:
+				logMessage(f"Event not in flo - EventID { refreshEvent.EventID } Flo ID { refreshEvent.SystemID } ")
 		
 		for event in events:
 			systemId = event["url"].split('/')[5]
