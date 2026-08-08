@@ -210,6 +210,49 @@ except pyodbc.Error as databaseError:
 	errorLogging(f"Database connection failed: {databaseError}")
 	sys.exit(1)
 
+logMessage(f"----------- Process duplicates")
+
+logMessage(f"	Get duplicates from mongo DB")
+
+response = apiSession.get(f"{ millDBURL }/data/duplicate?status=pending")
+duplicates = json.loads(response.text)["duplicates"]
+
+if len(duplicates) > 0:
+	logMessage(f"	Load duplicates")
+
+	duplicateBatch = []
+	for duplicate in duplicates:
+		if duplicate["primary"] and duplicate["duplicates"] and len(duplicate["duplicates"]) > 0:
+			for candidate in duplicate["duplicates"]:
+				duplicateBatch.append((
+					duplicate["primary"]["sqlId"],
+					candidate["sqlId"]
+				))
+
+	cur.execute(sql["DuplicateCreate"])
+	cur.executemany("insert #Duplicates (SaveWrestlerID, DuplicateWrestlerID) values (?, ?);", duplicateBatch)
+
+	logMessage(f"	Process { len(duplicates) } wrestlers with { len(duplicateBatch) } duplicates")
+	cur.execute(sql["DuplicateProcess"])
+
+	logMessage(f"	Update the duplicates status")
+
+	updateCount = 0
+	errorCount = 0
+	for duplicate in duplicates:
+		duplicate["status"] = "complete"
+		response = apiSession.post(f"{ millDBURL }/data/duplicate", json={ "duplicate": duplicate })
+		if response.status_code >= 400:
+			errorCount += 1
+			errorLogging(f"	Error updating duplicate status: {response.status_code} - {response.text}")
+		else:
+			updateCount += 1
+
+	logMessage(f"	Total { updateCount } duplicates updated and { errorCount } errors")
+
+else:
+	logMessage(f"	No duplicates to process")
+
 logMessage(f"----------- Portal Event Sync")
 
 modifiedTimespanDays = -2
