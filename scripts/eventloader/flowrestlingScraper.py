@@ -162,38 +162,32 @@ while currentDate <= endDate:
 		events = eventsData["data"][0]["events"]
 		
 		if refreshEvent:
-			events = [ event for event in events if event["url"].split('/')[5] == refreshEvent.SystemID ]
+			events = [{
+				"url": f"https://www.flowrestling.org/nextgen/events/{ refreshEvent.SystemID }/information"
+			}]
 
-			if len(events) == 0:
-				logMessage(f"Event not in flo - EventID { refreshEvent.EventID } Flo ID { refreshEvent.SystemID } ")
-		
 		for event in events:
 			systemId = event["url"].split('/')[5]
 			if systemId in excludedEvents:
 				# Excluded or completed event
 				continue
 
-			eventName = event["name"]
-			eventAddress = f"{event["location"]["venueName"]}, {event["location"]["city"]}, {event["location"]["region"]}"
-
 			informationUrl = apiUrls["base"] + apiUrls["event"].format(systemId=systemId)
 			informationResponse = requests.get(informationUrl, headers=requestHeaders)
 			
 			if informationResponse.status_code != 200:
-				errorLogging(f"Error fetching information for {eventName}. Status code: {informationResponse.status_code}")
+				errorLogging(f"Error fetching information for {systemId}. Status code: {informationResponse.status_code}")
 				continue
 
 			informationData = informationResponse.json()
-			if informationData.get("data") and informationData["data"].get("startDate"):
-				eventStartDate = datetime.datetime.strptime(informationData["data"]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date()
-				eventEndDate = datetime.datetime.strptime(informationData["data"]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date() if informationData["data"].get("endDate") else eventStartDate
-				startDateStr = eventStartDate.strftime("%Y-%m-%d")
-				endDateStr = eventEndDate.strftime("%Y-%m-%d")
-			else:
-				startDateStr = dateStr
-				endDateStr = dateStr
-				eventStartDate = currentDate
-				eventEndDate = currentDate
+			
+			eventName = informationData["data"]["title"]
+			eventAddress = f"{informationData["data"]["location"]["name"]}"
+
+			eventStartDate = datetime.datetime.strptime(informationData["data"]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date()
+			eventEndDate = datetime.datetime.strptime(informationData["data"]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date() if informationData["data"].get("endDate") else eventStartDate
+			startDateStr = eventStartDate.strftime("%Y-%m-%d")
+			endDateStr = eventEndDate.strftime("%Y-%m-%d")
 
 			# Update the event details
 			cur.execute(sql["EventSave"], (systemId, eventName, startDateStr, endDateStr, eventAddress, state, 0, 0))
