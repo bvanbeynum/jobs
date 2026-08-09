@@ -83,7 +83,7 @@ def ServiceLoop():
 				lastRun = max(completeDates)
 
 			isTimeElapsed = False
-			if job.get("startTime") is not None:
+			if job.get("startTime") is not None and len(job.get("startTime")) > 0 and ":" in job.get("startTime"):
 				# 1. Parse the startTime (HH:MM) into a datetime object for today
 				hour, minute = map(int, job["startTime"].split(':'))
 				target_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
