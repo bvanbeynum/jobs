@@ -95,23 +95,24 @@ def ServiceLoop():
 				lastRun = max(completeDates)
 
 			isTimeElapsed = False
-			if job.get("startTime") is not None and len(job.get("startTime")) > 0 and ":" in job.get("startTime"):
-				# 1. Parse the startTime (HH:MM) into a datetime object for today
-				hour, minute = map(int, job["startTime"].split(":"))
-				target_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-				isTimeElapsed = now >= target_time_today and (lastRun is None or lastRun.date() < now.date())
-			elif job.get("command") == "start":
+			if job.get("command") is not None and job["command"].lower() == "start":
 				isTimeElapsed = True
 				
 				# reset the job command
-				response = requests.get(f"{ serverPath }/sys/api/setjobcommand?jobid={ running['jobId'] }&command=unset")
+				response = requests.get(f"{ serverPath }/sys/api/setjobcommand?jobid={ job['id'] }&command=unset")
 				if response.status_code != 200:
-					errorMessage = f"Error resetting the command for job {running['jobId']}. Status: {response.status_code}. Response: {response.text}"
+					errorMessage = f"Error resetting the command for job {job['id']}. Status: {response.status_code}. Response: {response.text}"
 					print(f"{currentTime()}: {errorMessage}")
 					errorLogging(errorMessage, 556)
 					continue
 
-			else:
+			elif job.get("startTime") is not None and len(job.get("startTime")) > 0 and ":" in job.get("startTime"):
+				# 1. Parse the startTime (HH:MM) into a datetime object for today
+				hour, minute = map(int, job["startTime"].split(":"))
+				target_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+				isTimeElapsed = now >= target_time_today and (lastRun is None or lastRun.date() < now.date())
+
+			elif job.get("frequencySeconds") is not None and job.get("frequencySeconds") > 0:
 				isTimeElapsed = lastRun is None or datetime.datetime.now(datetime.timezone.utc) > lastRun + datetime.timedelta(seconds=job["frequencySeconds"])
 
 			if job["id"] not in runningIds and isTimeElapsed:
