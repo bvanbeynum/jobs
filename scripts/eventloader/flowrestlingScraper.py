@@ -108,6 +108,7 @@ endDate = today + datetime.timedelta(weeks=8)
 currentDate = startDate
 dataModified = True
 states = ["SC", "NC", "GA", "TN"]
+refreshEvent = None
 
 cur.execute(sql["ExcludedGet"], (startDate, endDate))
 excludedEvents = [row.SystemID for row in cur.fetchall()]
