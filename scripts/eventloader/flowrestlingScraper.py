@@ -276,16 +276,16 @@ while currentDate <= endDate:
 							matchCount += 1
 
 							athlete1Id = match["topParticipant"]["id"]
-							athlete1Name = (match["topParticipant"].get("name") or "").replace("'", "''")
-							athlete1Team = (match["topParticipant"].get("team") or "").replace("'", "''")
+							athlete1Name = (match["topParticipant"].get("name") or "").replace("'", "''").replace('"', '').replace("\\", "")
+							athlete1Team = (match["topParticipant"].get("team") or "").replace("'", "''").replace('"', '').replace("\\", "")
 							athlete1Winner = 1 if match["topParticipant"].get("winner", False) else 0
 							athlete1Seed = match["topParticipant"].get("seed")
 							athlete1Score = match["topParticipant"].get("score")
 							athlete1Seed = match["topParticipant"].get("seed")
 
 							athlete2Id = match["bottomParticipant"]["id"]
-							athlete2Name = (match["bottomParticipant"].get("name") or "").replace("'", "''")
-							athlete2Team = (match["bottomParticipant"].get("team") or "").replace("'", "''")
+							athlete2Name = (match["bottomParticipant"].get("name") or "").replace("'", "''").replace('"', '').replace("\\", "")
+							athlete2Team = (match["bottomParticipant"].get("team") or "").replace("'", "''").replace('"', '').replace("\\", "")
 							athlete2Winner = 1 if match["bottomParticipant"].get("winner", False) else 0
 							athlete2Seed = match["bottomParticipant"].get("seed")
 							athlete2Score = match["bottomParticipant"].get("score")

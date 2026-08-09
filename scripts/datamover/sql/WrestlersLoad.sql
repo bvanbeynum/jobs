@@ -61,19 +61,27 @@ group by
 		EventWrestlerMatch.EventWrestlerID
 		, Event.EventName
 		, Event.EventDate
-		, Event.EventState
+		, Event.EventState;
 
 ;with WrestlerNameAggregation as (
 	select	WrestlerMatchSource.EventWrestlerID
 			, Names = '["' + string_agg(lower(WrestlerMatchSource.WrestlerName), '", "') within group (order by WrestlerMatchSource.WrestlerName) + '"]'
-	from	(select distinct EventWrestlerID, WrestlerName from #WrestlerData) as WrestlerMatchSource
+	from	(
+			select	distinct EventWrestlerID
+					, WrestlerName = replace(replace(replace(WrestlerName, '"', ''), '\', ''), '  ', ' ')
+			from #WrestlerData
+			) as WrestlerMatchSource
 	group by
 			WrestlerMatchSource.EventWrestlerID
 )
 , TeamNameAggregation as (
 	select	WrestlerMatchSource.EventWrestlerID
 			, Teams = '["' + string_agg(lower(WrestlerMatchSource.TeamName), '", "') within group (order by WrestlerMatchSource.TeamName) + '"]'
-	from	(select distinct EventWrestlerID, TeamName from #WrestlerData) as WrestlerMatchSource
+	from	(
+			select	distinct EventWrestlerID
+					, TeamName = replace(replace(replace(TeamName, '"', ''), '\', ''), '  ', ' ')
+			from #WrestlerData
+			) as WrestlerMatchSource
 	group by
 			WrestlerMatchSource.EventWrestlerID
 )
@@ -104,7 +112,7 @@ group by
 	where	WrestlerData.IsSchoolTeam = 1
 )
 select	WrestlerID = EventWrestler.ID
-		, WrestlerName = EventWrestler.WrestlerName
+		, WrestlerName = replace(replace(replace(EventWrestler.WrestlerName, '"', ''), '\', ''), '  ', ' ')
 		, Rating = EventWrestler.GlickoRating
 		, Deviation = EventWrestler.GlickoDeviation
 		, Grade = WrestlerGrade.Grade

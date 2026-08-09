@@ -7,6 +7,7 @@ import sys
 import subprocess
 import json
 import requests
+import threading
 from dateutil import parser
 
 def currentTime():
@@ -20,8 +21,22 @@ def errorLogging(message, code):
 	}
 	try:
 		requests.post(f"{serverPath}/sys/api/addlog", json=logData)
-	except Exception as e:
-		print(f"{currentTime()}: Exception in errorLogging: {e}")
+	except Exception as exception:
+		print(f"{currentTime()}: Exception in errorLogging: {exception}")
+
+	print(f"{currentTime()}: Error ({code}): {message}")
+
+def enqueueStreamOutput(stream, severity, messagesList, messagesLock):
+	# Reads output line-by-line from a process stream and appends it to messagesList in a thread-safe manner
+	if stream is None:
+		return
+
+	for line in iter(stream.readline, ""):
+		cleanedLine = str.strip(line)
+		with messagesLock:
+			messagesList.append({ "severity": severity, "message": cleanedLine })
+
+	stream.close()
 
 def ServiceLoop():
 	sleepTime = sleepLong
@@ -38,18 +53,16 @@ def ServiceLoop():
 				errorLogging(errorMessage, 550)
 				time.sleep(sleepTime)
 				continue
-		except Exception as e:
-			errorMessage = f"Exception getting jobs: { e }"
-			print(f"{ currentTime() }: {errorMessage}")
+		except Exception as exception:
+			errorMessage = f"Exception getting jobs: { exception }"
 			errorLogging(errorMessage, 551)
 			time.sleep(sleepTime)
 			continue
 
 		try:
 			jobs = json.loads(response.text)["jobs"]
-		except Exception as e:
-			errorMessage = f"Exception parsing jobs json: { e }"
-			print(f"{ currentTime() }: {errorMessage}")
+		except Exception as exception:
+			errorMessage = f"Exception parsing jobs json: { exception }"
 			errorLogging(errorMessage, 552)
 			time.sleep(sleepTime)
 			continue
@@ -65,9 +78,8 @@ def ServiceLoop():
 				for run in job["runs"]:
 					run["startTime"] = parser.parse(run["startTime"])
 					run["completeTime"] = parser.parse(run["completeTime"]) if run["completeTime"] is not None else None
-			except Exception as e:
-				errorMessage = f"Exception parsing dates for job {job.get('id', 'N/A')}: {e}"
-				print(f"{currentTime()}: {errorMessage}")
+			except Exception as exception:
+				errorMessage = f"Exception parsing dates for job {job.get('id', 'N/A')}: {exception}"
 				errorLogging(errorMessage, 553)
 				continue
 
@@ -85,7 +97,7 @@ def ServiceLoop():
 			isTimeElapsed = False
 			if job.get("startTime") is not None and len(job.get("startTime")) > 0 and ":" in job.get("startTime"):
 				# 1. Parse the startTime (HH:MM) into a datetime object for today
-				hour, minute = map(int, job["startTime"].split(':'))
+				hour, minute = map(int, job["startTime"].split(":"))
 				target_time_today = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 				isTimeElapsed = now >= target_time_today and (lastRun is None or lastRun.date() < now.date())
 			else:
@@ -110,14 +122,43 @@ def ServiceLoop():
 						continue
 					run = json.loads(response.text)["run"]
 
+					messagesList = []
+					messagesLock = threading.Lock()
+					process = subprocess.Popen(
+						[sys.executable, "-u", f"./scripts/{ job['scriptName'] }"],
+						stdout=subprocess.PIPE,
+						stderr=subprocess.PIPE,
+						text=True,
+						encoding="utf-8"
+					)
+
+					stdoutThread = threading.Thread(
+						target=enqueueStreamOutput,
+						args=(process.stdout, 0, messagesList, messagesLock),
+						daemon=True
+					)
+					stderrThread = threading.Thread(
+						target=enqueueStreamOutput,
+						args=(process.stderr, 100, messagesList, messagesLock),
+						daemon=True
+					)
+
+					stdoutThread.start()
+					stderrThread.start()
+
 					runningJobs.append({
 						"jobId": job["id"],
 						"jobName": job["name"],
 						"run": run,
-						"process": subprocess.Popen([sys.executable, f"./scripts/{ job['scriptName'] }"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8")
-						})
-				except Exception as e:
-					errorMessage = f"Exception starting job {job.get('id', 'N/A')}: {e}"
+						"process": process,
+						"messages": messagesList,
+						"messagesLock": messagesLock,
+						"stdoutThread": stdoutThread,
+						"stderrThread": stderrThread,
+						"lastSavedMessageCount": 0
+					})
+				except Exception as exception:
+					errorMessage = f"Exception starting job {job.get('id', 'N/A')}: {exception}"
 					print(f"{currentTime()}: {errorMessage}")
 					errorLogging(errorMessage, 555)
 					continue
@@ -141,24 +182,24 @@ def ServiceLoop():
 					if run.get("isKill"):
 						stopJob = True
 						running["process"].kill()
-				
+
 				if stopJob:
-					
+					if running.get("stdoutThread") is not None:
+						running["stdoutThread"].join(timeout=2)
+					if running.get("stderrThread") is not None:
+						running["stderrThread"].join(timeout=2)
+
 					run = running["run"]
 					run["completeTime"] = datetime.datetime.strftime(datetime.datetime.now(datetime.timezone.utc), "%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
-					# Are there messages
-					if running["process"].stdout:
-						for line in iter(running["process"].stdout.readline, ""):
-							run["messages"].append({ "severity": 0, "message": str.strip(line) })
+					with running["messagesLock"]:
+						currentMessages = list(running["messages"])
 
-					if running["process"].stderr:
-						for line in iter(running["process"].stderr.readline, ""):
-							run["messages"].append({ "severity": 100, "message": str.strip(line) })
-					
 					# If there's a message to not log then don't load the messages
-					if len([ message for message in run["messages"] if message["message"] == "no log" ]) > 0:
+					if len([ message for message in currentMessages if message["message"] == "no log" ]) > 0:
 						run["messages"] = []
+					else:
+						run["messages"] = currentMessages
 
 					response = requests.post(f"{ serverPath }/sys/api/savejobrun?jobid={ running['jobId'] }", json={ "jobrun": run })
 					if response.status_code != 200:
@@ -173,8 +214,27 @@ def ServiceLoop():
 
 					if len(runningJobs) == 0:
 						sleepTime = sleepLong
-			except Exception as e:
-				errorMessage = f"Exception updating job {running.get('jobId', 'N/A')}: {e}"
+				else:
+					with running["messagesLock"]:
+						currentMessages = list(running["messages"])
+
+					if len(currentMessages) != running.get("lastSavedMessageCount", 0):
+						run = dict(running["run"])
+
+						if len([ message for message in currentMessages if message["message"] == "no log" ]) > 0:
+							run["messages"] = []
+						else:
+							run["messages"] = currentMessages
+
+						response = requests.post(f"{ serverPath }/sys/api/savejobrun?jobid={ running['jobId'] }", json={ "jobrun": run })
+						if response.status_code == 200:
+							running["lastSavedMessageCount"] = len(currentMessages)
+						else:
+							errorMessage = f"Error updating job run progress for job {running['jobId']}. Status: {response.status_code}. Response: {response.text}"
+							print(f"{currentTime()}: {errorMessage}")
+							errorLogging(errorMessage, 559)
+			except Exception as exception:
+				errorMessage = f"Exception updating job {running.get('jobId', 'N/A')}: {exception}"
 				print(f"{currentTime()}: {errorMessage}")
 				errorLogging(errorMessage, 558)
 				continue
@@ -194,8 +254,8 @@ try:
 	serverPath = config["apiServer"]
 	sleepShort = config["sleep"]["short"]
 	sleepLong = config["sleep"]["long"]
-except Exception as e:
-	print(f"{currentTime()}: Could not load config: {e}")
+except Exception as exception:
+	print(f"{currentTime()}: Could not load config: {exception}")
 	exit()
 
 print(f"{ currentTime() }: ----------- Service Loop")
