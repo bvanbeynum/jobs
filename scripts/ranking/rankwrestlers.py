@@ -112,9 +112,9 @@ try:
 	for latestRating in latestRatings:
 		ratingsCache[latestRating.EventWrestlerID] = {
 			"varsity": glicko2.Player(rating=float(latestRating.Rating), rd=float(latestRating.Deviation)),
-			"jv": glicko2.Player(rating=float(latestRating.JVRating), rd=float(latestRating.JVDeviation)) if latestRating.JVRating and latestRating.JVDeviation else glicko2.Player(rating=1500, rd=500, vol=0.06),
-			"ms": glicko2.Player(rating=float(latestRating.MSRating), rd=float(latestRating.MSDeviation)) if latestRating.MSRating and latestRating.MSDeviation else glicko2.Player(rating=1500, rd=500, vol=0.06),
-			"girls": glicko2.Player(rating=float(latestRating.GirlsRating), rd=float(latestRating.GirlsDeviation)) if latestRating.GirlsRating and latestRating.GirlsDeviation else glicko2.Player(rating=1500, rd=500, vol=0.06),
+			"jv": glicko2.Player(rating=float(latestRating.JVRating), rd=float(latestRating.JVDeviation)) if latestRating.JVRating and latestRating.JVDeviation else glicko2.Player(rating=1500, rd=300, vol=0.06),
+			"ms": glicko2.Player(rating=float(latestRating.MSRating), rd=float(latestRating.MSDeviation)) if latestRating.MSRating and latestRating.MSDeviation else glicko2.Player(rating=1500, rd=300, vol=0.06),
+			"girls": glicko2.Player(rating=float(latestRating.GirlsRating), rd=float(latestRating.GirlsDeviation)) if latestRating.GirlsRating and latestRating.GirlsDeviation else glicko2.Player(rating=1500, rd=300, vol=0.06),
 		}
 	print(f"{ currentTime() }: Loaded { len(ratingsCache) } wrestlers into memory cache")
 except Exception as queryError:
@@ -153,10 +153,10 @@ while currentDate <= maxDate:
 			else:
 				# Initialize new wrestler with defaults
 				players[wrestlerId] = {
-					"varsity": glicko2.Player(rating=1500, rd=500, vol=0.06),
-					"jv": glicko2.Player(rating=1500, rd=500, vol=0.06),
-					"ms": glicko2.Player(rating=1500, rd=500, vol=0.06),
-					"girls": glicko2.Player(rating=1500, rd=500, vol=0.06)
+					"varsity": glicko2.Player(rating=1500, rd=300, vol=0.06),
+					"jv": glicko2.Player(rating=1500, rd=300, vol=0.06),
+					"ms": glicko2.Player(rating=1500, rd=300, vol=0.06),
+					"girls": glicko2.Player(rating=1500, rd=300, vol=0.06)
 				}
 
 		# 3. Get weekly match outcomes
