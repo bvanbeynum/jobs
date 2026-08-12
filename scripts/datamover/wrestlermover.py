@@ -146,6 +146,52 @@ def saveWrestlerEventsBatch(wrestlerEventsList, depth=0):
 			errorLogging(f"	Bulk save succeeded for chunk of { len(wrestlerEventsList) }, but failed to parse response: { parseError }")
 		return True
 
+def saveWrestlerRatingsBatch(wrestlerRatingsList, depth=0):
+	# Declare errorCount as global to update the global error threshold tracking
+	errorCount = 0
+	if not wrestlerRatingsList:
+		return True
+
+	# Try posting to the bulk save endpoint with a timeout
+	try:
+		response = apiSession.post(f"{ millDBURL }/data/wrestlerrating/bulk", json={ "wrestlerratings": wrestlerRatingsList }, timeout=300)
+		statusCode = response.status_code
+		responseText = response.text
+	except Exception as apiException:
+		statusCode = 504
+		responseText = str(apiException)
+
+	if statusCode >= 400:
+		# If the server timed out or failed to process the request, and the batch is large enough,
+		# split the batch in half and recursively retry to bypass gateway timeout limits.
+		if len(wrestlerRatingsList) > 10 and (statusCode == 504 or "timeout" in responseText.lower() or statusCode == 502):
+			midIndex = len(wrestlerRatingsList) // 2
+			firstHalf = wrestlerRatingsList[:midIndex]
+			secondHalf = wrestlerRatingsList[midIndex:]
+			logMessage(f"	Gateway timeout/error on batch of { len(wrestlerRatingsList) } wrestlerRatings. Retrying in two smaller chunks of { len(firstHalf) } and { len(secondHalf) }.")
+			successFirst = saveWrestlerRatingsBatch(firstHalf, depth + 1)
+			successSecond = saveWrestlerRatingsBatch(secondHalf, depth + 1)
+			return successFirst and successSecond
+		else:
+			# If the batch cannot be split further or it's a non-transient error, log the failure.
+			errorCount += 1
+			errorLogging(f"	Error bulk saving wrestlerRatings (size { len(wrestlerRatingsList) }): { statusCode } - { responseText }")
+			return False
+	else:
+		try:
+			# Only log successes for sub-chunks (depth > 0) to keep normal output clean.
+			if depth > 0:
+				saveResult = response.json()
+				matched = saveResult.get("matchedCount", 0)
+				modified = saveResult.get("modifiedCount", 0)
+				upserted = saveResult.get("upsertedCount", 0)
+				inserted = saveResult.get("insertedCount", 0)
+				logMessage(f"	Bulk save completed for chunk of { len(wrestlerRatingsList) }: { matched } matched, { modified } modified, { upserted } upserted, { inserted } inserted")
+		except Exception as parseError:
+			errorLogging()
+			errorLogging(f"	Bulk save succeeded for chunk of { len(wrestlerRatingsList) }, but failed to parse response: { parseError }")
+		return True
+
 def saveEventsBatch(eventsList, depth=0):
 	# Declare errorCount as global to update the global error threshold tracking
 	errorCount = 0
@@ -386,16 +432,6 @@ while True:
 	cur.execute(sql["WrestlerBatchCreate"])
 	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlersBatch])
 
-	# Batch load ratings
-	cur.execute(sql["WrestlerRatingsBatchLoad"])
-	ratings_batch = cur.fetchall()
-
-	ratings_by_wrestler = {}
-	for rating in ratings_batch:
-		if rating.EventWrestlerID not in ratings_by_wrestler:
-			ratings_by_wrestler[rating.EventWrestlerID] = []
-		ratings_by_wrestler[rating.EventWrestlerID].append(rating)
-
 	wrestlersPayload = []
 	for wrestlerRow in wrestlersBatch:
 		wrestler = {
@@ -412,22 +448,12 @@ while True:
 			"lastWeightClass": wrestlerRow.LastWeightClass,
 			"schoolName": wrestlerRow.SchoolName,
 			"schoolDivision": wrestlerRow.SchoolDivision,
-			"schoolWeightClass": wrestlerRow.SchoolWeightClass,
-			"ratingHistory": []
+			"schoolWeightClass": wrestlerRow.SchoolWeightClass
 		}
 
 		# Add id if a match is found in wrestlerLookup
 		if wrestlerRow.WrestlerID in wrestlerLookup:
 			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
-
-		ratings = ratings_by_wrestler.get(wrestlerRow.WrestlerID, [])
-
-		for ratingRow in ratings:
-			wrestler["ratingHistory"].append({
-				"periodEndDate": datetime.datetime.strftime(ratingRow.PeriodEndDate, "%Y-%m-%d"),
-				"rating": float(ratingRow.Rating),
-				"deviation": float(ratingRow.Deviation)
-			})
 
 		wrestlersUpdated.append(wrestlerRow.WrestlerID)
 		wrestlersPayload.append(wrestler)
@@ -441,6 +467,42 @@ while True:
 	offset += batchSize
 
 logMessage(f"	Total { wrestlersCompleted } wrestlers processed")
+logMessage(f"Process wrestler ratings")
+
+offset = 0
+batchSize = 500  # Adjust batch size as needed
+wrestlersRatingsCompleted = 0
+
+while True:
+	wrestlerRatingBatchIDs = wrestlersUpdated[offset:offset + batchSize]
+
+	if not wrestlerRatingBatchIDs or len(wrestlerRatingBatchIDs) == 0:
+		break  # No more wrestlers to fetch
+
+	# Batch load matches
+	cur.execute(sql["WrestlerRatingsBatchCreate"])
+	cur.executemany("insert #wrestlerRatingsBatch (WrestlerID) values (?);", [[wrestlerID] for wrestlerID in wrestlerRatingBatchIDs])
+	cur.execute(sql["WrestlerRatingsBatchLoad"])
+	ratingsBatch = cur.fetchall()
+
+	wrestlerRatingsPayload = []
+	for rating in ratingsBatch:
+		wrestlerRatingsPayload.append({
+			"wrestlerSqlId": rating.EventWrestlerID,
+			"periodEndDate": formatDate(rating.PeriodEndDate),
+			"rating": float(rating.Rating),
+			"deviation": float(rating.Deviation)
+		})
+
+	# Post current batch to the bulk save endpoint using retry/split logic
+	saveWrestlerRatingsBatch(wrestlerRatingsPayload)
+	
+	wrestlersRatingsCompleted += len(wrestlerRatingsPayload)
+	logMessage(f"	{ len(wrestlerRatingsPayload) } wrestler ratings processed")
+
+	offset += batchSize
+
+logMessage(f"	Total { wrestlersRatingsCompleted } wrestler ratings processed")
 logMessage(f"Process wrestler events")
 
 offset = 0
@@ -506,7 +568,7 @@ while True:
 	offset += batchSize
 
 logMessage(f"	Total { wrestlersEventsCompleted } wrestler events processed")
-logMessage(f"----------- Event Sync")
+logMessage(f"Process Events")
 
 today = datetime.datetime.now().date()
 if today.month >= 9:
