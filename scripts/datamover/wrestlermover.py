@@ -428,10 +428,6 @@ while True:
 	if not wrestlersBatch:
 		break  # No more wrestlers to fetch
 
-	# Batch load matches
-	cur.execute(sql["WrestlerBatchCreate"])
-	cur.executemany("insert #WrestlerBatch (WrestlerID) values (?);", [[wrestler.WrestlerID] for wrestler in wrestlersBatch])
-
 	wrestlersPayload = []
 	for wrestlerRow in wrestlersBatch:
 		wrestler = {

@@ -42,7 +42,8 @@ select	EventWrestlerMatch.EventWrestlerID
 		, IsSchoolTeam = max(case when School.ID is not null then 1 else 0 end)
 		, Division = max(EventMatch.Division)
 		, WeightClass = max(EventMatch.WeightClass)
-		, Grade = max(EventWrestlerMatch.Grade)
+		, Grade = GradeLookup.Grade
+		, GradeSort = GradeLookup.Sort
 into	#WrestlerData
 from	EventWrestlerMatch
 join	EventMatch
@@ -56,12 +57,26 @@ on		EventWrestlerMatch.TeamName = EventSchool.EventSchoolName
 left join
 		School
 on		EventSchool.SchoolID = School.ID
+outer apply (
+		select	Grade = coalesce(NewGrade.Grade, WrestlerGrade.Grade)
+				, Sort = coalesce(NewGrade.Sort, WrestlerGrade.Sort)
+		from	WrestlerGrade
+		left join
+				WrestlerGrade NewGrade
+		on		WrestlerGrade.Sort + (
+					case when month(getdate()) >= 8 then (year(getdate()) + 1) else year(getdate()) end
+					- case when month(event.EventDate) >= 8 then (year(event.EventDate) + 1) else year(event.EventDate) end
+				) = NewGrade.Sort
+		where	EventWrestlerMatch.Grade = WrestlerGrade.Grade
+		) GradeLookup
 where	EventWrestlerMatch.EventWrestlerID in (select EventWrestlerID from #PagedWrestler)
 group by
 		EventWrestlerMatch.EventWrestlerID
 		, Event.EventName
 		, Event.EventDate
-		, Event.EventState;
+		, Event.EventState
+		, GradeLookup.Grade
+		, GradeLookup.Sort;
 
 ;with WrestlerNameAggregation as (
 	select	WrestlerMatchSource.EventWrestlerID
@@ -111,11 +126,19 @@ group by
 	from	#WrestlerData WrestlerData
 	where	WrestlerData.IsSchoolTeam = 1
 )
+, GradeCalculation as (
+select	WrestlerData.EventWrestlerID
+		, WrestlerData.WrestlerName
+		, WrestlerData.Grade
+		, RowFilter = row_number() over (partition by WrestlerData.EventWrestlerID order by WrestlerData.GradeSort desc)
+from	#WrestlerData WrestlerData
+where	len(WrestlerData.Grade) > 0
+)
 select	WrestlerID = EventWrestler.ID
 		, WrestlerName = replace(replace(replace(EventWrestler.WrestlerName, '"', ''), '\', ''), '  ', ' ')
 		, Rating = EventWrestler.GlickoRating
 		, Deviation = EventWrestler.GlickoDeviation
-		, Grade = WrestlerGrade.Grade
+		, Grade = GradeCalculation.Grade
 		, SearchNames = WrestlerNameAggregation.Names
 		, SearchTeams = TeamNameAggregation.Teams
 		, States = StateAggregation.States
@@ -144,14 +167,10 @@ left join
 		LastSchoolEvent
 on		WrestlerPopulation.EventWrestlerID = LastSchoolEvent.EventWrestlerID
 		and LastSchoolEvent.RowFilter = 1
-outer apply (
-		select	top 1 WrestlerData.Grade
-		from	#WrestlerData WrestlerData
-		where	WrestlerPopulation.EventWrestlerID = WrestlerData.EventWrestlerID
-				and len(WrestlerData.Grade) > 0
-		order by
-				WrestlerData.EventDate desc
-		) WrestlerGrade
+left join
+		GradeCalculation
+on		WrestlerPopulation.EventWrestlerID = GradeCalculation.EventWrestlerID
+		and GradeCalculation.RowFilter = 1
 order by
 		WrestlerPopulation.LastModified desc
 		, EventWrestler.ID;

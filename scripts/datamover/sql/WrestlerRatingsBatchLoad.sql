@@ -3,7 +3,7 @@ select	WrestlerRating.EventWrestlerID,
 		WrestlerRating.Rating,
 		WrestlerRating.Deviation
 from	WrestlerRating
-join 	#WrestlerBatch WB 
+join 	#wrestlerRatingsBatch WB 
 on		WrestlerRating.EventWrestlerID = WB.WrestlerID
 where	(
 			getdate() >= cast(cast(year(getdate()) as varchar(255)) + '-12-01' as date)
