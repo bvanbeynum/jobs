@@ -1,5 +1,7 @@
 select	WrestlerID = EventWrestlerMatch.EventWrestlerID
 		, EventID = event.ID
+		, Event.EventSystem
+		, SystemID = Event.SystemID
 		, EventName = Event.EventName
 		, EventDate = Event.EventDate
 		, TeamName = coalesce(WrestlerSchool.SchoolName, EventWrestlerMatch.TeamName)

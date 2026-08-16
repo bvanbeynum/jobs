@@ -524,6 +524,8 @@ while True:
 			events[eventKey] = {
 				"wrestlerSqlId": matchRow.WrestlerID,
 				"sqlId": matchRow.EventID,
+				"eventSystem": matchRow.EventSystem,
+				"systemId": matchRow.SystemID,
 				"name": matchRow.EventName,
 				"date": formatDate(matchRow.EventDate),
 				"team": matchRow.TeamName,
