@@ -1,3 +1,15 @@
+set nocount on;
+
+declare @StartDate int;
+declare @TimespanDays int;
+declare @Offset int;
+declare @BatchSize int;
+
+set @StartDate = ?;
+set @TimespanDays = ?;
+set @Offset = ?;
+set @BatchSize = ?;
+
 select	SqlID = Event.ID
 		, EventSystem = Event.EventSystem
 		, SystemID = Event.SystemID
@@ -12,14 +24,14 @@ select	SqlID = Event.ID
 from	Event
 where	event.EventSystem <> 'WrestlingPortal'
 		and Event.IsExcluded = 0
-		and Event.EventDate >= ?
+		and Event.EventDate >= dateadd(day, @StartDate, getdate())
 		and (
-			Event.ModifiedDate >= ?
+			Event.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			or exists (
 				select	1
 				from	EventMatch
 				where	EventMatch.EventID = Event.ID
-						and EventMatch.ModifiedDate >= ?
+						and EventMatch.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			)
 			or exists (
 				select	1
@@ -27,9 +39,11 @@ where	event.EventSystem <> 'WrestlingPortal'
 				join	EventWrestlerMatch
 				on		EventMatch.ID = EventWrestlerMatch.EventMatchID
 				where	EventMatch.EventID = Event.ID
-						and EventWrestlerMatch.ModifiedDate >= ?
+						and EventWrestlerMatch.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			)
 		)
 order by
 		Event.ID
-offset ? rows fetch next ? rows only;
+offset @Offset rows fetch next @BatchSize rows only;
+
+set nocount off;

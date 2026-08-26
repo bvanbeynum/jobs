@@ -575,9 +575,6 @@ else:
 	year = today.year - 2
 seasonStartDate = datetime.date(year, 9, 1)
 
-modifiedTimespanDays = -2
-modifiedThreshold = datetime.datetime.now() + datetime.timedelta(days=modifiedTimespanDays)
-
 logMessage(f"	Get events from Mill")
 
 response = apiSession.get(f"{ millDBURL }/data/event?eventsystem=Flo&select=sqlId")
@@ -602,18 +599,16 @@ for mongoEvent in mongoEvents:
 logMessage(f"	Deleted { deletedEvents } events")
 
 eventsProcessed = 0
-eventBatchSize = 200
+eventBatchSize = 50
 eventOffset = 0
 eventIds = []
-
-# modifiedThreshold = datetime.datetime.strptime("2024-01-01", "%Y-%m-%d").date()
-modifiedThreshold = datetime.datetime.now() - datetime.timedelta(days=modifiedTimespanDays)
+modifiedTimespanDays = -2
 
 logMessage(f"	Load events to mill")
 while True:
 
 	# Load a batch of events directly from SQL to minimize peak memory usage
-	cur.execute(sql["EventsLoad"], (seasonStartDate, seasonStartDate, modifiedThreshold, modifiedThreshold, eventOffset, eventBatchSize))
+	cur.execute(sql["EventsLoad"], (seasonStartDate, modifiedTimespanDays, eventOffset, eventBatchSize))
 	eventsRows = cur.fetchall()
 	
 	if not eventsRows:
