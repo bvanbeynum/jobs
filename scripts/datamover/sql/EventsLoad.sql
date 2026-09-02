@@ -1,6 +1,6 @@
 set nocount on;
 
-declare @StartDate int;
+declare @StartDate date;
 declare @TimespanDays int;
 declare @Offset int;
 declare @BatchSize int;
@@ -24,7 +24,7 @@ select	SqlID = Event.ID
 from	Event
 where	event.EventSystem <> 'WrestlingPortal'
 		and Event.IsExcluded = 0
-		and Event.EventDate >= dateadd(day, @StartDate, getdate())
+		and Event.EventDate >= @StartDate
 		and (
 			Event.ModifiedDate >= dateadd(day, @TimespanDays, getdate())
 			or exists (
