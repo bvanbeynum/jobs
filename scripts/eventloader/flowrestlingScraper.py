@@ -183,7 +183,10 @@ while currentDate <= endDate:
 			informationData = informationResponse.json()
 			
 			eventName = informationData["data"]["title"]
-			eventAddress = f"{informationData["data"]["location"]["name"]}"
+
+			eventAddress = ""
+			if informationData["data"].get("location") is not None and informationData["data"]["location"].get("name") is not None:
+				eventAddress = f"{informationData["data"]["location"]["name"]}"
 
 			eventStartDate = datetime.datetime.strptime(informationData["data"]["startDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date()
 			eventEndDate = datetime.datetime.strptime(informationData["data"]["endDate"], "%Y-%m-%dT%H:%M:%S.%fZ").date() if informationData["data"].get("endDate") else eventStartDate
