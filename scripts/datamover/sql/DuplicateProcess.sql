@@ -4,6 +4,29 @@ begin transaction
 
 begin try
 
+	-- Remove duplicate cases (the save record is also a duplicate record)
+	with RecordGroup as (
+	select	distinct FirstRecord = case when SaveRecord.SaveWrestlerID < DupRecord.SaveWrestlerID then SaveRecord.SaveWrestlerID else DupRecord.SaveWrestlerID end
+			, OtherRecord = case when SaveRecord.SaveWrestlerID < DupRecord.SaveWrestlerID then DupRecord.SaveWrestlerID else SaveRecord.SaveWrestlerID end
+	from	#Duplicates SaveRecord
+	join	#Duplicates DupRecord
+	on		SaveRecord.SaveWrestlerID = DupRecord.DuplicateWrestlerID
+	)
+	delete
+	from	#Duplicates
+	from	#Duplicates Duplicates
+	join	RecordGroup
+	on		Duplicates.DuplicateWrestlerID = RecordGroup.FirstRecord
+
+	-- Remove cases where the save record is no longer active
+	delete
+	from	#Duplicates
+	from	#Duplicates Duplicates
+	left join
+			EventWrestler
+	on		Duplicates.SaveWrestlerID = EventWrestler.ID
+	where	EventWrestler.ID is null
+
 	-- Convert all the duplicate's matches to the primary
 	update  EventWrestlerMatch
 	set		EventWrestlerID = Duplicates.SaveWrestlerID
