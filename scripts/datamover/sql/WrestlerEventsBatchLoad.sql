@@ -63,6 +63,7 @@ outer apply (
 		order by
 				WrestlerRating.PeriodEndDate desc
 		) OpponentRating
+where	Event.EventSystem <> 'WrestlingPortal'
 order by	
 		Event.EventDate desc
 		, MatchSort
