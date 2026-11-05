@@ -156,10 +156,13 @@ while currentDate <= endDate:
 
 		if response.status_code != 200:
 			errorLogging(f"Error fetching events for {dateStr}. Status code: {response.status_code}")
-			currentDate += datetime.timedelta(days=1)
 			continue
 
 		eventsData = response.json()
+		if eventsData is None or eventsData["data"] is None or len(eventsData["data"]) == 0 or eventsData["data"][0]["events"] is None:
+			logMessage(f"No events to load for { state } after { dateStr }")
+			continue
+		
 		events = eventsData["data"][0]["events"]
 		
 		if refreshEvent:
