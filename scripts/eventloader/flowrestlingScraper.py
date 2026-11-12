@@ -160,7 +160,7 @@ while currentDate <= endDate:
 
 		eventsData = response.json()
 		if eventsData is None or eventsData["data"] is None or len(eventsData["data"]) == 0 or eventsData["data"][0]["events"] is None:
-			logMessage(f"No events to load for { state } after { dateStr }")
+			# logMessage(f"No events to load for { state } after { dateStr }")
 			continue
 		
 		events = eventsData["data"][0]["events"]
