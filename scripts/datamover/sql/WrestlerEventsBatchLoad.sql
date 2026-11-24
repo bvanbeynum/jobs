@@ -1,3 +1,37 @@
+set nocount on;
+
+declare @TimespanDays int = ?;
+declare @CutoffDate datetime = dateadd(day, @TimespanDays, getdate());
+
+if object_id('tempdb..#ModifiedWrestlerEvents') is not null
+	drop table #ModifiedWrestlerEvents;
+
+select distinct
+		WrestlerID = EventWrestlerMatch.EventWrestlerID,
+		EventID = Event.ID
+into	#ModifiedWrestlerEvents
+from	#WrestlerEventsBatch Batch
+join	EventWrestlerMatch
+on		EventWrestlerMatch.EventWrestlerID = Batch.WrestlerID
+join	EventMatch
+on		EventWrestlerMatch.EventMatchID = EventMatch.ID
+join	Event
+on		EventMatch.EventID = Event.ID
+left join
+		EventWrestlerMatch OpponentMatch
+on		EventWrestlerMatch.EventMatchID = OpponentMatch.EventMatchID
+		and OpponentMatch.EventWrestlerID <> EventWrestlerMatch.EventWrestlerID
+where	Event.EventSystem <> 'WrestlingPortal'
+		and (
+			Batch.FullSync = 1
+			or Event.ModifiedDate >= @CutoffDate
+			or EventMatch.ModifiedDate >= @CutoffDate
+			or EventWrestlerMatch.ModifiedDate >= @CutoffDate
+			or OpponentMatch.ModifiedDate >= @CutoffDate
+		);
+
+create clustered index ix_ModifiedWrestlerEvents on #ModifiedWrestlerEvents (WrestlerID, EventID);
+
 select	WrestlerID = EventWrestlerMatch.EventWrestlerID
 		, EventID = event.ID
 		, Event.EventSystem
@@ -25,10 +59,11 @@ select	WrestlerID = EventWrestlerMatch.EventWrestlerID
 		, EventWrestlerMatch.Nearfalls
 		, EventWrestlerMatch.Reversals
 from	EventWrestlerMatch
-join	#WrestlerEventsBatch Batch
-on		EventWrestlerMatch.EventWrestlerID = Batch.WrestlerID
+join	#ModifiedWrestlerEvents ModifiedEvents
+on		EventWrestlerMatch.EventWrestlerID = ModifiedEvents.WrestlerID
 join	EventMatch
 on		EventWrestlerMatch.EventMatchID = EventMatch.ID
+		and EventMatch.EventID = ModifiedEvents.EventID
 join	Event
 on		EventMatch.EventID = Event.ID
 left join
@@ -66,4 +101,6 @@ outer apply (
 where	Event.EventSystem <> 'WrestlingPortal'
 order by	
 		Event.EventDate desc
-		, MatchSort
+		, MatchSort;
+
+set nocount off;

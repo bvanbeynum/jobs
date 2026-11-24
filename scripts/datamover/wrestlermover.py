@@ -421,6 +421,7 @@ batchSize = 1000  # Adjust batch size as needed
 wrestlersCompleted = 0
 
 wrestlersUpdated = []
+newWrestlerIDs = set()
 while True:
 	cur.execute(sql["WrestlersLoad"], (modifiedTimespan, eventTimespan, offset, batchSize))
 	wrestlersBatch = cur.fetchall()
@@ -449,7 +450,9 @@ while True:
 
 		# Add id if a match is found in wrestlerLookup
 		if wrestlerRow.WrestlerID in wrestlerLookup:
-			wrestler['id'] = wrestlerLookup[wrestlerRow.WrestlerID]
+			wrestler["id"] = wrestlerLookup[wrestlerRow.WrestlerID]
+		else:
+			newWrestlerIDs.add(wrestlerRow.WrestlerID)
 
 		wrestlersUpdated.append(wrestlerRow.WrestlerID)
 		wrestlersPayload.append(wrestler)
@@ -501,6 +504,10 @@ while True:
 logMessage(f"	Total { wrestlersRatingsCompleted } wrestler ratings processed")
 logMessage(f"Process wrestler events")
 
+fullEventSync = False
+if fullEventSync:
+	logMessage("\tFull wrestler event sync enabled (--full-events)")
+
 offset = 0
 batchSize = 500  # Adjust batch size as needed
 wrestlersEventsCompleted = 0
@@ -513,8 +520,11 @@ while True:
 
 	# Batch load matches
 	cur.execute(sql["WrestlerEventsBatchCreate"])
-	cur.executemany("insert #WrestlerEventsBatch (WrestlerID) values (?);", [[wrestlerID] for wrestlerID in wrestlerEventBatchIDs])
-	cur.execute(sql["WrestlerEventsBatchLoad"])
+	cur.executemany(
+		"insert #WrestlerEventsBatch (WrestlerID, FullSync) values (?, ?);",
+		[(wrestlerID, 1 if (fullEventSync or wrestlerID in newWrestlerIDs) else 0) for wrestlerID in wrestlerEventBatchIDs]
+	)
+	cur.execute(sql["WrestlerEventsBatchLoad"], (modifiedTimespan,))
 	matchesBatch = cur.fetchall()
 
 	events = {}
